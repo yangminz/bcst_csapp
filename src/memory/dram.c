@@ -45,7 +45,6 @@ void write64bits_dram(uint64_t paddr, uint64_t data)
     mm[paddr + 7] = (data >> 56) & 0xff;
 }
 
-
 void print_register()
 {
     printf("rax = %16lx\trbx = %16lx\trcx = %16lx\trdx = %16lx\n",
@@ -54,7 +53,6 @@ void print_register()
         reg.rsi, reg.rdi, reg.rbp, reg.rsp);
     printf("rip = %16lx\n", reg.rip);
 }
-
 
 void print_stack()
 {
