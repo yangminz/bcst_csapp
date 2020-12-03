@@ -6,7 +6,7 @@
 #include<stdint.h>
 
 #define DEBUG_INSTRUCTIONCYCLE      0x1
-#define DBBUG_REGISTERS             0x2
+#define DEBUG_REGISTERS             0x2
 #define DEBUG_PRINTSTACK            0x4
 #define DEBUG_PRINTCACHESET         0x8
 #define DEBUG_CACHEDETAILS          0x10
@@ -15,7 +15,7 @@
 #define DEBUG_LOADER                0x80
 #define DEBUG_PARSEINST             0x100
 
-#define DEBUG_VERBOSE_SET           0x41
+#define DEBUG_VERBOSE_SET           0x1
 
 // do page walk
 #define DEBUG_ENABLE_PAGE_WALK      0

@@ -397,7 +397,7 @@ void instruction_cycle(core_t *cr)
 
 void print_register(core_t *cr)
 {
-    if ((DEBUG_VERBOSE_SET & DBBUG_REGISTERS) == 0x0)
+    if ((DEBUG_VERBOSE_SET & DEBUG_REGISTERS) == 0x0)
     {
         return;
     }

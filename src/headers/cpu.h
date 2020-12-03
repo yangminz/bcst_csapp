@@ -184,21 +184,6 @@ typedef struct REGISTER_STRUCT
 } reg_t;
 
 /*======================================*/
-/*      sram cache                      */
-/*======================================*/
-
-/*
-The components of a SRAM cache address:
-Note: SRAM cache address is the translated physical address
-
-|   TAG_LEN     |   INDEX_LEN   |   OFFSET_LEN  |
-+---------------+---------------+---------------+
-|   tag         |   index       |   offset      |
-+---------------+---------------+---------------+
-|   ADDR_LEN                                    |
-*/
-
-/*======================================*/
 /*      cpu core                        */
 /*======================================*/
 
@@ -249,7 +234,6 @@ typedef struct CORE_STRUCT
 
     // register files
     reg_t       reg;
-    uint64_t    pdbr;   // page directory base register
 } core_t;
 
 // define cpu core array to support core level parallelism
@@ -265,7 +249,7 @@ uint64_t ACTIVE_CORE;
 void instruction_cycle(core_t *cr);
 
 /*--------------------------------------*/
-// palace the functions here because they requires the core_t type
+// place the functions here because they requires the core_t type
 
 /*--------------------------------------*/
 // mmu functions
