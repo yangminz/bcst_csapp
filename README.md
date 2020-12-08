@@ -2,7 +2,7 @@
 
 *Copyright Declaration*
 
-This repository is a part of BCST project. BCST project contains the source code and videos produced by yangminz. The videos are published publicly on the bilibili by (yaaangmin): [https://space.bilibili.com/4564101]. The source code are published on github (yangminz): [https://github.com/yangminz]. Any repository and video under BCST project is exclusively owned by yangminz and shall not be used for commercial and profitting purpose without yangminz's permit.
+This repository is a part of BCST project. BCST project contains the source code and videos produced by yangminz. The videos are published publicly on the bilibili by (yaaangmin): [https://space.bilibili.com/4564101]. The source code are published on github (yangminz): [https://github.com/yangminz]. Any repository and video under BCST project is exclusively owned by yangminz and shall not be used for commercial and profitting purpose without yangminz's permission.
 
 **Foundation of Computer System - Computer System A Programmer's Perspective (CSAPP)**
 
@@ -27,3 +27,5 @@ This repository aims to give an introduction to the computer science text book: 
 `0x06` First run of the simulator - The interface to access memory and `call` instruction: [https://www.bilibili.com/video/BV1vK4y1E7sy/] (2020-11-06)
 
 `0x07` The relationship between Recursion and Tree and Stack - `push` instruction: [https://www.bilibili.com/video/BV1tz4y1y7JZ/] (2020-11-18)
+
+`0x08` First refactory of the code base - complete `pop` and `ret` instructions, converting from im-memory instruction structures to string encoded assembly instructions: [https://www.bilibili.com/video/BV1WK41137JT/] (2020-12-04)
