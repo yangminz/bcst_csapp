@@ -413,7 +413,7 @@ void instruction_cycle(core_t *cr)
 {
     // FETCH: get the instruction string by program counter
     const char *inst_str = (const char *)cr->rip;
-    debug_printf(DEBUG_INSTRUCTIONCYCLE, "%lx    %s\n", cr->rip, inst_str);
+    debug_printf(DEBUG_INSTRUCTIONCYCLE, "%8lx    %s\n", cr->rip, inst_str);
 
     // DECODE: decode the run-time instruction operands
     inst_t inst;

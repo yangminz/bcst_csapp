@@ -29,3 +29,5 @@ This repository aims to give an introduction to the computer science text book: 
 `0x07` The relationship between Recursion and Tree and Stack - `push` instruction: [https://www.bilibili.com/video/BV1tz4y1y7JZ/] (2020-11-18)
 
 `0x08` First refactory of the code base - complete `pop` and `ret` instructions, converting from im-memory instruction structures to string encoded assembly instructions: [https://www.bilibili.com/video/BV1WK41137JT/] (2020-12-04)
+
+`0x09` Use Deterministic Finite Automata to parse the immediate number string, applicable for future ELF file parsing: [https://www.bilibili.com/video/BV1ty4y1S7z1/] (2020-12-08)

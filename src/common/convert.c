@@ -46,8 +46,9 @@ uint64_t string2uint_range(const char *str, int start, int end)
                 sign_bit = 1;
                 continue;
             }
-            else if (c == ' ')
+            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
             {
+                // skip leading spaces
                 state = 0;
                 continue;
             }
@@ -155,12 +156,18 @@ uint64_t string2uint_range(const char *str, int start, int end)
                 }
                 continue;
             }
+            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            {
+                state = 6;
+                continue;
+            }
             else { goto fail; }
         }
         else if (state == 6)
         {
-            if (c == ' ')
+            if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
             {
+                // skip tailing spaces
                 state = 6;
                 continue;
             }
