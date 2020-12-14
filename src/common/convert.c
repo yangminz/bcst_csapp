@@ -1,3 +1,13 @@
+/* BCST - Introduction to Computer Systems
+ * Author:      yangminz@outlook.com
+ * Github:      https://github.com/yangminz/bcst_csapp
+ * Bilibili:    https://space.bilibili.com/4564101
+ * Zhihu:       https://www.zhihu.com/people/zhao-yang-min
+ * This project (code repository and videos) is exclusively owned by yangminz 
+ * and shall not be used for commercial and profitting purpose 
+ * without yangminz's permission.
+ */
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdint.h>
@@ -56,6 +66,7 @@ uint64_t string2uint_range(const char *str, int start, int end)
         }
         else if (state == 1)
         {
+            // check zero
             if ('0' <= c && c <= '9')
             {
                 state = 2;
@@ -76,6 +87,7 @@ uint64_t string2uint_range(const char *str, int start, int end)
         }
         else if (state == 2)
         {
+            // dec number
             if ('0' <= c && c <= '9')
             {
                 state = 2;
@@ -98,6 +110,7 @@ uint64_t string2uint_range(const char *str, int start, int end)
         }
         else if (state == 3)
         {
+            // negative
             if (c == '0')
             {
                 state = 1;
@@ -111,25 +124,9 @@ uint64_t string2uint_range(const char *str, int start, int end)
             }
             else { goto fail; }
         }
-        else if (state == 4)
+        else if (state == 4 || state == 5)
         {
-            if ('0' <= c && c <= '9')
-            {
-                state = 5;
-                uv = uv * 16 + c - '0';
-                continue;
-            }
-            else if ('a' <= c && c <= 'f')
-            {
-                state = 5;
-                uv = uv * 16 + c - 'a' + 10;
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 5)
-        {
-            // hex
+            // hex number
             if ('0' <= c && c <= '9')
             {
                 state = 5;
@@ -156,7 +153,7 @@ uint64_t string2uint_range(const char *str, int start, int end)
                 }
                 continue;
             }
-            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            else if (state == 5 && (c == ' ' || c == '\t' || c == '\r' || c == '\n'))
             {
                 state = 6;
                 continue;
