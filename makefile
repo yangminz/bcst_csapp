@@ -17,7 +17,7 @@ MAIN_HARDWARE = $(SRC_DIR)/main_hardware.c
 
 .PHONY:hardware
 hardware:
-	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(CPU) $(MEMORY) $(DISK) $(MAIN_HARDWARE) -o $(EXE_HARDWARE)
+	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(CPU) $(MEMORY) $(MAIN_HARDWARE) -o $(EXE_HARDWARE)
 	./$(EXE_HARDWARE)
 
 clean:
