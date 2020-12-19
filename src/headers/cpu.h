@@ -253,8 +253,7 @@ typedef struct CORE_STRUCT
         uint32_t eip;
     };
     
-    // condition code flags of most recent (latest) operation
-    // condition codes will only be set by the following integer arithmetic instructions
+    // cpu flags
     cpu_flag_t flags;
 
     // register files

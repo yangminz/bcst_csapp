@@ -75,6 +75,60 @@ typedef struct INST_STRUCT
 /*      parse assembly instruction      */
 /*======================================*/
 
+// lookup table
+static const char *reg_name_list[72] = {
+    "%rax","%eax","%ax","%ah","%al",
+    "%rbx","%ebx","%bx","%bh","%bl",
+    "%rcx","%ecx","%cx","%ch","%cl",
+    "%rdx","%edx","%dx","%dh","%dl",
+    "%rsi","%esi","%si","%sih","%sil",
+    "%rdi","%edi","%di","%dih","%dil",
+    "%rbp","%ebp","%bp","%bph","%bpl",
+    "%rsp","%esp","%sp","%sph","%spl",
+    "%r8","%r8d","%r8w","%r8b",
+    "%r9","%r9d","%r9w","%r9b",
+    "%r10","%r10d","%r10w","%r10b",
+    "%r11","%r11d","%r11w","%r11b",
+    "%r12","%r12d","%r12w","%r12b",
+    "%r13","%r13d","%r13w","%r13b",
+    "%r14","%r14d","%r14w","%r14b",
+    "%r15","%r15d","%r15w","%r15b",
+};
+// reflection
+static uint64_t reflect_register(const char *reg_name, core_t *cr)
+{
+    // lookup table
+    reg_t *reg = &(cr->reg);
+    uint64_t reg_addr[72] = {
+        (uint64_t)&(reg->rax),(uint64_t)&(reg->eax),(uint64_t)&(reg->ax),(uint64_t)&(reg->ah),(uint64_t)&(reg->al),
+        (uint64_t)&(reg->rbx),(uint64_t)&(reg->ebx),(uint64_t)&(reg->bx),(uint64_t)&(reg->bh),(uint64_t)&(reg->bl),
+        (uint64_t)&(reg->rcx),(uint64_t)&(reg->ecx),(uint64_t)&(reg->cx),(uint64_t)&(reg->ch),(uint64_t)&(reg->cl),
+        (uint64_t)&(reg->rdx),(uint64_t)&(reg->edx),(uint64_t)&(reg->dx),(uint64_t)&(reg->dh),(uint64_t)&(reg->dl),
+        (uint64_t)&(reg->rsi),(uint64_t)&(reg->esi),(uint64_t)&(reg->si),(uint64_t)&(reg->sih),(uint64_t)&(reg->sil),
+        (uint64_t)&(reg->rdi),(uint64_t)&(reg->edi),(uint64_t)&(reg->di),(uint64_t)&(reg->dih),(uint64_t)&(reg->dil),
+        (uint64_t)&(reg->rbp),(uint64_t)&(reg->ebp),(uint64_t)&(reg->bp),(uint64_t)&(reg->bph),(uint64_t)&(reg->bpl),
+        (uint64_t)&(reg->rsp),(uint64_t)&(reg->esp),(uint64_t)&(reg->sp),(uint64_t)&(reg->sph),(uint64_t)&(reg->spl),
+        (uint64_t)&(reg->r8),(uint64_t)&(reg->r8d),(uint64_t)&(reg->r8w),(uint64_t)&(reg->r8b),
+        (uint64_t)&(reg->r9),(uint64_t)&(reg->r9d),(uint64_t)&(reg->r9w),(uint64_t)&(reg->r9b),
+        (uint64_t)&(reg->r10),(uint64_t)&(reg->r10d),(uint64_t)&(reg->r10w),(uint64_t)&(reg->r10b),
+        (uint64_t)&(reg->r11),(uint64_t)&(reg->r11d),(uint64_t)&(reg->r11w),(uint64_t)&(reg->r11b),
+        (uint64_t)&(reg->r12),(uint64_t)&(reg->r12d),(uint64_t)&(reg->r12w),(uint64_t)&(reg->r12b),
+        (uint64_t)&(reg->r13),(uint64_t)&(reg->r13d),(uint64_t)&(reg->r13w),(uint64_t)&(reg->r13b),
+        (uint64_t)&(reg->r14),(uint64_t)&(reg->r14d),(uint64_t)&(reg->r14w),(uint64_t)&(reg->r14b),
+        (uint64_t)&(reg->r15),(uint64_t)&(reg->r15d),(uint64_t)&(reg->r15w),(uint64_t)&(reg->r15b),
+    };
+
+    for (int i = 0; i < 72; ++ i)
+    {
+        if (strcmp(reg_name, reg_name_list[i]) == 0)
+        {
+            return reg_addr[i];
+        }
+    }
+    debug_printf(DEBUG_PARSEINST, "parse operand %s\n    cannot parse register %s\n", reg_name);
+    exit(0);
+}
+
 // functions to map the string assembly code to inst_t instance
 static void parse_instruction(const char *str, inst_t *inst, core_t *cr);
 static void parse_operand(const char *str, od_t *od, core_t *cr);
@@ -145,70 +199,16 @@ static uint64_t decode_operand(od_t *od)
     return 0;
 }
 
-
-// lookup table
-static const char *reg_name_list[72] = {
-    "%rax","%eax","%ax","%ah","%al",
-    "%rbx","%ebx","%bx","%bh","%bl",
-    "%rcx","%ecx","%cx","%ch","%cl",
-    "%rdx","%edx","%dx","%dh","%dl",
-    "%rsi","%esi","%si","%sih","%sil",
-    "%rdi","%edi","%di","%dih","%dil",
-    "%rbp","%ebp","%bp","%bph","%bpl",
-    "%rsp","%esp","%sp","%sph","%spl",
-    "%r8","%r8d","%r8w","%r8b",
-    "%r9","%r9d","%r9w","%r9b",
-    "%r10","%r10d","%r10w","%r10b",
-    "%r11","%r11d","%r11w","%r11b",
-    "%r12","%r12d","%r12w","%r12b",
-    "%r13","%r13d","%r13w","%r13b",
-    "%r14","%r14d","%r14w","%r14b",
-    "%r15","%r15d","%r15w","%r15b",
-};
-static uint64_t reflect_register(const char *str, core_t *cr)
-{    
-    // lookup table
-    reg_t *reg = &(cr->reg);
-    uint64_t reg_addr[72] = {
-        (uint64_t)&(reg->rax),(uint64_t)&(reg->eax),(uint64_t)&(reg->ax),(uint64_t)&(reg->ah),(uint64_t)&(reg->al),
-        (uint64_t)&(reg->rbx),(uint64_t)&(reg->ebx),(uint64_t)&(reg->bx),(uint64_t)&(reg->bh),(uint64_t)&(reg->bl),
-        (uint64_t)&(reg->rcx),(uint64_t)&(reg->ecx),(uint64_t)&(reg->cx),(uint64_t)&(reg->ch),(uint64_t)&(reg->cl),
-        (uint64_t)&(reg->rdx),(uint64_t)&(reg->edx),(uint64_t)&(reg->dx),(uint64_t)&(reg->dh),(uint64_t)&(reg->dl),
-        (uint64_t)&(reg->rsi),(uint64_t)&(reg->esi),(uint64_t)&(reg->si),(uint64_t)&(reg->sih),(uint64_t)&(reg->sil),
-        (uint64_t)&(reg->rdi),(uint64_t)&(reg->edi),(uint64_t)&(reg->di),(uint64_t)&(reg->dih),(uint64_t)&(reg->dil),
-        (uint64_t)&(reg->rbp),(uint64_t)&(reg->ebp),(uint64_t)&(reg->bp),(uint64_t)&(reg->bph),(uint64_t)&(reg->bpl),
-        (uint64_t)&(reg->rsp),(uint64_t)&(reg->esp),(uint64_t)&(reg->sp),(uint64_t)&(reg->sph),(uint64_t)&(reg->spl),
-        (uint64_t)&(reg->r8),(uint64_t)&(reg->r8d),(uint64_t)&(reg->r8w),(uint64_t)&(reg->r8b),
-        (uint64_t)&(reg->r9),(uint64_t)&(reg->r9d),(uint64_t)&(reg->r9w),(uint64_t)&(reg->r9b),
-        (uint64_t)&(reg->r10),(uint64_t)&(reg->r10d),(uint64_t)&(reg->r10w),(uint64_t)&(reg->r10b),
-        (uint64_t)&(reg->r11),(uint64_t)&(reg->r11d),(uint64_t)&(reg->r11w),(uint64_t)&(reg->r11b),
-        (uint64_t)&(reg->r12),(uint64_t)&(reg->r12d),(uint64_t)&(reg->r12w),(uint64_t)&(reg->r12b),
-        (uint64_t)&(reg->r13),(uint64_t)&(reg->r13d),(uint64_t)&(reg->r13w),(uint64_t)&(reg->r13b),
-        (uint64_t)&(reg->r14),(uint64_t)&(reg->r14d),(uint64_t)&(reg->r14w),(uint64_t)&(reg->r14b),
-        (uint64_t)&(reg->r15),(uint64_t)&(reg->r15d),(uint64_t)&(reg->r15w),(uint64_t)&(reg->r15b),
-    };
-    for (int i = 0; i < 72; ++ i)
-    {
-        if (strcmp(str, reg_name_list[i]) == 0)
-        {
-            // now we know that i is the index inside reg_name_list
-            return reg_addr[i];
-        }
-    }
-    printf("parse register %s error\n", str);
-    exit(0);
-}
-
 static void parse_instruction(const char *str, inst_t *inst, core_t *cr)
 {
     
 }
 
+// parse the string assembly operand to od_t instance
 static void parse_operand(const char *str, od_t *od, core_t *cr)
 {
-    // str: assembly code string, e.g. mov $rsp,$rbp
-    // od: pointer to the address to store the parsed operand
-    // cr: active core processor
+    // str: the stripped compact operand string: turned to lower cases before parsing
+    // od: the data structure to store operand
     od->type = EMPTY;
     od->imm = 0;
     od->scal = 0;
@@ -218,185 +218,146 @@ static void parse_operand(const char *str, od_t *od, core_t *cr)
     int str_len = strlen(str);
     if (str_len == 0)
     {
-        // empty operand string
+        // empty operand
         return;
-    }
-
+    }    
+    
+    // parse the operand string
     if (str[0] == '$')
     {
         // immediate number
         od->type = IMM;
-        // try to parse the immediate number
+        // try to parse the immediate number 64
+        // condition short cut would not bring extra burden
         od->imm = string2uint_range(str, 1, -1);
-        return;
     }
     else if (str[0] == '%')
     {
         // register
         od->type = REG;
+        // match the correct register name
         od->reg1 = reflect_register(str, cr);
         return;
     }
     else
     {
-        // memory access
+        // should be a memory format, but check it
+        // split imm(reg1,reg2,scal)
         char imm[64] = {'\0'};
         int imm_len = 0;
-        char reg1[64] = {'\0'};
+        char reg1[8] = {'\0'};
         int reg1_len = 0;
-        char reg2[64] = {'\0'};
+        char reg2[8] = {'\0'};
         int reg2_len = 0;
-        char scal[64] = {'\0'};
+        char scal[2] = {'\0'};
         int scal_len = 0;
 
-        int ca = 0; // ()
-        int cb = 0; // comma ,
-
+        int count_parentheses = 0;
+        int count_comma = 0;
+        // scan
         for (int i = 0; i < str_len; ++ i)
         {
-            char c = str[i];
-
-            if (c == '(' || c == ')')
+            if (str[i] == '(' || str[i] == ')')
             {
-                ca ++;
+                count_parentheses ++;
+                continue;
+            }            
+            else if (str[i] == ',')
+            {
+                count_comma ++;
                 continue;
             }
-            else if (c == ',')
+            else
             {
-                cb ++;
-                continue;
-            }
-            else 
-            {
-                // parse imm(reg1,reg2,scal)
-                if (ca == 0)
+                if (count_parentheses == 0)
                 {
-                    // xxx
-                    imm[imm_len] = c;
+                    // imm
+                    imm[imm_len] = str[i];
                     imm_len ++;
-                    continue;
                 }
-                else if (ca == 1)
+                else if (count_parentheses == 1)
                 {
-                    if (cb == 0)
+                    if (count_comma == 0)
                     {
-                        // ???(xxxx
-                        // (xxxx
-                        reg1[reg1_len] = c;
+                        // ...(reg1
+                        reg1[reg1_len] = str[i];
                         reg1_len ++;
-                        continue;
                     }
-                    else if (cb == 1)
+                    else if (count_comma == 1)
                     {
-                        // (???,xxxxx
-                        // ???(???,xxxxx
-                        // (,xxxxx
-                        // ???(,xxxxx
-                        reg2[reg2_len] = c;
+                        // ...(...,reg2
+                        reg2[reg2_len] = str[i];
                         reg2_len ++;
-                        continue;
                     }
-                    else if (cb == 2)
+                    else if (count_comma == 2)
                     {
-                        // (???,???,xxxxx
-                        scal[scal_len] = c;
+                        // ...(...,...,scal
+                        scal[scal_len] = str[i];
                         scal_len ++;
                     }
                 }
             }
         }
 
-        // imm, reg1, reg2, scal
-
+        // parse imm
         if (imm_len > 0)
         {
             od->imm = string2uint(imm);
-            if (ca == 0)
+            if (count_parentheses == 0)
             {
                 // imm
                 od->type = MEM_IMM;
                 return;
             }
         }
-
+        // parse scale
         if (scal_len > 0)
         {
-            od->scal = string2uint(scal);
-            if (od->scal != 1 && od->scal != 2 && od->scal != 4  && od->scal != 8)
+            od->imm = string2uint(scal);
+            if (od->scal != 1 && od->scal != 2 && od->scal != 4 && od->scal != 8)
             {
-                printf("%s is not a legal scaler\n", scal);
+                debug_printf(DEBUG_PARSEINST, "parse operand %s\n    scale number %s must be 1,2,4,8\n", scal);
                 exit(0);
             }
         }
-
+        // parse reg1
         if (reg1_len > 0)
         {
             od->reg1 = reflect_register(reg1, cr);
         }
-
+        // parse reg2
         if (reg2_len > 0)
         {
             od->reg2 = reflect_register(reg2, cr);
         }
 
-        // set operand type
-        if (cb == 0)
+        // set types
+        if (count_comma == 0)
         {
-            if (imm_len > 0)
-            {
-                od->type = MEM_IMM_REG1;
-                return;
-            }
-            else 
-            {
-                od->type = MEM_REG1;
-                return;
-            }
+            // (r)
+            od->type = MEM_REG1;
         }
-        else if (cb == 1)
+        else if (count_comma == 1)
         {
-            if (imm_len > 0)
-            {
-                od->type = MEM_IMM_REG1_REG2;
-                return;
-            }
-            else 
-            {
-                od->type = MEM_REG1_REG2;
-                return;
-            }
+            // (r,r)
+            od->type = MEM_REG1_REG2;
         }
-        else if (cb == 2)
+        else if (count_comma == 2)
         {
-            if (reg1_len > 0)
+            if (reg1_len == 0)
             {
-                // reg1 exists
-                if (imm_len > 0)
-                {
-                    od->type = MEM_IMM_REG1_REG2_SCAL;
-                    return;
-                }
-                else 
-                {
-                    od->type = MEM_REG1_REG2_SCAL;
-                    return;
-                }
+                // (,r,s)
+                od->type = MEM_REG2_SCAL;
             }
             else
             {
-                // no reg1
-                if (imm_len > 0)
-                {
-                    od->type = MEM_IMM_REG2_SCAL;
-                    return;
-                }
-                else 
-                {
-                    od->type = MEM_REG2_SCAL;
-                    return;
-                }
-            }            
+                // (r,r,s)
+                od->type = MEM_REG1_REG2_SCAL;
+            }
         }
+        // bias 1 for MEM_IMM_[.*]
+        if (imm_len > 0)
+        od->type ++;
     }
 }
 

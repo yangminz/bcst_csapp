@@ -1,6 +1,6 @@
-exe_linker
-exe_hardware
 /.vscode
+/files/swapfiles/*.page.txt
+/bin
 
 # Prerequisites
 *.d
