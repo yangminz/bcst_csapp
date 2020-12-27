@@ -31,3 +31,37 @@ This repository aims to give an introduction to the computer science text book: 
 `0x08` First refactory of the code base - complete `pop` and `ret` instructions, converting from im-memory instruction structures to string encoded assembly instructions: [https://www.bilibili.com/video/BV1WK41137JT/] (2020-12-04)
 
 `0x09` Use Deterministic Finite Automata to parse the immediate number string, applicable for future ELF file parsing: [https://www.bilibili.com/video/BV1ty4y1S7z1/] (2020-12-08)
+
+`0x0A` Parse the stringfied assembly operands: Register and Memory formats: [https://www.bilibili.com/video/BV1zT4y1M7GE] (2020-12-18)
+
+**References**
+
+Refer to these books for deeper understanding, as well as better implementation:
+
+1. **Computer Systems: A Programmer's Perspective, Third Edition**, *Randal E. Bryant and David R. O'Hallaron*, Carnegie Mellon University
+
+This is the main text book we are using overall.
+
+2. **Operating System Concepts, Tenth Edition**, *Avi Silberschatz, Peter Baer Galvin and Greg Gagne*, John Wiley & Sons, Inc.
+
+This is a famous OS textbook. We will use this textbook for better understanding on process and virtual memory.
+
+3. **Operating Systems: Three Easy Pieces**, *Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau* (University of Wisconsin-Madison)
+
+The authors are couple. They publish this textbook [free online](http://pages.cs.wisc.edu/~remzi/OSTEP/). We are implementing several components from this textbook: process context switching, virutal memory swapping.
+
+3. **Linker and Libraries Guide**, *Sun Microsystems, Inc.*
+
+This guide can help us specify the format of Executable and Linkable Formats and implement the static linking: symbol processing, simple resolution, relocation processing.
+
+5. **Compilers: Principles, Techniques, and Tools**, *Alfred V. Aho, Monica S. Lam, Ravi Sethi, and Jeffrey D. Ullman*, Pearson Education, Inc
+
+We use this compiler's textbook to implement DFA for type converter: `uint64_t string2uint(const char *str)`.
+
+6. **Understanding the Linux Kernel, Second Edition**, *Daniel P. Bovet and Marco Cesati*
+
+This book describes the Linux kernel in detail, will help our understanding of Linux.
+
+7. **Windows Internals Seventh Edition**, *Pavel Yosifovich, Alex Ionescu, Mark E. Russinovich, David A. Solomon*, Microsoft Press
+
+It's good to see the implementation of another OS.
