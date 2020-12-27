@@ -1,7 +1,7 @@
 CC = /usr/bin/gcc-7
 CFLAGS = -Wall -g -O2 -Werror -std=gnu99 -Wno-unused-function
 
-TARGET_HARDWARE = ./bin/test_hardware
+BIN_HARDWARE = ./bin/test_hardware
 
 SRC_DIR = ./src
 
