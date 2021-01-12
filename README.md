@@ -34,6 +34,10 @@ This repository aims to give an introduction to the computer science text book: 
 
 `0x0A` Parse the stringfied assembly operands: Register and Memory formats: [https://www.bilibili.com/video/BV1zT4y1M7GE] (2020-12-18)
 
+`0x0B` End of parsing instructions; Conditional codes in CPU [https://www.bilibili.com/video/BV1Qf4y1e73j] (2020-12-27)
+
+`0x0C` End of Part 1: jmp, jne, leave instructions; Completion of recursive function call [https://www.bilibili.com/video/BV1Ey4y1v7aG] (2021-01-04)
+
 **References**
 
 Refer to these books for deeper understanding, as well as better implementation:

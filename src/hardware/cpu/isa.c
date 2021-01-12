@@ -132,10 +132,10 @@ static uint64_t reflect_register(const char *reg_name, core_t *cr)
 // functions to map the string assembly code to inst_t instance
 static void parse_instruction(const char *str, inst_t *inst, core_t *cr);
 static void parse_operand(const char *str, od_t *od, core_t *cr);
-static uint64_t decode_operand(od_t *od);
+static uint64_t compute_operand(od_t *od);
 
 // interpret the operand
-static uint64_t decode_operand(od_t *od)
+static uint64_t compute_operand(od_t *od)
 {
     if (od->type == IMM)
     {
@@ -532,8 +532,8 @@ static inline void next_rip(core_t *cr)
 
 static void mov_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    uint64_t dst = compute_operand(dst_od);
 
     if (src_od->type == REG && dst_od->type == REG)
     {
@@ -581,8 +581,8 @@ static void mov_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void push_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    // uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    // uint64_t dst = compute_operand(dst_od);
 
     if (src_od->type == REG)
     {
@@ -602,8 +602,8 @@ static void push_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void pop_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    // uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    // uint64_t dst = compute_operand(dst_od);
     
     if (src_od->type == REG)
     {
@@ -639,8 +639,8 @@ static void leave_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void call_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    // uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    // uint64_t dst = compute_operand(dst_od);
 
     // src: immediate number: virtual address of target function starting
     // dst: empty
@@ -658,8 +658,8 @@ static void call_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void ret_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    // uint64_t src = decode_operand(src_od);
-    // uint64_t dst = decode_operand(dst_od);
+    // uint64_t src = compute_operand(src_od);
+    // uint64_t dst = compute_operand(dst_od);
 
     // src: empty
     // dst: empty
@@ -676,8 +676,8 @@ static void ret_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void add_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    uint64_t dst = compute_operand(dst_od);
 
     if (src_od->type == REG && dst_od->type == REG)
     {
@@ -706,8 +706,8 @@ static void add_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void sub_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    uint64_t dst = compute_operand(dst_od);
 
     if (src_od->type == IMM && dst_od->type == REG)
     {
@@ -739,8 +739,8 @@ static void sub_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void cmp_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
-    uint64_t dst = decode_operand(dst_od);
+    uint64_t src = compute_operand(src_od);
+    uint64_t dst = compute_operand(dst_od);
 
     if (src_od->type == IMM && dst_od->type >= MEM_IMM)
     {
@@ -771,7 +771,7 @@ static void cmp_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void jne_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
+    uint64_t src = compute_operand(src_od);
 
     // src_od is actually a instruction memory address
     // but we are interpreting it as an immediate number
@@ -790,7 +790,7 @@ static void jne_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void jmp_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
-    uint64_t src = decode_operand(src_od);
+    uint64_t src = compute_operand(src_od);
     cr->rip = src;
     cr->flags.__cpu_flag_value = 0;
 }
