@@ -22,7 +22,7 @@ e.g. write 0x00007fd357a02ae0 to cache, the memory lapping should be:
 */
 
 // memory accessing used in instructions
-uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
+uint64_t read64bits_dram(uint64_t paddr)
 {
     if (DEBUG_ENABLE_SRAM_CACHE == 1)
     {
@@ -48,7 +48,7 @@ uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
     }
 }
 
-void write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
+void write64bits_dram(uint64_t paddr, uint64_t data)
 {
     if (DEBUG_ENABLE_SRAM_CACHE == 1)
     {
@@ -70,7 +70,7 @@ void write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
     }
 }
 
-void readinst_dram(uint64_t paddr, char *buf, core_t *cr)
+void readinst_dram(uint64_t paddr, char *buf)
 {
     for (int i = 0; i < MAX_INSTRUCTION_CHAR; ++ i)
     {
@@ -78,7 +78,7 @@ void readinst_dram(uint64_t paddr, char *buf, core_t *cr)
     }
 }
 
-void writeinst_dram(uint64_t paddr, const char *str, core_t *cr)
+void writeinst_dram(uint64_t paddr, const char *str)
 {
     int len = strlen(str);
     assert(len < MAX_INSTRUCTION_CHAR);

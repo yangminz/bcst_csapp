@@ -16,7 +16,7 @@
 #include<headers/memory.h>
 #include<headers/common.h>
 
-uint64_t va2pa(uint64_t vaddr, core_t *cr)
+uint64_t va2pa(uint64_t vaddr)
 {
     return vaddr % PHYSICAL_MEMORY_SPACE;
 }
