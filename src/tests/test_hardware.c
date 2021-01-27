@@ -145,7 +145,7 @@ static void TestSumRecursiveCondition()
     cpu_reg.rbp = 0x7ffffffee230;
     cpu_reg.rsp = 0x7ffffffee220;
 
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 
     write64bits_dram(va2pa(0x7ffffffee230), 0x0000000008000650);    // rbp
     write64bits_dram(va2pa(0x7ffffffee228), 0x0000000000000000);

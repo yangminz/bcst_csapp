@@ -23,7 +23,7 @@
 // struct of registers in each core
 // resource accessible to the core itself only
 
-struct REGISTER_STRUCT 
+typedef struct 
 {
     // return value
     union 
@@ -191,7 +191,8 @@ struct REGISTER_STRUCT
         uint16_t r15w;
         uint8_t  r15b;
     };
-} cpu_reg;
+} cpu_reg_t;
+cpu_reg_t cpu_reg;
 
 /*======================================*/
 /*      cpu core                        */
@@ -225,31 +226,30 @@ struct REGISTER_STRUCT
 */
 
 // the 4 flags be a uint64_t in total
-struct CPU_FLAGS_STRUCT
+typedef union
 {
-    union
-    {
-        uint64_t __cpu_flag_value;
-        struct
-        {    
-            // carry flag: detect overflow for unsigned operations
-            uint16_t CF;
-            // zero flag: result is zero
-            uint16_t ZF;
-            // sign flag: result is negative: highest bit
-            uint16_t SF;
-            // overflow flag: detect overflow for signed operations
-            uint16_t OF;
-        };
-    };
-} cpu_flags;
+    uint64_t __flags_value;
+    struct
+    {    
+        // carry flag: detect overflow for unsigned operations
+        uint16_t CF;
+        // zero flag: result is zero
+        uint16_t ZF;
+        // sign flag: result is negative: highest bit
+        uint16_t SF;
+        // overflow flag: detect overflow for signed operations
+        uint16_t OF;
+    };        
+} cpu_flags_t;
+cpu_flags_t cpu_flags;
 
 // program counter or instruction pointer
-union PROGRAM_COUNTER_UNION
+typedef union
 {
     uint64_t rip;
     uint32_t eip;
-} cpu_pc;
+} cpu_pc_t;
+cpu_pc_t cpu_pc;
 
 // move to common.h to be shared by linker
 // #define MAX_INSTRUCTION_CHAR 64

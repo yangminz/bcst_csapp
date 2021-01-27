@@ -540,7 +540,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         // dst: register
         *(uint64_t *)dst = *(uint64_t *)src;
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
     else if (src_od->type == REG && dst_od->type >= MEM_IMM)
@@ -551,7 +551,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
             va2pa(dst), 
             *(uint64_t *)src);
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
     else if (src_od->type >= MEM_IMM && dst_od->type == REG)
@@ -560,7 +560,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         // dst: register
         *(uint64_t *)dst = read64bits_dram(va2pa(src));
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
     else if (src_od->type == IMM && dst_od->type == REG)
@@ -569,7 +569,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         // dst: register
         *(uint64_t *)dst = src;
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
 }
@@ -588,7 +588,7 @@ static void push_handler(od_t *src_od, od_t *dst_od)
             va2pa(cpu_reg.rsp), 
             *(uint64_t *)src);
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
 }
@@ -607,7 +607,7 @@ static void pop_handler(od_t *src_od, od_t *dst_od)
         cpu_reg.rsp = cpu_reg.rsp + 8;
         *(uint64_t *)src = old_val;
         increase_pc();
-        cpu_flags.__cpu_flag_value = 0;
+        cpu_flags.__flags_value = 0;
         return;
     }
 }
@@ -623,7 +623,7 @@ static void leave_handler(od_t *src_od, od_t *dst_od)
     cpu_reg.rsp = cpu_reg.rsp + 8;
     cpu_reg.rbp = old_val;
     increase_pc();
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 }
 
 static void call_handler(od_t *src_od, od_t *dst_od)
@@ -640,7 +640,7 @@ static void call_handler(od_t *src_od, od_t *dst_od)
         cpu_pc.rip + sizeof(char) * MAX_INSTRUCTION_CHAR);
     // jump to target function address
     cpu_pc.rip = src;
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 }
 
 static void ret_handler(od_t *src_od, od_t *dst_od)
@@ -656,7 +656,7 @@ static void ret_handler(od_t *src_od, od_t *dst_od)
     cpu_reg.rsp = cpu_reg.rsp + 8;
     // jump to return address
     cpu_pc.rip = ret_addr;
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 }
 
 static void add_handler(od_t *src_od, od_t *dst_od)
@@ -770,14 +770,14 @@ static void jne_handler(od_t *src_od, od_t *dst_od)
         // last instruction value == 0
         increase_pc();
     }
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 }
 
 static void jmp_handler(od_t *src_od, od_t *dst_od)
 {
     uint64_t src = compute_operand(src_od);
     cpu_pc.rip = src;
-    cpu_flags.__cpu_flag_value = 0;
+    cpu_flags.__flags_value = 0;
 }
 
 // instruction cycle is implemented in CPU
