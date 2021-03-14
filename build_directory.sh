@@ -1,1 +1,1 @@
-mkdir -p ./bin ./files/swapfiles ./files/executable
+mkdir -p ./bin ./files/swap ./files/exe

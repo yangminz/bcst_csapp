@@ -20,5 +20,10 @@ hardware:
 	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(CPU) $(MEMORY) $(TEST_HARDWARE) -o $(BIN_HARDWARE)
 	./$(BIN_HARDWARE)
 
+.PHONY:link
+link:
+	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(SRC_DIR)/tests/test_elf.c $(SRC_DIR)/linker/parseElf.c -o ./bin/test_elf
+	./bin/test_elf
+
 clean:
 	rm -f *.o *~ $(BIN_HARDWARE)
