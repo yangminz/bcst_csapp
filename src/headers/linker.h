@@ -61,6 +61,7 @@ typedef struct
     char buffer[MAX_ELF_FILE_LENGTH][MAX_ELF_FILE_WIDTH];
     uint64_t line_count;
 
+    uint64_t sht_count;
     sh_entry_t *sht;
 } elf_t;
 
