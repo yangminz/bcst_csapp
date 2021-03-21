@@ -6,8 +6,9 @@
 #include<headers/linker.h>
 #include<headers/common.h>
 
-int parse_table_entry(char *str, char ***ent)
+static int parse_table_entry(char *str, char ***ent)
 {
+    // column0,column1,column2,column3,...
     // parse line as table entries
     int count_col = 1;
     int len = strlen(str);
@@ -57,7 +58,7 @@ int parse_table_entry(char *str, char ***ent)
     return count_col;
 }
 
-void free_table_entry(char **ent, int n)
+static void free_table_entry(char **ent, int n)
 {
     for (int i = 0; i < n; ++ i)
     {
@@ -66,12 +67,14 @@ void free_table_entry(char **ent, int n)
     free(ent);
 }
 
-void parse_sh(char *str, sh_entry_t *sh)
+static void parse_sh(char *str, sh_entry_t *sh)
 {
+    // .text,0x0,4,22
     char **cols;
     int num_cols = parse_table_entry(str, &cols);
     assert(num_cols == 4);
 
+    assert(sh != NULL);
     strcpy(sh->sh_name, cols[0]);
     sh->sh_addr = string2uint(cols[1]);
     sh->sh_offset = string2uint(cols[2]);
@@ -80,7 +83,7 @@ void parse_sh(char *str, sh_entry_t *sh)
     free_table_entry(cols, num_cols);
 }
 
-void print_sh_entry(sh_entry_t *sh)
+static void print_sh_entry(sh_entry_t *sh)
 {
     debug_printf(DEBUG_LINKER, "%s\t%x\t%d\t%d\n",
         sh->sh_name,
@@ -89,7 +92,74 @@ void print_sh_entry(sh_entry_t *sh)
         sh->sh_size);
 }
 
-int read_elf(const char *filename, uint64_t bufaddr)
+static void parse_symtab(char *str, st_entry_t *ste)
+{
+    // sum,STB_GLOBAL,STT_FUNCTION,.text,0,22
+    char **cols;
+    int num_cols = parse_table_entry(str, &cols);
+    assert(num_cols == 6);
+
+    assert(ste != NULL);
+    strcpy(ste->st_name, cols[0]);
+
+    // select symbol bind
+    if (strcmp(cols[1], "STB_LOCAL") == 0)
+    {
+        ste->bind = STB_LOCAL;
+    }
+    else if (strcmp(cols[1], "STB_GLOBAL") == 0)
+    {
+        ste->bind = STB_GLOBAL;
+    }
+    else if (strcmp(cols[1], "STB_WEAK") == 0)
+    {
+        ste->bind = STB_WEAK;
+    }
+    else
+    {
+        printf("symbol bind is neiter LOCAL, GLOBAL, nor WEAK\n");
+        exit(0);
+    }
+    
+    // select symbol type 
+    if (strcmp(cols[2], "STT_NOTYPE") == 0)
+    {
+        ste->type = STT_NOTYPE;
+    }
+    else if (strcmp(cols[2], "STT_OBJECT") == 0)
+    {
+        ste->type = STT_OBJECT;
+    }
+    else if (strcmp(cols[2], "STT_FUNC") == 0)
+    {
+        ste->type = STT_FUNC;
+    }
+    else
+    {
+        printf("symbol type is neiter NOTYPE, OBJECT, nor FUNC\n");
+        exit(0);
+    }
+
+    strcpy(ste->st_shndx, cols[3]);
+
+    ste->st_value = string2uint(cols[4]);
+    ste->st_size = string2uint(cols[5]);
+
+    free_table_entry(cols, num_cols);
+}
+
+static void print_symtab_entry(st_entry_t *ste)
+{
+    debug_printf(DEBUG_LINKER, "%s\t%d\t%d\t%s\t%d\t%d\n",
+        ste->st_name,
+        ste->bind,
+        ste->type,
+        ste->st_shndx,
+        ste->st_value,
+        ste->st_size);
+}
+
+static int read_elf(const char *filename, uint64_t bufaddr)
 {
     // open file and read
     FILE *fp;
@@ -163,6 +233,7 @@ int read_elf(const char *filename, uint64_t bufaddr)
 
 void parse_elf(char *filename, elf_t *elf)
 {
+    assert(elf != NULL);
     int line_count = read_elf(filename, (uint64_t)(&(elf->buffer)));
     for (int i = 0; i < line_count; ++ i)
     {
@@ -172,10 +243,31 @@ void parse_elf(char *filename, elf_t *elf)
     // parse section headers
     int sh_count = string2uint(elf->buffer[1]);
     elf->sht = malloc(sh_count * sizeof(sh_entry_t));
+
+    sh_entry_t *symt_sh = NULL;
     for (int i = 0; i < sh_count; ++ i)
     {
         parse_sh(elf->buffer[2 + i], &(elf->sht[i]));
         print_sh_entry(&(elf->sht[i]));
+
+        if (strcmp(elf->sht[i].sh_name, ".symtab") == 0)
+        {
+            // this is the section header for symbol table
+            symt_sh = &(elf->sht[i]);
+        }
+    }
+
+    assert(symt_sh != NULL);
+
+    // parse symbol table
+    elf->symt_count = symt_sh->sh_size;
+    elf->symt = malloc(elf->symt_count * sizeof(st_entry_t));
+    for (int i = 0; i < symt_sh->sh_size; ++ i)
+    {
+        parse_symtab(
+            elf->buffer[i + symt_sh->sh_offset],
+            &(elf->symt[i]));
+        print_symtab_entry(&(elf->symt[i]));
     }
 }
 

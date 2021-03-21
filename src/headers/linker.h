@@ -63,6 +63,12 @@ typedef struct
 
     uint64_t sht_count;
     sh_entry_t *sht;
+
+    uint64_t symt_count;
+    st_entry_t *symt;
 } elf_t;
+
+void parse_elf(char *filename, elf_t *elf);
+void free_elf(elf_t *elf);
 
 #endif

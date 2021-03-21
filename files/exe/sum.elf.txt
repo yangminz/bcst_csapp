@@ -47,5 +47,5 @@ retq
 
 // .symtab
 // st_name,bind,type,st_shndex,st_value,st_size
-sum,STB_GLOBAL,STT_FUNCTION,.text,0,22
+sum,STB_GLOBAL,STT_FUNC,.text,0,22
 bias,STB_GLOBAL,STT_OBJECT,COMMON,8,8
