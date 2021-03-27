@@ -208,17 +208,27 @@ static void simple_resolution(st_entry_t *sym, elf_t *sym_elf, smap_t *candidate
     int pre1 = symbol_precedence(sym);
     int pre2 = symbol_precedence(candidate->src);
 
-    // implement rule 1
     if (pre1 == 2 && pre2 == 2)
     {
+        /* rule 1
+                pre1    pre2
+            ---------------------
+                2       2
+         */
         debug_printf(DEBUG_LINKER, 
             "symbol resolution: strong symbol \"%s\" is redeclared\n", sym->st_name);
         exit(0);
     }
-
-    // implement rule 3
-    if (pre1 != 2 && pre2 != 2)
+    else if (pre1 != 2 && pre2 != 2)
     {
+        /* rule 3 - select higher precedence
+                pre1    pre2
+            ---------------------
+                0       0
+                0       1
+                1       0
+                1       1
+         */
         // use the stronger one as best match
         if (pre1 > pre2)
         {
@@ -228,12 +238,22 @@ static void simple_resolution(st_entry_t *sym, elf_t *sym_elf, smap_t *candidate
         }
         return;
     }
-
-    // implement rule 2
-    if (pre1 == 2)
+    else if (pre1 == 2)
     {
+        /* rule 2 - select current symbol
+                pre1    pre2
+            ---------------------
+                2       0
+                2       1
+         */
         // select sym as best match
         candidate->src = sym;
         candidate->elf = sym_elf;
     }
+    /* rule 2 - select candidate
+            pre1    pre2
+        ---------------------
+            0       2
+            1       2
+    */
 }
