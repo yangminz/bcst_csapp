@@ -22,7 +22,7 @@ hardware:
 
 .PHONY:link
 link:
-	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(SRC_DIR)/tests/test_elf.c $(SRC_DIR)/linker/parseElf.c -o ./bin/test_elf
+	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(SRC_DIR)/tests/test_elf.c $(SRC_DIR)/linker/parseElf.c $(SRC_DIR)/linker/staticlink.c -o ./bin/test_elf
 	./bin/test_elf
 
 clean:

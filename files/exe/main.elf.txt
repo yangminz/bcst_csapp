@@ -1,0 +1,54 @@
+// unsigned long long sum(unsigned long long *a, unsigned long long n);
+// unsigned long long array[2] = {0x12340000, 0xabcd};
+// unsigned long long bias = 0xf00000000;
+// unsigned long long main()
+// {
+//     unsigned long long val = sum(array, 2);
+//     return val;
+// }
+
+// link process:
+// gcc-7 -c main.c -o main.o
+// gcc-7 -c sum.c -o sum.o
+// ld main.o sum.o -e main -o program
+
+// ------------------------------- //
+// elf file content
+// ------------------------------- //
+
+// lines of elf file (witout comments and white line): [0] - [0]
+22
+
+// lines of the following section header tables: [1] - [1]
+3
+
+// section header
+// sh_name,sh_addr,sh_offset,sh_size
+.text,0x0,5,10
+.data,0x0,15,3
+.symtab,0x0,18,4
+
+// .text
+// main()
+push   %rbp
+mov    %rsp,%rbp
+sub    $0x10,%rsp
+mov    $0x2,%esi
+lea    0x0000000000000000(%rip),%rdi    // 14 <main+0x14>
+callq  0x0000000000000000   // <main+0x19>, place holder for sum
+mov    %rax,-0x8(%rbp)
+mov    -0x8(%rbp),%rax
+leaveq
+retq
+
+// .data
+0x0000000012340000
+0x000000000000abcd
+0x0000000f00000000
+
+// .symtab
+// st_name,bind,type,st_shndex,st_value,st_size
+array,STB_GLOBAL,STT_OBJECT,.data,0,2
+bias,STB_GLOBAL,STT_OBJECT,.data,2,1
+main,STB_GLOBAL,STT_FUNC,.text,0,10
+sum,STB_GLOBAL,STT_NOTYPE,SHN_UNDEF,0,0

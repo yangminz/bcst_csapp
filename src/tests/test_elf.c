@@ -18,9 +18,13 @@ void free_elf(elf_t *elf);
 
 int main()
 {
-    elf_t elf;
-    parse_elf("./files/exe/sum.elf.txt", &elf);
-    free_elf(&elf);
+    elf_t src[2];
+
+    parse_elf("./files/exe/sum.elf.txt", &src[0]);
+    parse_elf("./files/exe/main.elf.txt", &src[1]);
+
+    free_elf(&src[0]);
+    free_elf(&src[1]);
     
     return 0;
 }

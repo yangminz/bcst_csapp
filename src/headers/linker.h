@@ -52,7 +52,6 @@ typedef struct
     uint64_t st_size;       // count of lines of symbol
 } st_entry_t;
 
-
 #define MAX_ELF_FILE_LENGTH (64)    // max 64 effective lines
 #define MAX_ELF_FILE_WIDTH (128)    // max 128 chars per line
 
