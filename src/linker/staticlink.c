@@ -98,7 +98,7 @@ static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
             ;
         }
     }
-    
+
     // all the elf files have been processed
     // cleanup: check if there is any undefined symbols in the map table
     for (int i = 0; i < *smap_count; ++ i)
@@ -111,6 +111,16 @@ static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
 static inline int symbol_precedence(st_entry_t *sym)
 {
     // use inline function to imporve efficiency in run-time by preprocessing
+    /*  we do not consider weak because it's very rare
+        and we do not consider local because it's not conflicting
+
+            bind        type        shndx               prec
+            --------------------------------------------------
+            global      notype      undef               0 - undefined
+            global      object      data,bss,rodata     2 - defined
+            global      object      common              1 - tentative
+            global      func        text                2 - defined
+    */
     // TODO: get precedence of each symbol
     if (strcmp(sym->st_shndx, "SHN_UNDEF") == 0)
     {
