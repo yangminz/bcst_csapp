@@ -62,7 +62,7 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 
 **2021-02-28** ELF的符号表，以及什么是符号，它们在编译器和链接器视角中的差异：[https://www.bilibili.com/video/BV1VX4y1V7JP/]
 
-**2021-03-07** 符号表中的Bind, Type以及Index，C语言\code{.c}源文件中不同位置的申明与定义是如何在ELF文件中描述的，特别是COMMON节等容易混淆的地方：[https://www.bilibili.com/video/BV14h411Q7Rz/]
+**2021-03-07** 符号表中的Bind, Type以及Index，C语言`.c`源文件中不同位置的申明与定义是如何在ELF文件中描述的，特别是COMMON节等容易混淆的地方：[https://www.bilibili.com/video/BV14h411Q7Rz/]
 
 **2021-03-14** 设计可执行与可链接的文本格式，`.elf.txt`。从磁盘上的文件中读取到内存：[https://www.bilibili.com/video/BV1Ji4y1K7uw/]
 
@@ -70,4 +70,4 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 
 **2021-03-27** 静态链接的第一步：符号解析，设计内部的符号表作为维护符号关系的数据结构：[https://www.bilibili.com/video/BV1EZ4y1A7qM/]
 
-**2021-04-04** 静态链接的第二部：将ELF的Section合并为EOF的Segment，并且计算Segment的运行时起始地址：[https://www.bilibili.com/video/BV1Lh411D7fh/]
+**2021-04-04** 静态链接的第二步：将ELF的Section合并为EOF的Segment，并且计算Segment的运行时起始地址：[https://www.bilibili.com/video/BV1Lh411D7fh/]
