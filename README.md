@@ -38,34 +38,34 @@ This repository aims to give an introduction to the computer science text book: 
 
 `0x0C` End of Part 1: jmp, jne, leave instructions; Completion of recursive function call [https://www.bilibili.com/video/BV1Ey4y1v7aG] (2021-01-04)
 
-**References**
+总结一：数据类型与计算模型
+[https://www.bilibili.com/video/BV1LU4y14792/](2021-01-15)
 
-Refer to these books for deeper understanding, as well as better implementation:
+总结二：递归与λ表达式
+[https://www.bilibili.com/video/BV1Wv411s7yU/](2021-01-23)
 
-1. **Computer Systems: A Programmer's Perspective, Third Edition**, *Randal E. Bryant and David R. O'Hallaron*, Carnegie Mellon University
+## 第七章链接 - 一个简陋的静态文本链接器实现
 
-This is the main text book we are using overall.
+ELF文件的格式 - Header
+[https://www.bilibili.com/video/BV1MX4y1576E/](2021-02-06)
 
-2. **Operating System Concepts, Tenth Edition**, *Avi Silberschatz, Peter Baer Galvin and Greg Gagne*, John Wiley & Sons, Inc.
+Section Header Table
+[https://www.bilibili.com/video/BV1AU4y1s7Je/](2021-02-21)
 
-This is a famous OS textbook. We will use this textbook for better understanding on process and virtual memory.
+ELF符号表
+[https://www.bilibili.com/video/BV1VX4y1V7JP/](2021-02-28)
 
-3. **Operating Systems: Three Easy Pieces**, *Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau* (University of Wisconsin-Madison)
+ELF符号表 - Bind, Type, Index
+[https://www.bilibili.com/video/BV14h411Q7Rz/](2021-03-07)
 
-The authors are couple. They publish this textbook [free online](http://pages.cs.wisc.edu/~remzi/OSTEP/). We are implementing several components from this textbook: process context switching, virutal memory swapping.
+可执行可连接的`.elf.txt`文本格式
+[https://www.bilibili.com/video/BV1Ji4y1K7uw/](2021-03-14)
 
-3. **Linker and Libraries Guide**, *Sun Microsystems, Inc.*
+解析`.elf.txt`的节头表与符号表
+[https://www.bilibili.com/video/BV1Nz4y1279C/](2021-03-21)
 
-This guide can help us specify the format of Executable and Linkable Formats and implement the static linking: symbol processing, simple resolution, relocation processing.
+符号解析
+[https://www.bilibili.com/video/BV1EZ4y1A7qM/](2021-03-27)
 
-5. **Compilers: Principles, Techniques, and Tools**, *Alfred V. Aho, Monica S. Lam, Ravi Sethi, and Jeffrey D. Ullman*, Pearson Education, Inc
-
-We use this compiler's textbook to implement DFA for type converter: `uint64_t string2uint(const char *str)`.
-
-6. **Understanding the Linux Kernel, Second Edition**, *Daniel P. Bovet and Marco Cesati*
-
-This book describes the Linux kernel in detail, will help our understanding of Linux.
-
-7. **Windows Internals Seventh Edition**, *Pavel Yosifovich, Alex Ionescu, Mark E. Russinovich, David A. Solomon*, Microsoft Press
-
-It's good to see the implementation of another OS.
+Section合并，计算Run-time的Segment地址
+[https://www.bilibili.com/video/BV1Lh411D7fh/](2021-04-04)
