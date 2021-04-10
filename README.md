@@ -71,3 +71,5 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 **2021-03-27** 静态链接的第一步：符号解析，设计内部的符号表作为维护符号关系的数据结构：[video](https://www.bilibili.com/video/BV1EZ4y1A7qM/), [git-commit](https://github.com/yangminz/bcst_csapp/tree/32dff6910b379436bef854252ca0dae4a06200ed)
 
 **2021-04-04** 静态链接的第二步：将ELF的Section合并为EOF的Segment，并且计算Segment的运行时起始地址：[video](https://www.bilibili.com/video/BV1Lh411D7fh/), [git-commit](https://github.com/yangminz/bcst_csapp/tree/d2c4f611d0cffb8e029c254a41100be58392577f)
+
+**2021-04-10** 静态链接的第三步：将ELF文件中的符号引用重定位到它们在EOF中的符号：[video](https://www.bilibili.com/video/bv1GU4y1h7mt), [git-commit](https://github.com/yangminz/bcst_csapp/tree/d0be3855f2b679fae31a66096a53661c277890e1)
