@@ -640,7 +640,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
                     // must be referenced by a .text symbol
                     // check if this symbol is the one referencing
                     int sym_text_start = sym->st_value;
-                    int sym_text_end = sym->st_value + sym->st_size;
+                    int sym_text_end = sym->st_value + sym->st_size - 1;
 
                     if (sym_text_start <= r->r_row && r->r_row <= sym_text_end)
                     {
@@ -702,7 +702,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
                     // must be referenced by a .data symbol
                     // check if this symbol is the one referencing
                     int sym_data_start = sym->st_value;
-                    int sym_data_end = sym->st_value + sym->st_size;
+                    int sym_data_end = sym->st_value + sym->st_size - 1;
 
                     if (sym_data_start <= r->r_row && r->r_row <= sym_data_end)
                     {
