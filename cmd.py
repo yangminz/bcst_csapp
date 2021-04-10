@@ -144,23 +144,23 @@ def mem_check(key):
 assert(len(sys.argv) >= 2)
 
 # single argument "python3 cmd.py argv[1]"
-if sys.argv[1] == "build" or sys.argv[1] == "b":
+if sys.argv[1].lower().startswith("build"):
     assert(len(sys.argv) == 3)
     build(sys.argv[2])
-elif sys.argv[1] == "run" or sys.argv[1] == "r":
+elif sys.argv[1].lower().startswith("run"):
     run(sys.argv[2])
-elif sys.argv[1] == KEY_MACHINE:
+elif sys.argv[1].lower().startswith(KEY_MACHINE.lower()):
     build(KEY_MACHINE)
     run(KEY_MACHINE)
-elif sys.argv[1] == KEY_LINKER:
+elif sys.argv[1].lower().startswith(KEY_LINKER.lower()):
     build(KEY_LINKER)
     run(KEY_LINKER)
-elif sys.argv[1] == "mem":
+elif sys.argv[1].lower().startswith("memorycheck"):
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
-elif sys.argv[1] == "clean":
+elif sys.argv[1].lower().startswith("clean"):
     pass
-elif sys.argv[1] == "copyright":
+elif sys.argv[1].lower().startswith("copyright"):
     add_copyright_header()
-elif sys.argv[1] == "count":
+elif sys.argv[1].lower().startswith("count"):
     count_lines()
