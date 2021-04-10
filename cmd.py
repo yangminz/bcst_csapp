@@ -42,19 +42,22 @@ def add_copyright_header():
     # recursively add lines to every .c and .h file
     print("recursively add lines to every .c and .h file")
     for filename in filelist:
-        with open(filename, "r", encoding = 'utf-8') as fr:
-            content = fr.read()
-            if (content.startswith("/* BCST - Introduction to Computer Systems")):
-                print("\tskip\t%s" % filename)
-                fr.close()
-                continue
-            else:
-                fr.close()
-                # reopen and write data: this is a safer approach
-                # try to not open in r+ mode
-                print("\tprepend\t%s" % filename)
-                with open(filename, "w", encoding = 'utf-8') as fw:
-                    fw.write(notification + content)
+        try:
+            with open(filename, "r", encoding = 'ascii') as fr:
+                content = fr.read()
+                if (content.startswith("/* BCST - Introduction to Computer Systems")):
+                    print("\tskip\t%s" % filename)
+                    fr.close()
+                    continue
+                else:
+                    fr.close()
+                    # reopen and write data: this is a safer approach
+                    # try to not open in r+ mode
+                    print("\tprepend\t%s" % filename)
+                    with open(filename, "w", encoding = 'ascii') as fw:
+                        fw.write(notification + content)
+        except UnicodeDecodeError:
+            print(filename)
 
 def count_lines():
     # get files with paths
