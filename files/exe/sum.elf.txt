@@ -40,7 +40,7 @@ addq   $0x1,-0x10(%rbp)
 mov    -0x10(%rbp),%rax
 cmp    -0x20(%rbp),%rax
 jb     1e // <sum+0x1e>
-mov    0x0000000000000000(%rip),%rdx
+mov    0x0000000000000000(%rip),%rdx // referencing bias
 mov    -0x8(%rbp),%rax
 add    %rdx,%rax
 pop    %rbp
@@ -53,4 +53,4 @@ bias,STB_GLOBAL,STT_OBJECT,COMMON,8,8
 
 // .rel.text
 // r_row,r_col,type,sym,r_addend
-17,7,R_X86_64_PC32,1,-4
+17,7,R_X86_64_PC32,1,-4     // bias

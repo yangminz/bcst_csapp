@@ -56,7 +56,7 @@ typedef struct
 /*      relocation information          */
 /*======================================*/
 
-typedef enum RELO_TYPE
+typedef enum
 {
     R_X86_64_32,
     R_X86_64_PC32,
