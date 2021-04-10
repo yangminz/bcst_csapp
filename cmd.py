@@ -12,6 +12,7 @@ i = 0
 for argv in sys.argv:
     print("[", i, "] ", argv)
     i += 1
+print("================")
 
 KEY_MACHINE = "m"
 KEY_LINKER = "l"

@@ -11,15 +11,16 @@
 // }
 
 // count of effective lines
-28
+30
 
 // count of section header table lines
-2
+3
 
 // begin of section header table
 // sh_name,sh_addr,sh_offset,sh_size
-.text,0x0,4,22
-.symtab,0x0,26,2
+.text,0x0,5,22
+.symtab,0x0,27,2
+.rel.text,0x0,29,1
 
 // .text section
 push   %rbp
@@ -39,7 +40,7 @@ addq   $0x1,-0x10(%rbp)
 mov    -0x10(%rbp),%rax
 cmp    -0x20(%rbp),%rax
 jb     1e // <sum+0x1e>
-mov    0x0(%rip),%rdx
+mov    0x0000000000000000(%rip),%rdx
 mov    -0x8(%rbp),%rax
 add    %rdx,%rax
 pop    %rbp
@@ -49,3 +50,7 @@ retq
 // st_name,bind,type,st_shndex,st_value,st_size
 sum,STB_GLOBAL,STT_FUNC,.text,0,22
 bias,STB_GLOBAL,STT_OBJECT,COMMON,8,8
+
+// .rel.text
+// r_row,r_col,type,sym,r_addend
+17,7,R_X86_64_PC32,1,-4

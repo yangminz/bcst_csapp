@@ -17,6 +17,7 @@
 
 #define MAX_SYMBOL_MAP_LENGTH 64
 #define MAX_SECTION_BUFFER_LENGTH 64
+#define MAX_RELOCATION_LINES 64
 
 // internal mapping between source and destination symbol entries
 typedef struct
@@ -24,18 +25,52 @@ typedef struct
     elf_t       *elf;   // src elf file
     st_entry_t  *src;   // src symbol
     st_entry_t  *dst;   // dst symbol: used for relocation - find the function referencing the undefined symbol
-    // TODO:
-    // relocation entry (referencing section, referenced symbol) converted to (referencing symbol, referenced symbol) entry
 } smap_t;
 
+/* ------------------------------------ */
+/* Symbol Processing                    */
+/* ------------------------------------ */
 static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
     smap_t *smap_table, int *smap_count);
 static void simple_resolution(st_entry_t *sym, elf_t *sym_elf, smap_t *candidate);
 
+/* ------------------------------------ */
+/* Section Merging                      */
+/* ------------------------------------ */
 static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_count);
 static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
     smap_t *smap_table, int *smap_count);
 
+/* ------------------------------------ */
+/* Relocation                           */
+/* ------------------------------------ */
+static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
+    smap_t *smap_table, int *smap_count);
+
+static void R_X86_64_32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced);
+static void R_X86_64_PC32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced);
+static void R_X86_64_PLT32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced);
+
+typedef void (*rela_handler_t)(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced);
+
+static rela_handler_t handler_table[3] = {
+    &R_X86_64_32_handler,       // 0
+    &R_X86_64_PC32_handler,     // 1
+    // linux commit b21ebf2: x86: Treat R_X86_64_PLT32 as R_X86_64_PC32
+    &R_X86_64_PC32_handler,     // 2
+};
+
+/* ------------------------------------ */
+/* Helper                               */
+/* ------------------------------------ */
 static const char *get_stb_string(st_bind_t bind);
 static const char *get_stt_string(st_type_t type);
 
@@ -93,8 +128,19 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst)
         printf("%s\n", dst->buffer[i]);
     }
 
-    // TODO: update dst.buffer for dst.symt
-    // Find the buffer offset for symbol table and write the buffer
+    // UPDATE buffer: relocate the referencing in buffer
+    // relocating: update the relocation entries from ELF files into EOF buffer
+    relocation_processing(srcs, num_srcs, dst, smap_table, &smap_count);
+
+    // finally, check EOF file
+    if ((DEBUG_VERBOSE_SET & DEBUG_LINKER) != 0)
+    {
+        printf("----\nfinal output EOF:\n");
+        for (int i = 0; i < dst->line_count; ++ i)
+        {
+            printf("%s\n", dst->buffer[i]);
+        }
+    }
 }
 
 static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
@@ -555,6 +601,90 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
         line_written ++;
     }
     assert(line_written == dst->line_count);
+}
+
+// precondition: smap_table.dst is valid
+static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
+    smap_t *smap_table, int *smap_count)
+{
+    // update the relocation entries: r_row, r_col, sym
+    for (int i = 0; i < num_srcs; ++ i)
+    {
+        elf_t *elf = srcs[i];
+
+        // .rel.text
+        for (int j = 0; j < elf->reltext_count; ++ j)
+        {
+            rl_entry_t *r = &elf->reltext[j];
+
+            // search the referencing symbol
+            for (int k = 0; k < elf->symt_count; ++ k)
+            {
+                st_entry_t *sym = &elf->symt[k];
+
+                if (strcmp(sym->st_shndx, ".text") == 0)
+                {
+                    // must be referenced by a .text symbol
+                    // TODO: check if this symbol is the one referencing
+                    int sym_text_start = 0;
+                    int sym_text_end = 0;
+
+                    if (sym_text_start <= r->r_row && r->r_row <= sym_text_end)
+                    {
+                        // symt[k] is referencing reltext[j].sym
+                        // search the smap table to find the EOF location
+                        int referencing_merged = 0;
+                        for (int t = 0; t < *smap_count; ++ t)
+                        {
+                            if (smap_table[t].src == sym)
+                            {
+                                referencing_merged = 1;
+                                // TODO: update the new referencing position in EOF
+                                int eof_row_referencing;
+
+                                // search the being referenced symbol
+                                for (int u = 0; u < *smap_count; ++ u)
+                                {
+                                    // TODO: what is the EOF symbol name?
+                                    // TODO: how to get the referenced symbol name
+                                    if (1)
+                                    {
+                                        // till now, the referencing row and referenced row are all found
+                                        // TODO: update the location
+                                        (handler_table[(int)r->type])(dst, 0, 0, 0, NULL);
+                                    }
+                                }
+                            }
+                        }
+                        // referencing must be in smap_table
+                        assert(referencing_merged == 1);
+                    }
+                }
+            }
+        }
+
+        // TODO: .rel.data
+    }
+}
+
+// relocating handlers
+
+static void R_X86_64_32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced)
+{
+}
+
+static void R_X86_64_PC32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced)
+{
+}
+
+static void R_X86_64_PLT32_handler(elf_t *dst, 
+    int row_referencing, int col_referencing, int addend,
+    st_entry_t *sym_referenced)
+{
 }
 
 static const char *get_stb_string(st_bind_t bind)
