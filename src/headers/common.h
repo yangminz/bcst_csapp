@@ -60,7 +60,8 @@ void finally_cleanup();
 // trie
 typedef struct TRIE_NODE_STRUCT
 {
-    struct TRIE_NODE_STRUCT *next[128];
+    // '0'-'9','a'-'z','%'
+    struct TRIE_NODE_STRUCT *next[37];
     uint64_t address;
 } trie_node_t;
 

@@ -69,4 +69,7 @@ void finally_cleanup()
     {
         (*events[i])();
     }
+
+    // clean itself
+    free(events);
 }
