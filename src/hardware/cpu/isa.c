@@ -75,8 +75,8 @@ typedef struct INST_STRUCT
 /*      parse assembly instruction      */
 /*======================================*/
 
-trie_node_t *register_mapping = NULL;
-trie_node_t *operator_mapping = NULL;
+static trie_node_t *register_mapping = NULL;
+static trie_node_t *operator_mapping = NULL;
 
 static void trie_cleanup()
 {
@@ -181,7 +181,7 @@ static void lazy_initialize_trie()
     add_cleanup_event(&trie_cleanup);
 }
 
-uint64_t try_get_from_trie(trie_node_t **root, char *key)
+static uint64_t try_get_from_trie(trie_node_t **root, char *key)
 {
     if (*root == NULL)
     {
