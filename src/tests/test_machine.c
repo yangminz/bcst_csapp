@@ -10,6 +10,7 @@
 
 #include<stdio.h>
 #include<string.h>
+#include<assert.h>
 #include<headers/cpu.h>
 #include<headers/memory.h>
 #include<headers/common.h>
@@ -31,6 +32,9 @@ int main()
 {
     TestAddFunctionCallAndComputation();
     TestSumRecursiveCondition();
+
+    finally_cleanup();
+
     return 0;
 }
 

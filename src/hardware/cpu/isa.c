@@ -75,57 +75,126 @@ typedef struct INST_STRUCT
 /*      parse assembly instruction      */
 /*======================================*/
 
-// lookup table
-static const char *reg_name_list[72] = {
-    "%rax","%eax","%ax","%ah","%al",
-    "%rbx","%ebx","%bx","%bh","%bl",
-    "%rcx","%ecx","%cx","%ch","%cl",
-    "%rdx","%edx","%dx","%dh","%dl",
-    "%rsi","%esi","%si","%sih","%sil",
-    "%rdi","%edi","%di","%dih","%dil",
-    "%rbp","%ebp","%bp","%bph","%bpl",
-    "%rsp","%esp","%sp","%sph","%spl",
-    "%r8","%r8d","%r8w","%r8b",
-    "%r9","%r9d","%r9w","%r9b",
-    "%r10","%r10d","%r10w","%r10b",
-    "%r11","%r11d","%r11w","%r11b",
-    "%r12","%r12d","%r12w","%r12b",
-    "%r13","%r13d","%r13w","%r13b",
-    "%r14","%r14d","%r14w","%r14b",
-    "%r15","%r15d","%r15w","%r15b",
-};
-// reflection
-static uint64_t reflect_register(const char *reg_name)
-{
-    // lookup table
-    uint64_t reg_addr[72] = {
-        (uint64_t)&(cpu_reg.rax),(uint64_t)&(cpu_reg.eax),(uint64_t)&(cpu_reg.ax),(uint64_t)&(cpu_reg.ah),(uint64_t)&(cpu_reg.al),
-        (uint64_t)&(cpu_reg.rbx),(uint64_t)&(cpu_reg.ebx),(uint64_t)&(cpu_reg.bx),(uint64_t)&(cpu_reg.bh),(uint64_t)&(cpu_reg.bl),
-        (uint64_t)&(cpu_reg.rcx),(uint64_t)&(cpu_reg.ecx),(uint64_t)&(cpu_reg.cx),(uint64_t)&(cpu_reg.ch),(uint64_t)&(cpu_reg.cl),
-        (uint64_t)&(cpu_reg.rdx),(uint64_t)&(cpu_reg.edx),(uint64_t)&(cpu_reg.dx),(uint64_t)&(cpu_reg.dh),(uint64_t)&(cpu_reg.dl),
-        (uint64_t)&(cpu_reg.rsi),(uint64_t)&(cpu_reg.esi),(uint64_t)&(cpu_reg.si),(uint64_t)&(cpu_reg.sih),(uint64_t)&(cpu_reg.sil),
-        (uint64_t)&(cpu_reg.rdi),(uint64_t)&(cpu_reg.edi),(uint64_t)&(cpu_reg.di),(uint64_t)&(cpu_reg.dih),(uint64_t)&(cpu_reg.dil),
-        (uint64_t)&(cpu_reg.rbp),(uint64_t)&(cpu_reg.ebp),(uint64_t)&(cpu_reg.bp),(uint64_t)&(cpu_reg.bph),(uint64_t)&(cpu_reg.bpl),
-        (uint64_t)&(cpu_reg.rsp),(uint64_t)&(cpu_reg.esp),(uint64_t)&(cpu_reg.sp),(uint64_t)&(cpu_reg.sph),(uint64_t)&(cpu_reg.spl),
-        (uint64_t)&(cpu_reg.r8),(uint64_t)&(cpu_reg.r8d),(uint64_t)&(cpu_reg.r8w),(uint64_t)&(cpu_reg.r8b),
-        (uint64_t)&(cpu_reg.r9),(uint64_t)&(cpu_reg.r9d),(uint64_t)&(cpu_reg.r9w),(uint64_t)&(cpu_reg.r9b),
-        (uint64_t)&(cpu_reg.r10),(uint64_t)&(cpu_reg.r10d),(uint64_t)&(cpu_reg.r10w),(uint64_t)&(cpu_reg.r10b),
-        (uint64_t)&(cpu_reg.r11),(uint64_t)&(cpu_reg.r11d),(uint64_t)&(cpu_reg.r11w),(uint64_t)&(cpu_reg.r11b),
-        (uint64_t)&(cpu_reg.r12),(uint64_t)&(cpu_reg.r12d),(uint64_t)&(cpu_reg.r12w),(uint64_t)&(cpu_reg.r12b),
-        (uint64_t)&(cpu_reg.r13),(uint64_t)&(cpu_reg.r13d),(uint64_t)&(cpu_reg.r13w),(uint64_t)&(cpu_reg.r13b),
-        (uint64_t)&(cpu_reg.r14),(uint64_t)&(cpu_reg.r14d),(uint64_t)&(cpu_reg.r14w),(uint64_t)&(cpu_reg.r14b),
-        (uint64_t)&(cpu_reg.r15),(uint64_t)&(cpu_reg.r15d),(uint64_t)&(cpu_reg.r15w),(uint64_t)&(cpu_reg.r15b),
-    };
+trie_node_t *register_mapping = NULL;
+trie_node_t *operator_mapping = NULL;
 
-    for (int i = 0; i < 72; ++ i)
+static void trie_cleanup()
+{
+    trie_free(register_mapping);
+    trie_free(operator_mapping);
+}
+
+static void lazy_initialize_trie()
+{
+    // initialize the register mapping
+    trie_insert(&register_mapping, "%rax",   (uint64_t)&(cpu_reg.rax)    );
+    trie_insert(&register_mapping, "%eax",   (uint64_t)&(cpu_reg.eax)    );
+    trie_insert(&register_mapping, "%ax",    (uint64_t)&(cpu_reg.ax)     );
+    trie_insert(&register_mapping, "%ah",    (uint64_t)&(cpu_reg.ah)     );
+    trie_insert(&register_mapping, "%al",    (uint64_t)&(cpu_reg.al)     );
+    trie_insert(&register_mapping, "%rbx",   (uint64_t)&(cpu_reg.rbx)    );
+    trie_insert(&register_mapping, "%ebx",   (uint64_t)&(cpu_reg.ebx)    );
+    trie_insert(&register_mapping, "%bx",    (uint64_t)&(cpu_reg.bx)     );
+    trie_insert(&register_mapping, "%bh",    (uint64_t)&(cpu_reg.bh)     );
+    trie_insert(&register_mapping, "%bl",    (uint64_t)&(cpu_reg.bl)     );
+    trie_insert(&register_mapping, "%rcx",   (uint64_t)&(cpu_reg.rcx)    );
+    trie_insert(&register_mapping, "%ecx",   (uint64_t)&(cpu_reg.ecx)    );
+    trie_insert(&register_mapping, "%cx",    (uint64_t)&(cpu_reg.cx)     );
+    trie_insert(&register_mapping, "%ch",    (uint64_t)&(cpu_reg.ch)     );
+    trie_insert(&register_mapping, "%cl",    (uint64_t)&(cpu_reg.cl)     );
+    trie_insert(&register_mapping, "%rdx",   (uint64_t)&(cpu_reg.rdx)    );
+    trie_insert(&register_mapping, "%edx",   (uint64_t)&(cpu_reg.edx)    );
+    trie_insert(&register_mapping, "%dx",    (uint64_t)&(cpu_reg.dx)     );
+    trie_insert(&register_mapping, "%dh",    (uint64_t)&(cpu_reg.dh)     );
+    trie_insert(&register_mapping, "%dl",    (uint64_t)&(cpu_reg.dl)     );
+    trie_insert(&register_mapping, "%rsi",   (uint64_t)&(cpu_reg.rsi)    );
+    trie_insert(&register_mapping, "%esi",   (uint64_t)&(cpu_reg.esi)    );
+    trie_insert(&register_mapping, "%si",    (uint64_t)&(cpu_reg.si)     );
+    trie_insert(&register_mapping, "%sih",   (uint64_t)&(cpu_reg.sih)    );
+    trie_insert(&register_mapping, "%sil",   (uint64_t)&(cpu_reg.sil)    );
+    trie_insert(&register_mapping, "%rdi",   (uint64_t)&(cpu_reg.rdi)    );
+    trie_insert(&register_mapping, "%edi",   (uint64_t)&(cpu_reg.edi)    );
+    trie_insert(&register_mapping, "%di",    (uint64_t)&(cpu_reg.di)     );
+    trie_insert(&register_mapping, "%dih",   (uint64_t)&(cpu_reg.dih)    );
+    trie_insert(&register_mapping, "%dil",   (uint64_t)&(cpu_reg.dil)    );
+    trie_insert(&register_mapping, "%rbp",   (uint64_t)&(cpu_reg.rbp)    );
+    trie_insert(&register_mapping, "%ebp",   (uint64_t)&(cpu_reg.ebp)    );
+    trie_insert(&register_mapping, "%bp",    (uint64_t)&(cpu_reg.bp)     );
+    trie_insert(&register_mapping, "%bph",   (uint64_t)&(cpu_reg.bph)    );
+    trie_insert(&register_mapping, "%bpl",   (uint64_t)&(cpu_reg.bpl)    );
+    trie_insert(&register_mapping, "%rsp",   (uint64_t)&(cpu_reg.rsp)    );
+    trie_insert(&register_mapping, "%esp",   (uint64_t)&(cpu_reg.esp)    );
+    trie_insert(&register_mapping, "%sp",    (uint64_t)&(cpu_reg.sp)     );
+    trie_insert(&register_mapping, "%sph",   (uint64_t)&(cpu_reg.sph)    );
+    trie_insert(&register_mapping, "%spl",   (uint64_t)&(cpu_reg.spl)    );
+    trie_insert(&register_mapping, "%r8",    (uint64_t)&(cpu_reg.r8)     );
+    trie_insert(&register_mapping, "%r8d",   (uint64_t)&(cpu_reg.r8d)    );
+    trie_insert(&register_mapping, "%r8w",   (uint64_t)&(cpu_reg.r8w)    );
+    trie_insert(&register_mapping, "%r8b",   (uint64_t)&(cpu_reg.r8b)    );
+    trie_insert(&register_mapping, "%r9",    (uint64_t)&(cpu_reg.r9)     );
+    trie_insert(&register_mapping, "%r9d",   (uint64_t)&(cpu_reg.r9d)    );
+    trie_insert(&register_mapping, "%r9w",   (uint64_t)&(cpu_reg.r9w)    );
+    trie_insert(&register_mapping, "%r9b",   (uint64_t)&(cpu_reg.r9b)    );
+    trie_insert(&register_mapping, "%r10",   (uint64_t)&(cpu_reg.r10)    );
+    trie_insert(&register_mapping, "%r10d",  (uint64_t)&(cpu_reg.r10d)   );
+    trie_insert(&register_mapping, "%r10w",  (uint64_t)&(cpu_reg.r10w)   );
+    trie_insert(&register_mapping, "%r10b",  (uint64_t)&(cpu_reg.r10b)   );
+    trie_insert(&register_mapping, "%r11",   (uint64_t)&(cpu_reg.r11)    );
+    trie_insert(&register_mapping, "%r11d",  (uint64_t)&(cpu_reg.r11d)   );
+    trie_insert(&register_mapping, "%r11w",  (uint64_t)&(cpu_reg.r11w)   );
+    trie_insert(&register_mapping, "%r11b",  (uint64_t)&(cpu_reg.r11b)   );
+    trie_insert(&register_mapping, "%r12",   (uint64_t)&(cpu_reg.r12)    );
+    trie_insert(&register_mapping, "%r12d",  (uint64_t)&(cpu_reg.r12d)   );
+    trie_insert(&register_mapping, "%r12w",  (uint64_t)&(cpu_reg.r12w)   );
+    trie_insert(&register_mapping, "%r12b",  (uint64_t)&(cpu_reg.r12b)   );
+    trie_insert(&register_mapping, "%r13",   (uint64_t)&(cpu_reg.r13)    );
+    trie_insert(&register_mapping, "%r13d",  (uint64_t)&(cpu_reg.r13d)   );
+    trie_insert(&register_mapping, "%r13w",  (uint64_t)&(cpu_reg.r13w)   );
+    trie_insert(&register_mapping, "%r13b",  (uint64_t)&(cpu_reg.r13b)   );
+    trie_insert(&register_mapping, "%r14",   (uint64_t)&(cpu_reg.r14)    );
+    trie_insert(&register_mapping, "%r14d",  (uint64_t)&(cpu_reg.r14d)   );
+    trie_insert(&register_mapping, "%r14w",  (uint64_t)&(cpu_reg.r14w)   );
+    trie_insert(&register_mapping, "%r14b",  (uint64_t)&(cpu_reg.r14b)   );
+    trie_insert(&register_mapping, "%r15",   (uint64_t)&(cpu_reg.r15)    );
+    trie_insert(&register_mapping, "%r15d",  (uint64_t)&(cpu_reg.r15d)   );
+    trie_insert(&register_mapping, "%r15w",  (uint64_t)&(cpu_reg.r15w)   );
+    trie_insert(&register_mapping, "%r15b",  (uint64_t)&(cpu_reg.r15b)   );
+
+    // initialize the operator mapping
+    trie_insert(&operator_mapping, "movq",   INST_MOV    );
+    trie_insert(&operator_mapping, "mov",    INST_MOV    );
+    trie_insert(&operator_mapping, "push",   INST_PUSH   );
+    trie_insert(&operator_mapping, "pop",    INST_POP    );
+    trie_insert(&operator_mapping, "leaveq", INST_LEAVE  );
+    trie_insert(&operator_mapping, "callq",  INST_CALL   );
+    trie_insert(&operator_mapping, "retq",   INST_RET    );
+    trie_insert(&operator_mapping, "add",    INST_ADD    );
+    trie_insert(&operator_mapping, "sub",    INST_SUB    );
+    trie_insert(&operator_mapping, "cmpq",   INST_CMP    );
+    trie_insert(&operator_mapping, "jne",    INST_JNE    );
+    trie_insert(&operator_mapping, "jmp",    INST_JMP    );
+
+    trie_print(operator_mapping);
+    trie_print(register_mapping);
+
+    // add the cleanup events
+    add_cleanup_event(&trie_cleanup);
+}
+
+uint64_t try_get_from_trie(trie_node_t **root, char *key)
+{
+    if (*root == NULL)
     {
-        if (strcmp(reg_name, reg_name_list[i]) == 0)
-        {
-            return reg_addr[i];
-        }
+        lazy_initialize_trie();
     }
-    debug_printf(DEBUG_PARSEINST, "parse operand %s\n    cannot parse register %s\n", reg_name);
-    exit(0);
+    uint64_t val;
+    int result = trie_get(*root, key, &val);
+    if (result == 0)
+    {
+        printf("could not find key '%s' from trie\n", key);
+        exit(0);
+    }
+    return val;
 }
 
 // functions to map the string assembly code to inst_t instance
@@ -272,50 +341,7 @@ static void parse_instruction(const char *str, inst_t *inst)
     parse_operand(src_str, &(inst->src));
     parse_operand(dst_str, &(inst->dst));
 
-    if (strcmp(op_str, "mov") == 0 || strcmp(op_str, "movq") == 0)
-    {
-        inst->op = INST_MOV;
-    }
-    else if (strcmp(op_str, "push") == 0)
-    {
-        inst->op = INST_PUSH;
-    }
-    else if (strcmp(op_str, "pop") == 0)
-    {
-        inst->op = INST_POP;
-    }
-    else if (strcmp(op_str, "leaveq") == 0)
-    {
-        inst->op = INST_LEAVE;
-    }
-    else if (strcmp(op_str, "callq") == 0)
-    {
-        inst->op = INST_CALL;
-    }
-    else if (strcmp(op_str, "retq") == 0)
-    {
-        inst->op = INST_RET;
-    }
-    else if (strcmp(op_str, "add") == 0)
-    {
-        inst->op = INST_ADD;
-    }
-    else if (strcmp(op_str, "sub") == 0)
-    {
-        inst->op = INST_SUB;
-    }
-    else if (strcmp(op_str, "cmpq") == 0)
-    {
-        inst->op = INST_CMP;
-    }
-    else if (strcmp(op_str, "jne") == 0)
-    {
-        inst->op = INST_JNE;
-    }
-    else if (strcmp(op_str, "jmp") == 0)
-    {
-        inst->op = INST_JMP;
-    }
+    inst->op = (op_t)try_get_from_trie(&operator_mapping, op_str);
 
     debug_printf(DEBUG_PARSEINST, "[%s (%d)] [%s (%d)] [%s (%d)]\n", op_str, inst->op, src_str, inst->src.type, dst_str, inst->dst.type);
 }
@@ -352,7 +378,7 @@ static void parse_operand(const char *str, od_t *od)
         // register
         od->type = REG;
         // match the correct register name
-        od->reg1 = reflect_register(str);
+        od->reg1 = try_get_from_trie(&register_mapping, (char *)str);
         return;
     }
     else
@@ -439,12 +465,12 @@ static void parse_operand(const char *str, od_t *od)
         // parse reg1
         if (reg1_len > 0)
         {
-            od->reg1 = reflect_register(reg1);
+            od->reg1 = try_get_from_trie(&register_mapping, reg1);
         }
         // parse reg2
         if (reg2_len > 0)
         {
-            od->reg2 = reflect_register(reg2);
+            od->reg2 = try_get_from_trie(&register_mapping, reg2);
         }
 
         // set types

@@ -89,18 +89,20 @@ def build(key):
     gcc_map = {
         KEY_MACHINE : [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O2", "-Werror", "-std=gnu99", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
             "-I", "./src",
             "./src/tests/test_machine.c",
             "./src/common/print.c",
             "./src/common/convert.c",
+            "./src/common/trie.c",
+            "./src/common/cleanup.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
             "./src/hardware/memory/dram.c",
             "-o", EXE_BIN_MACHINE],
         KEY_LINKER : [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O2", "-Werror", "-std=gnu99", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
             "-I", "./src",
             "./src/tests/test_elf.c",
             "./src/common/print.c",
@@ -127,6 +129,17 @@ def run(key):
         exit()
     subprocess.run([bin_map[key]])
 
+def debug(key):
+    assert(os.path.isdir("./bin/"))
+    bin_map = {
+        KEY_MACHINE : EXE_BIN_MACHINE,
+        KEY_LINKER : EXE_BIN_LINKER
+    }
+    if not key in bin_map:
+        print("input the correct binary key:", bin_map.keys())
+        exit()
+    subprocess.run(["/usr/bin/gdb", bin_map[key]])
+
 def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
@@ -151,7 +164,11 @@ if "build".startswith(argv_1_lower):
     assert(len(sys.argv) == 3)
     build(sys.argv[2])
 elif "run".startswith(argv_1_lower):
+    assert(len(sys.argv) == 3)
     run(sys.argv[2])
+elif "debug".startswith(argv_1_lower):
+    assert(len(sys.argv) == 3)
+    debug(sys.argv[2])
 elif KEY_MACHINE.lower().startswith(argv_1_lower):
     build(KEY_MACHINE)
     run(KEY_MACHINE)
