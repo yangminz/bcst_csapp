@@ -112,7 +112,7 @@ int hashtable_get(hashtable_t *tab, char *key, uint64_t *val)
     uint64_t hid = lowbits_n(hid64, tab->globaldepth);
 
     hashtable_bucket_t *b = tab->barray[hid];
-    for (int i = 0; i < b->counter; ++ b)
+    for (int i = 0; i < b->counter; ++ i)
     {
         if (strcmp(b->karray[i], key) == 0)
         {

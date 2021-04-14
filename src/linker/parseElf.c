@@ -113,42 +113,23 @@ static void parse_symtab(char *str, st_entry_t *ste)
     strcpy(ste->st_name, cols[0]);
 
     // select symbol bind
-    if (strcmp(cols[1], "STB_LOCAL") == 0)
+    uint64_t bind_value;
+    if (hashtable_get(link_constant_dict, cols[1], &bind_value) == 0)
     {
-        ste->bind = STB_LOCAL;
-    }
-    else if (strcmp(cols[1], "STB_GLOBAL") == 0)
-    {
-        ste->bind = STB_GLOBAL;
-    }
-    else if (strcmp(cols[1], "STB_WEAK") == 0)
-    {
-        ste->bind = STB_WEAK;
-    }
-    else
-    {
+        // failed
         printf("symbol bind is neiter LOCAL, GLOBAL, nor WEAK\n");
         exit(0);
     }
-    
-    // select symbol type 
-    if (strcmp(cols[2], "STT_NOTYPE") == 0)
+    ste->bind = (st_bind_t)bind_value;
+
+    uint64_t type_value;
+    if (hashtable_get(link_constant_dict, cols[2], &type_value) == 0)
     {
-        ste->type = STT_NOTYPE;
-    }
-    else if (strcmp(cols[2], "STT_OBJECT") == 0)
-    {
-        ste->type = STT_OBJECT;
-    }
-    else if (strcmp(cols[2], "STT_FUNC") == 0)
-    {
-        ste->type = STT_FUNC;
-    }
-    else
-    {
+        // failed
         printf("symbol type is neiter NOTYPE, OBJECT, nor FUNC\n");
         exit(0);
     }
+    ste->type = (st_type_t)type_value;
 
     strcpy(ste->st_shndx, cols[3]);
 
@@ -181,23 +162,14 @@ static void parse_relocation(char *str, rl_entry_t *rte)
     rte->r_col = string2uint(cols[1]);
     
     // select relocation type
-    if (strcmp(cols[2], "R_X86_64_32") == 0)
+    uint64_t type_value;
+    if (hashtable_get(link_constant_dict, cols[2], &type_value) == 0)
     {
-        rte->type = R_X86_64_32;
-    }
-    else if (strcmp(cols[2], "R_X86_64_PC32") == 0)
-    {
-        rte->type = R_X86_64_PC32;
-    }
-    else if (strcmp(cols[2], "R_X86_64_PLT32") == 0)
-    {
-        rte->type = R_X86_64_PLT32;
-    }
-    else
-    {
+        // failed
         printf("relocation type is neiter R_X86_64_32, R_X86_64_PC32, nor R_X86_64_PLT32\n");
         exit(0);
     }
+    rte->type = (st_type_t)type_value;
 
     rte->sym = string2uint(cols[3]);
 
@@ -289,6 +261,30 @@ static int read_elf(const char *filename, uint64_t bufaddr)
     return line_counter;
 }
 
+static void init_dictionary()
+{
+    if (link_constant_dict != NULL)
+    {
+        return;
+    }
+
+    link_constant_dict = hashtable_construct(4);
+
+    hashtable_insert(&link_constant_dict, "STB_LOCAL", STB_LOCAL);
+    hashtable_insert(&link_constant_dict, "STB_GLOBAL", STB_GLOBAL);
+    hashtable_insert(&link_constant_dict, "STB_WEAK", STB_WEAK);
+
+    hashtable_insert(&link_constant_dict, "STT_NOTYPE", STT_NOTYPE);
+    hashtable_insert(&link_constant_dict, "STT_OBJECT", STT_OBJECT);
+    hashtable_insert(&link_constant_dict, "STT_FUNC", STT_FUNC);
+
+    hashtable_insert(&link_constant_dict, "R_X86_64_32", R_X86_64_32);
+    hashtable_insert(&link_constant_dict, "R_X86_64_PC32", R_X86_64_PC32);
+    hashtable_insert(&link_constant_dict, "R_X86_64_PLT32", R_X86_64_PLT32);
+
+    print_hashtable(link_constant_dict);
+}
+
 void parse_elf(char *filename, elf_t *elf)
 {
     assert(elf != NULL);
@@ -297,6 +293,8 @@ void parse_elf(char *filename, elf_t *elf)
     {
         printf("[%d]\t%s\n", i, elf->buffer[i]);
     }
+
+    init_dictionary();
 
     // parse section headers
     elf->sht_count = string2uint(elf->buffer[1]);;
@@ -404,6 +402,9 @@ void write_eof(const char *filename, elf_t *eof)
     }
 
     fclose(fp);
+
+    // free hash table
+    hashtable_free(link_constant_dict);
 }
 
 void free_elf(elf_t *elf)
