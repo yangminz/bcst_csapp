@@ -59,6 +59,39 @@ def add_copyright_header():
         except UnicodeDecodeError:
             print(filename)
 
+def format_include():
+    # get files with paths
+    filelist = list(Path(".").rglob("*.c"))
+    a = "#include<headers/"
+    b = "#include<"
+
+    # recursively add lines to every .c and .h file
+    print("recursively check every .c and file")
+    for filename in filelist:
+        try:
+            with open(filename, "r", encoding = 'ascii') as fr:
+                content = fr.readlines()
+                for i in range(len(content)):
+                    # check first 100 lines
+                    if content[i].startswith(a):
+                        content[i] = "#include \"headers/" + content[i][len(a):]
+                        for j in range(len(content[i])):
+                            if content[i][j] == '>':
+                                l = list(content[i])
+                                l[j] = "\""
+                                content[i] = "".join(l)
+                        print(content[i])
+                    elif content[i].startswith(b):
+                        content[i] = "#include <" + content[i][len(b):]
+                        print(content[i])
+                fr.close()
+                # reopen and write data: this is a safer approach
+                # try to not open in r+ mode
+                with open(filename, "w", encoding = 'ascii') as fw:
+                    fw.write(content)
+        except UnicodeDecodeError:
+            print(filename)
+
 def count_lines():
     # get files with paths
     filelist = list(Path(".").rglob("*.[ch]"))
@@ -94,8 +127,8 @@ def build(key):
             "./src/tests/test_machine.c",
             "./src/common/print.c",
             "./src/common/convert.c",
-            "./src/common/trie.c",
             "./src/common/cleanup.c",
+            "./src/datastruct/trie.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
             "./src/hardware/memory/dram.c",
@@ -107,6 +140,7 @@ def build(key):
             "./src/tests/test_elf.c",
             "./src/common/print.c",
             "./src/common/convert.c",
+            "./src/datastruct/hashtable.c",
             "./src/linker/parseElf.c",
             "./src/linker/staticlink.c",
             "-o", EXE_BIN_LINKER
@@ -184,3 +218,5 @@ elif "clean".startswith(argv_1_lower):
     pass
 elif "copyright".startswith(argv_1_lower):
     add_copyright_header()
+elif "header".startswith(argv_1_lower):
+    format_include()

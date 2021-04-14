@@ -15,6 +15,7 @@
 #include<headers/cpu.h>
 #include<headers/memory.h>
 #include<headers/common.h>
+#include "headers/datastruct.h"
 
 static int get_index(char c)
 {

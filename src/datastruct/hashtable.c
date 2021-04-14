@@ -8,11 +8,12 @@
  * without yangminz's permission.
  */
 
-#include<stdio.h>
-#include<assert.h>
-#include<stdlib.h>
-#include<string.h>
-#include<stdint.h>
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include "headers/datastruct.h"
 
 static uint64_t hash_function(char *str)
 {
@@ -35,25 +36,8 @@ static uint64_t lowbits_n(uint64_t num, int length)
     return num & mask;
 }
 
-typedef struct
-{
-    int localdepth;     // the local depth
-    int counter;        // the counter of slots (have data)
-    char **karray;
-    uint64_t *varray;
-} bucket_t;
-
-typedef struct
-{
-    int num;            // number of buckets = 1 << globaldepth
-    int globaldepth;    // the global depth
-
-    int bsize;          // the size of (key, value) tuples of each bucket
-    bucket_t **barray;  // the internal table is actually an array: store the heap address
-} hashtable_t;
-
-static void split_bucket_full(hashtable_t *tab, bucket_t *b);
-static void insert_bucket_tail(hashtable_t *tab, bucket_t *b, char *key, uint64_t val);
+static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b);
+static void insert_bucket_tail(hashtable_t *tab, hashtable_bucket_t *b, char *key, uint64_t val);
 
 // the constructor
 hashtable_t *hashtable_construct(int bsize)
@@ -64,10 +48,10 @@ hashtable_t *hashtable_construct(int bsize)
     tab->num = 1 << tab->globaldepth;
 
     tab->bsize = bsize;
-    tab->barray = malloc(tab->num * sizeof(bucket_t *));
+    tab->barray = malloc(tab->num * sizeof(hashtable_bucket_t *));
     for (int i = 0; i < tab->num; ++ i)
     {
-        bucket_t *b = malloc(sizeof(bucket_t));
+        hashtable_bucket_t *b = malloc(sizeof(hashtable_bucket_t));
         b->localdepth = 1;
         b->counter = 0;
         b->karray = malloc(tab->bsize * sizeof(char *));
@@ -88,7 +72,7 @@ void hashtable_free(hashtable_t *tab)
 
     for (int i = 0; i < tab->num; ++ i)
     {
-        bucket_t *b = tab->barray[i];
+        hashtable_bucket_t *b = tab->barray[i];
         if (b == NULL)
         {
             continue;
@@ -127,7 +111,7 @@ int hashtable_get(hashtable_t *tab, char *key, uint64_t *val)
     uint64_t hid64 = hash_function(key);
     uint64_t hid = lowbits_n(hid64, tab->globaldepth);
 
-    bucket_t *b = tab->barray[hid];
+    hashtable_bucket_t *b = tab->barray[hid];
     for (int i = 0; i < b->counter; ++ b)
     {
         if (strcmp(b->karray[i], key) == 0)
@@ -150,7 +134,7 @@ int hashtable_insert(hashtable_t **tab_addr, char *key, uint64_t val)
     uint64_t hid64 = hash_function(key);
     uint64_t hid = lowbits_n(hid64, tab->globaldepth);
 
-    bucket_t *b = tab->barray[hid];
+    hashtable_bucket_t *b = tab->barray[hid];
     if (b->counter < tab->bsize)
     {
         // existing empty slot for inserting
@@ -163,13 +147,13 @@ int hashtable_insert(hashtable_t **tab_addr, char *key, uint64_t val)
         if (b->localdepth == tab->globaldepth)
         {
             // expand the array - double the size
-            bucket_t **old_array = tab->barray;
+            hashtable_bucket_t **old_array = tab->barray;
             int old_num = tab->num;
 
             // double
             tab->globaldepth += 1;
             tab->num = 1 << tab->globaldepth;
-            tab->barray = malloc(tab->num * sizeof(bucket_t *));
+            tab->barray = malloc(tab->num * sizeof(hashtable_bucket_t *));
 
             // copy the old array to the new
             for (int i = 0; i < old_num; ++ i)
@@ -204,7 +188,7 @@ int hashtable_insert(hashtable_t **tab_addr, char *key, uint64_t val)
     return 0;
 }
 
-static void split_bucket_full(hashtable_t *tab, bucket_t *b)
+static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b)
 {
     assert(b != NULL);
     assert(b->counter <= tab->bsize);
@@ -216,12 +200,12 @@ static void split_bucket_full(hashtable_t *tab, bucket_t *b)
     // split into new buckets: b -> b0 and b1
 
     // b0 use the old heap space
-    bucket_t *b0 = b;
+    hashtable_bucket_t *b0 = b;
     b0->counter = 0;
     b0->localdepth = before_localdepth + 1;
 
     // b1 malloc the new heap space
-    bucket_t *b1 = malloc(sizeof(bucket_t));
+    hashtable_bucket_t *b1 = malloc(sizeof(hashtable_bucket_t));
     b1->counter = 0;
     b1->localdepth = before_localdepth + 1;
     b1->karray = malloc(tab->bsize * sizeof(char *));
@@ -277,7 +261,7 @@ static void split_bucket_full(hashtable_t *tab, bucket_t *b)
     }
 }
 
-static void insert_bucket_tail(hashtable_t *tab, bucket_t *b, char *key, uint64_t val)
+static void insert_bucket_tail(hashtable_t *tab, hashtable_bucket_t *b, char *key, uint64_t val)
 {
     assert(b->localdepth <= tab->globaldepth);
     assert(b->counter < tab->bsize);
@@ -301,7 +285,7 @@ void print_hashtable(hashtable_t *tab)
     printf("global %d\n", tab->globaldepth);
     for (int i = 0; i < tab->num; ++ i)
     {
-        bucket_t *b = tab->barray[i];
+        hashtable_bucket_t *b = tab->barray[i];
         printf("[%d] local %d = %p: ", i, b->localdepth, b);
         for (int j = 0; j < b->counter; ++ j)
         {
