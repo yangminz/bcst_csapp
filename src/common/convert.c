@@ -8,11 +8,11 @@
  * without yangminz's permission.
  */
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdint.h>
-#include<string.h>
-#include<headers/common.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include "headers/common.h"
 
 // covert string to int64_t
 uint64_t string2uint(const char *str)

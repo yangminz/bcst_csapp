@@ -13,7 +13,7 @@
 #ifndef DEBUG_GUARD
 #define DEBUG_GUARD
 
-#include<stdint.h>
+#include <stdint.h>
 
 #define DEBUG_INSTRUCTIONCYCLE      (0x1)
 #define DEBUG_REGISTERS             (0x2)

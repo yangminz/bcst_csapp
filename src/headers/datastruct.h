@@ -13,7 +13,7 @@
 #ifndef DATASTRUCTURE_GUARD
 #define DATASTRUCTURE_GUARD
 
-#include<stdint.h>
+#include <stdint.h>
 
 /*======================================*/
 /*      Trie - Prefix Tree              */

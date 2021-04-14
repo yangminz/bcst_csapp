@@ -8,13 +8,13 @@
  * without yangminz's permission.
  */
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<headers/cpu.h>
-#include<headers/memory.h>
-#include<headers/common.h>
-#include<headers/datastruct.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "headers/cpu.h"
+#include "headers/memory.h"
+#include "headers/common.h"
+#include "headers/datastruct.h"
 
 /*======================================*/
 /*      instruction set architecture    */

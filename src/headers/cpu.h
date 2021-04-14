@@ -13,8 +13,8 @@
 #ifndef CPU_GUARD
 #define CPU_GUARD
 
-#include<stdint.h>
-#include<stdlib.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 /*======================================*/
 /*      registers                       */

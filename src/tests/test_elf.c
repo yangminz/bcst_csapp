@@ -8,11 +8,11 @@
  * without yangminz's permission.
  */
 
-#include<stdio.h>
-#include<stdint.h>
-#include<stdlib.h>
-#include<headers/linker.h>
-#include<headers/common.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "headers/linker.h"
+#include "headers/common.h"
 
 void parse_elf(char *filename, elf_t *elf);
 

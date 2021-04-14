@@ -8,13 +8,13 @@
  * without yangminz's permission.
  */
 
-#include<assert.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<headers/cpu.h>
-#include<headers/memory.h>
-#include<headers/common.h>
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "headers/cpu.h"
+#include "headers/memory.h"
+#include "headers/common.h"
 #include "headers/datastruct.h"
 
 static int get_index(char c)

@@ -8,13 +8,13 @@
  * without yangminz's permission.
  */
 
-#include<stdio.h>
-#include<stdint.h>
-#include<stdlib.h>
-#include<string.h>
-#include<assert.h>
-#include<headers/linker.h>
-#include<headers/common.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include "headers/linker.h"
+#include "headers/common.h"
 
 static int parse_table_entry(char *str, char ***ent)
 {

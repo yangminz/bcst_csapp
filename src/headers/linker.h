@@ -13,8 +13,8 @@
 #ifndef LINKER_GUARD
 #define LINKER_GUARD
 
-#include<stdint.h>
-#include<stdlib.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #define MAX_CHAR_SECTION_NAME (32)
 

@@ -8,12 +8,12 @@
  * without yangminz's permission.
  */
 
-#include<stdlib.h>
-#include<stdio.h>
-#include<assert.h>
-#include<string.h>
-#include<headers/linker.h>
-#include<headers/common.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
+#include "headers/linker.h"
+#include "headers/common.h"
 
 #define MAX_SYMBOL_MAP_LENGTH 64
 #define MAX_SECTION_BUFFER_LENGTH 64

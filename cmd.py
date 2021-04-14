@@ -56,12 +56,13 @@ def add_copyright_header():
                     print("\tprepend\t%s" % filename)
                     with open(filename, "w", encoding = 'ascii') as fw:
                         fw.write(notification + content)
+                        fw.close()
         except UnicodeDecodeError:
             print(filename)
 
 def format_include():
     # get files with paths
-    filelist = list(Path(".").rglob("*.c"))
+    filelist = list(Path(".").rglob("*.[ch]"))
     a = "#include<headers/"
     b = "#include<"
 
@@ -80,15 +81,14 @@ def format_include():
                                 l = list(content[i])
                                 l[j] = "\""
                                 content[i] = "".join(l)
-                        print(content[i])
                     elif content[i].startswith(b):
                         content[i] = "#include <" + content[i][len(b):]
-                        print(content[i])
                 fr.close()
                 # reopen and write data: this is a safer approach
                 # try to not open in r+ mode
                 with open(filename, "w", encoding = 'ascii') as fw:
-                    fw.write(content)
+                    fw.writelines(content)
+                    fw.close()
         except UnicodeDecodeError:
             print(filename)
 

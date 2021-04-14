@@ -13,8 +13,8 @@
 #ifndef MEMORY_GUARD
 #define MEMORY_GUARD
 
-#include<stdint.h>
-#include<headers/cpu.h>
+#include <stdint.h>
+#include "headers/cpu.h"
 
 /*======================================*/
 /*      physical memory on dram chips   */

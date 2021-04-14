@@ -8,10 +8,10 @@
  * without yangminz's permission.
  */
 
-#include<assert.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<headers/common.h>
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "headers/common.h"
 
 typedef void (*cleanup_t)();
 
