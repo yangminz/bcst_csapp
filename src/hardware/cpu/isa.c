@@ -265,7 +265,7 @@ static uint64_t compute_operand(od_t *od)
         }
         return vaddr;
     }
-    
+
     // empty
     return 0;
 }
@@ -366,7 +366,7 @@ static void parse_operand(const char *str, od_t *od)
         // empty operand
         return;
     }    
-    
+
     // parse the operand string
     if (str[0] == '$')
     {
@@ -626,7 +626,7 @@ static void pop_handler(od_t *src_od, od_t *dst_od)
 {
     uint64_t src = compute_operand(src_od);
     // uint64_t dst = compute_operand(dst_od);
-    
+
     if (src_od->type == REG)
     {
         // src: register
@@ -739,7 +739,7 @@ static void sub_handler(od_t *src_od, od_t *dst_od)
 
         cpu_flags.ZF = (val == 0);
         cpu_flags.SF = val_sign;
-        
+
         cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) || (src_sign == 0 && dst_sign == 1 && val_sign == 0);
 
         // update registers
@@ -773,7 +773,7 @@ static void cmp_handler(od_t *src_od, od_t *dst_od)
 
         cpu_flags.ZF = (val == 0);
         cpu_flags.SF = val_sign;
-        
+
         cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) || (src_sign == 0 && dst_sign == 1 && val_sign == 0);
 
         // signed and unsigned value follow the same addition. e.g.
@@ -822,7 +822,7 @@ void instruction_cycle()
     // DECODE: decode the run-time instruction operands
     inst_t inst;
     parse_instruction(inst_str, &inst);
-    
+
     // EXECUTE: get the function pointer or handler by the operator
     handler_t handler = handler_table[inst.op];
     // update CPU and memory according the instruction
@@ -856,7 +856,7 @@ void print_stack()
     uint64_t *high = (uint64_t*)&pm[va2pa(cpu_reg.rsp)];
     high = &high[n];
     uint64_t va = cpu_reg.rsp + n * 8;
-    
+
     for (int i = 0; i < 2 * n; ++ i)
     {
         uint64_t *ptr = (uint64_t *)(high - i);
@@ -890,7 +890,7 @@ void TestParsingInstruction()
         "callq  0",                 // 13
         "mov    %rax,-0x8(%rbp)",   // 14
     };
-    
+
     inst_t inst;
     for (int i = 0; i < 15; ++ i)
     {
@@ -913,11 +913,11 @@ void TestParsingOperand()
         "(%rsp,%rbx,8)",
         "0xabcd(%rsp,%rbx,8)",
     };
-    
+
     printf("rax %p\n", &(cpu_reg.rax));
     printf("rsp %p\n", &(cpu_reg.rsp));
     printf("rbx %p\n", &(cpu_reg.rbx));
-    
+
     for (int i = 0; i < 11; ++ i)
     {
         od_t od;

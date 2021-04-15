@@ -31,6 +31,6 @@ int main()
     free_elf(&src[0]);
     free_elf(&src[1]);
     free_elf(&dst);
-    
+
     return 0;
 }

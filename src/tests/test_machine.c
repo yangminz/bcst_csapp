@@ -83,7 +83,7 @@ static void TestAddFunctionCallAndComputation()
         "callq  0x00400000",        // 13
         "mov    %rax,-0x8(%rbp)",   // 14
     };
-    
+
     // copy to physical memory
     for (int i = 0; i < 15; ++ i)
     {
@@ -111,7 +111,7 @@ static void TestAddFunctionCallAndComputation()
     match = match && cpu_reg.rdi == 0xabcd;
     match = match && cpu_reg.rbp == 0x7ffffffee110;
     match = match && cpu_reg.rsp == 0x7ffffffee0f0;
-    
+
     if (match)
     {
         printf("register match\n");
@@ -205,7 +205,7 @@ static void TestSumRecursiveCondition()
     match = match && cpu_reg.rdi == 0x0;
     match = match && cpu_reg.rbp == 0x7ffffffee230;
     match = match && cpu_reg.rsp == 0x7ffffffee220;
-    
+
     if (match)
     {
         printf("register match\n");

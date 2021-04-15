@@ -238,7 +238,7 @@ static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b)
     }
 
     // till now, all pairs from b have been moved to b0(b) and b1
-    
+
     // hid64 now is the last hid64, but the low bits should be the same
     uint64_t hid_lowbits = lowbits_n(hid64, before_localdepth);
     for (int highbits = 0; highbits < (1 << (tab->globaldepth - before_localdepth)); ++ highbits)

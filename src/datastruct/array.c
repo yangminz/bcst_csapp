@@ -41,7 +41,7 @@ int array_insert(array_t **addr, uint64_t value)
     {
         // malloc to twice size
         uint64_t *old_table = arr->table;
-        
+
         arr->size = 2 * arr->size;
         arr->table = malloc(arr->size * sizeof(uint64_t));
         // count unchanged

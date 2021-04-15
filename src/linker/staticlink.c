@@ -117,7 +117,7 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst)
 
     // to this point, the EOF file header and section header table is placed
     // merge the left sections and relocate the entries in .text and .data
-    
+
     // merge the symbol content from ELF src into dst sections
     merge_section(srcs, num_srcs, dst, smap_table, &smap_count);
 
@@ -245,7 +245,7 @@ static inline int symbol_precedence(st_entry_t *sym)
     assert(sym->bind == STB_GLOBAL);
 
     // get precedence of the symbol
-    
+
     if (strcmp(sym->st_shndx, "SHN_UNDEF") == 0 && sym->type == STT_NOTYPE)
     {
         // Undefined: symbols referenced but not assigned a storage address
@@ -275,7 +275,7 @@ static void simple_resolution(st_entry_t *sym, elf_t *sym_elf, smap_t *candidate
 {
     // sym: symbol from current elf file
     // candidate: pointer to the internal map table slot: src -> dst
-    
+
     // determines which symbol is the one to be kept with 3 rules
     // rule 1: multiple strong symbols with the same name are not allowed
     // rule 2: given a strong symbol and multiple weak symbols with the same name, choose the strong symbol
@@ -389,7 +389,7 @@ static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_cou
         // get the pointer
         assert(sh_index < dst->sht_count);
         sh = &(dst->sht[sh_index]);
-        
+
         // write the fields
         strcpy(sh->sh_name, ".text");
         sh->sh_addr = text_runtime_addr;
@@ -411,7 +411,7 @@ static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_cou
         // get the pointer
         assert(sh_index < dst->sht_count);
         sh = &(dst->sht[sh_index]);
-        
+
         // write the fields
         strcpy(sh->sh_name, ".rodata");
         sh->sh_addr = rodata_runtime_addr;
@@ -427,13 +427,13 @@ static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_cou
         section_offset += sh->sh_size;
     }
     // else skip .rodata
-    
+
     if (count_data > 0)
     {
         // get the pointer
         assert(sh_index < dst->sht_count);
         sh = &(dst->sht[sh_index]);
-        
+
         // write the fields
         strcpy(sh->sh_name, ".data");
         sh->sh_addr = data_runtime_addr;
@@ -454,7 +454,7 @@ static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_cou
     // get the pointer
     assert(sh_index < dst->sht_count);
     sh = &(dst->sht[sh_index]);
-    
+
     // write the fields
     strcpy(sh->sh_name, ".symtab");
     sh->sh_addr = symtab_runtime_addr;
@@ -549,10 +549,10 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
                                     int dst_index = line_written + t;
                                     int src_index = srcs[i]->sht[src_section_index].sh_offset +
                                         sym->st_value + t;
-                                    
+
                                     assert(dst_index < MAX_ELF_FILE_LENGTH);
                                     assert(src_index < MAX_ELF_FILE_LENGTH);
-                                    
+
                                     strcpy(
                                         dst->buffer[dst_index],
                                         srcs[i]->buffer[src_index]);
