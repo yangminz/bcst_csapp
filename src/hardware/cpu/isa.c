@@ -88,6 +88,7 @@ static void trie_cleanup()
 static void lazy_initialize_trie()
 {
     // initialize the register mapping
+    register_mapping = trie_construct();
     trie_insert(&register_mapping, "%rax",   (uint64_t)&(cpu_reg.rax)    );
     trie_insert(&register_mapping, "%eax",   (uint64_t)&(cpu_reg.eax)    );
     trie_insert(&register_mapping, "%ax",    (uint64_t)&(cpu_reg.ax)     );
@@ -162,6 +163,7 @@ static void lazy_initialize_trie()
     trie_insert(&register_mapping, "%r15b",  (uint64_t)&(cpu_reg.r15b)   );
 
     // initialize the operator mapping
+    operator_mapping = trie_construct();
     trie_insert(&operator_mapping, "movq",   INST_MOV    );
     trie_insert(&operator_mapping, "mov",    INST_MOV    );
     trie_insert(&operator_mapping, "push",   INST_PUSH   );

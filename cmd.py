@@ -60,12 +60,34 @@ def add_copyright_header():
         except UnicodeDecodeError:
             print(filename)
 
-def format_include():
-    # get files with paths
-    filelist = list(Path(".").rglob("*.[ch]"))
+def format_include(s):
     a = "#include<headers/"
     b = "#include<"
 
+    # check include
+    if s.startswith(a):
+        s = "#include \"headers/" + s[len(a):]
+        for j in range(len(s)):
+            if s[j] == '>':
+                l = list(s)
+                l[j] = "\""
+                s = "".join(l)
+    elif s.startswith(b):
+        s = "#include <" + s[len(b):]
+    return s
+
+def format_whiteline(s):
+    space = 0
+    for c in s:
+        if c == ' ':
+            space += 1
+    if space == len(s) - 1 and s[-1] == '\n':
+        s = "\n"
+    return s
+
+def format_code():
+    # get files with paths
+    filelist = list(Path(".").rglob("*.[ch]"))
     # recursively add lines to every .c and .h file
     print("recursively check every .c and file")
     for filename in filelist:
@@ -73,16 +95,8 @@ def format_include():
             with open(filename, "r", encoding = 'ascii') as fr:
                 content = fr.readlines()
                 for i in range(len(content)):
-                    # check first 100 lines
-                    if content[i].startswith(a):
-                        content[i] = "#include \"headers/" + content[i][len(a):]
-                        for j in range(len(content[i])):
-                            if content[i][j] == '>':
-                                l = list(content[i])
-                                l[j] = "\""
-                                content[i] = "".join(l)
-                    elif content[i].startswith(b):
-                        content[i] = "#include <" + content[i][len(b):]
+                    content[i] = format_include(content[i])
+                    content[i] = format_whiteline(content[i])
                 fr.close()
                 # reopen and write data: this is a safer approach
                 # try to not open in r+ mode
@@ -129,6 +143,7 @@ def build(key):
             "./src/common/convert.c",
             "./src/common/cleanup.c",
             "./src/datastruct/trie.c",
+            "./src/datastruct/array.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
             "./src/hardware/memory/dram.c",
@@ -218,5 +233,5 @@ elif "clean".startswith(argv_1_lower):
     pass
 elif "copyright".startswith(argv_1_lower):
     add_copyright_header()
-elif "header".startswith(argv_1_lower):
-    format_include()
+elif "format".startswith(argv_1_lower):
+    format_code()

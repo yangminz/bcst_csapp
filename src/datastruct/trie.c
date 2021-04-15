@@ -52,43 +52,16 @@ static char get_char(int id)
     return '?';
 }
 
-void trie_insert(trie_node_t **root, char *key, uint64_t val)
+// constructor
+trie_node_t * trie_construct()
 {
-    trie_node_t **p = root;
-    for (int i = 0; i < strlen(key); ++ i)
-    {
-        if (*p == NULL)
-        {
-            *p = malloc(sizeof(trie_node_t));
-        }
-
-        p = &((*p)->next[get_index(key[i])]);
-    }
-    if (*p == NULL)
-    {
-        *p = malloc(sizeof(trie_node_t));
-    }
-
-    // may overwrite
-    (*p)->address = val;
+    trie_node_t *root = malloc(sizeof(trie_node_t));
+    root->isvalid = 0;
+    root->value = 0;
+    return root;
 }
 
-int trie_get(trie_node_t *root, char *key, uint64_t *val)
-{
-    trie_node_t *p = root;
-    for (int i = 0; i < strlen(key); ++ i)
-    {
-        if (p == NULL)
-        {
-            // not found
-            return 0;
-        }
-        p = p->next[get_index(key[i])];
-    }
-    *val = p->address;
-    return 1;
-}
-
+// free
 void trie_free(trie_node_t *root)
 {
     // two ways:
@@ -103,6 +76,50 @@ void trie_free(trie_node_t *root)
         trie_free(root->next[i]);
     }
     free(root);
+}
+
+int trie_insert(trie_node_t **address, char *key, uint64_t value)
+{
+    trie_node_t *p = *address;
+    if (p == NULL)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < strlen(key); ++ i)
+    {
+        p->isvalid = 1;
+
+        int id = get_index(key[i]);        
+        if (p->next[id] == NULL)
+        {
+            p->next[id] = malloc(sizeof(trie_node_t));
+            p->next[id]->value = 0;
+            p->next[id]->isvalid = 0;
+        }
+        p = p->next[id];
+    }
+
+    // may overwrite
+    p->value = value;
+    p->isvalid = 1;
+    return 1;
+}
+
+int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
+{
+    trie_node_t *p = root;
+    for (int i = 0; i < strlen(key); ++ i)
+    {
+        if (p == NULL || p->isvalid == 0)
+        {
+            // not found
+            return 0;
+        }
+        p = p->next[get_index(key[i])];
+    }
+    *valptr = p->value;
+    return 1;
 }
 
 static void trie_dfs_print(trie_node_t *x, int level, char c)
@@ -127,7 +144,7 @@ static void trie_dfs_print(trie_node_t *x, int level, char c)
 
 void trie_print(trie_node_t *root)
 {
-    if ((DEBUG_VERBOSE_SET & DEBUG_PARSEINST) == 0)
+    if ((DEBUG_VERBOSE_SET & DEBUG_DATASTRUCTURE) == 0)
     {
         return;
     }
