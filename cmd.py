@@ -155,7 +155,7 @@ def build(key):
             "./src/tests/test_elf.c",
             "./src/common/print.c",
             "./src/common/convert.c",
-            "./src/common/malloc.c",
+            "./src/common/tagmalloc.c",
             "./src/common/cleanup.c",
             "./src/datastruct/array.c",
             "./src/datastruct/hashtable.c",
