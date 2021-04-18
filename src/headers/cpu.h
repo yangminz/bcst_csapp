@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "headers/instruction.h"
 
 /*======================================*/
 /*      registers                       */

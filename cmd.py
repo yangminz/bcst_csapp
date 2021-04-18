@@ -147,6 +147,7 @@ def build(key):
                     "./src/algorithm/array.c",
                     "./src/hardware/cpu/isa.c",
                     "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/memory/dram.c",
                     "-o", EXE_BIN_MACHINE
                 ]
             ],
