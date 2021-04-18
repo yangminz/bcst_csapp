@@ -143,11 +143,10 @@ def build(key):
                     "./src/common/print.c",
                     "./src/common/convert.c",
                     "./src/common/cleanup.c",
-                    "./src/datastruct/trie.c",
-                    "./src/datastruct/array.c",
+                    "./src/algorithm/trie.c",
+                    "./src/algorithm/array.c",
                     "./src/hardware/cpu/isa.c",
                     "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/memory/dram.c",
                     "-o", EXE_BIN_MACHINE
                 ]
             ],
@@ -161,9 +160,9 @@ def build(key):
                     "./src/common/convert.c",
                     "./src/common/tagmalloc.c",
                     "./src/common/cleanup.c",
-                    "./src/datastruct/array.c",
-                    "./src/datastruct/hashtable.c",
-                    "./src/datastruct/linkedlist.c",
+                    "./src/algorithm/array.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/linkedlist.c",
                     "./src/linker/parseElf.c",
                     "./src/linker/staticlink.c",
                     "-o", EXE_BIN_LINKER
@@ -177,12 +176,12 @@ def build(key):
                     "./src/common/convert.c",
                     "./src/common/tagmalloc.c",
                     "./src/common/cleanup.c",
-                    "./src/datastruct/array.c",
-                    "./src/datastruct/hashtable.c",
-                    "./src/datastruct/linkedlist.c",
+                    "./src/algorithm/array.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/linkedlist.c",
                     "./src/linker/parseElf.c",
                     "./src/linker/staticlink.c",
-                    "-o", "./bin/staticlink.so"
+                    "-o", "./bin/staticLinker.so"
                 ],
                 [
                     "/usr/bin/gcc-7", 
@@ -192,9 +191,9 @@ def build(key):
                     "./src/common/convert.c",
                     "./src/common/tagmalloc.c",
                     "./src/common/cleanup.c",
-                    "./src/datastruct/array.c",
-                    "./src/datastruct/hashtable.c",
-                    "./src/datastruct/linkedlist.c",
+                    "./src/algorithm/array.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/linkedlist.c",
                     "./src/linker/linker.c", 
                     "-ldl", "-o", "./bin/link"
                 ],
@@ -210,13 +209,14 @@ def build(key):
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        KEY_MACHINE : [EXE_BIN_MACHINE],
+        KEY_LINKER : [EXE_BIN_LINKER],
+        "dll" : ["./bin/link", "main", "sum", "-o", "output"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
         exit()
-    subprocess.run([bin_map[key]])
+    subprocess.run(bin_map[key])
 
 def debug(key):
     assert(os.path.isdir("./bin/"))

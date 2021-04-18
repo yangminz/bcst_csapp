@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "headers/datastruct.h"
+#include "headers/algorithm.h"
 
 #define MAX_CHAR_SECTION_NAME (32)
 
@@ -104,5 +104,6 @@ typedef struct
 void parse_elf(char *filename, elf_t *elf);
 void free_elf(elf_t *elf);
 void link_elf(elf_t **srcs, int num_srcs, elf_t *dst);
+void write_eof(const char *filename, elf_t *eof);
 
 #endif

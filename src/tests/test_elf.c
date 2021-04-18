@@ -28,6 +28,8 @@ int main()
     srcp[1] = &src[1];
     link_elf((elf_t **)&srcp, 2, &dst);
 
+    write_eof("./files/exe/output.eof.txt", &dst);
+
     free_elf(&src[0]);
     free_elf(&src[1]);
     free_elf(&dst);

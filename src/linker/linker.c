@@ -68,21 +68,24 @@ int main(int argc, char **argv)
     void (*link_elf)(elf_t **, int, elf_t *);
     void (*write_eof)(const char *, elf_t *);
     void (*parse_elf)(const char *, elf_t *);
+    void (*free_elf)(elf_t *elf);
+
     link_elf = dlsym(linklib, "link_elf");
     write_eof = dlsym(linklib, "write_eof");
     parse_elf = dlsym(linklib, "parse_elf");
+    free_elf = dlsym(linklib, "free_elf");
 
     // do front end logic
 
     printf("we are DYNAMICALLY LINKING ./bin/linker.so to do STATIC linking:\nlinking ");
-    elf_t **srcs = malloc(elf_num * sizeof(elf_t *));
+    elf_t **srcs = tag_malloc(elf_num * sizeof(elf_t *), "link");
     for (int i = 0; i < elf_num; ++ i)
     {
         char elf_fullpath[100];
         sprintf(elf_fullpath, "%s/%s.elf.txt", EXECUTABLE_DIRECTORY, elf_fn[i]);
-        printf("%s ", elf_fullpath);
+        printf("%s\n", elf_fullpath);
 
-        srcs[i] = malloc(sizeof(elf_t));
+        srcs[i] = tag_malloc(sizeof(elf_t), "link");
         parse_elf(elf_fullpath, srcs[i]);
     }
 
@@ -98,9 +101,10 @@ int main(int argc, char **argv)
     // releaes elf heap
     for (int i = 0; i < elf_num; ++ i)
     {
-        free(srcs[i]);        
+        free_elf(srcs[i]);        
     }
-    free(srcs);
+
+    tag_free(srcs);
 
     return 0;
 }

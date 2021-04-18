@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "headers/common.h"
-#include "headers/datastruct.h"
+#include "headers/algorithm.h"
 
 static uint64_t compute_tag(char *str);
 static void tag_destroy();

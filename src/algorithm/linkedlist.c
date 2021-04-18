@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "headers/datastruct.h"
+#include "headers/algorithm.h"
 
 // constructor and destructor
 linkedlist_t *linkedlist_construct()

@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "headers/common.h"
-#include "headers/datastruct.h"
+#include "headers/algorithm.h"
 
 typedef void (*cleanup_t)();
 
