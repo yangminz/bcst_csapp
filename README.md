@@ -73,3 +73,5 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 **2021-04-04** 静态链接的第二步：将ELF的Section合并为EOF的Segment，并且计算Segment的运行时起始地址：[video](https://www.bilibili.com/video/BV1Lh411D7fh/), [git-commit](https://github.com/yangminz/bcst_csapp/tree/d2c4f611d0cffb8e029c254a41100be58392577f)
 
 **2021-04-10** 静态链接的第三步：将ELF文件中的符号引用重定位到它们在EOF中的符号：[video](https://www.bilibili.com/video/bv1GU4y1h7mt), [git-commit](https://github.com/yangminz/bcst_csapp/tree/d0be3855f2b679fae31a66096a53661c277890e1)
+
+**2021-04-18** 完成静态链接，计算符号的运行时地址。动态链接：GOT与PLT：[video](https://www.bilibili.com/video/BV1nQ4y1Z7us), [git-commit](https://github.com/yangminz/bcst_csapp/commit/316c38b76c329115d58d68e3fc626546ecab35ad)
