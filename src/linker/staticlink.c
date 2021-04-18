@@ -753,6 +753,12 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
 
 // relocating handlers
 
+static uint64_t get_symbol_runtime_address(elf_t *dst, st_entry_t *sym)
+{
+    // TODO: get the run-time address of symbol
+    return 0;
+}
+
 static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh,
     int row_referencing, int col_referencing, int addend,
     st_entry_t *sym_referenced)

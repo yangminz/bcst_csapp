@@ -32,5 +32,7 @@ int main()
     free_elf(&src[1]);
     free_elf(&dst);
 
+    finally_cleanup();
+
     return 0;
 }

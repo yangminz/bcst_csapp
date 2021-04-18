@@ -135,41 +135,77 @@ def build(key):
     make_build_directory()
     gcc_map = {
         KEY_MACHINE : [
-            "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-            "-I", "./src",
-            "./src/tests/test_machine.c",
-            "./src/common/print.c",
-            "./src/common/convert.c",
-            "./src/common/cleanup.c",
-            "./src/datastruct/trie.c",
-            "./src/datastruct/array.c",
-            "./src/hardware/cpu/isa.c",
-            "./src/hardware/cpu/mmu.c",
-            "./src/hardware/memory/dram.c",
-            "-o", EXE_BIN_MACHINE],
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                    "-I", "./src",
+                    "./src/tests/test_machine.c",
+                    "./src/common/print.c",
+                    "./src/common/convert.c",
+                    "./src/common/cleanup.c",
+                    "./src/datastruct/trie.c",
+                    "./src/datastruct/array.c",
+                    "./src/hardware/cpu/isa.c",
+                    "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/memory/dram.c",
+                    "-o", EXE_BIN_MACHINE
+                ]
+            ],
         KEY_LINKER : [
-            "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-            "-I", "./src",
-            "./src/tests/test_elf.c",
-            "./src/common/print.c",
-            "./src/common/convert.c",
-            "./src/common/tagmalloc.c",
-            "./src/common/cleanup.c",
-            "./src/datastruct/array.c",
-            "./src/datastruct/hashtable.c",
-            "./src/datastruct/linkedlist.c",
-            "./src/linker/parseElf.c",
-            "./src/linker/staticlink.c",
-            "-o", EXE_BIN_LINKER
-        ]
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                    "-I", "./src",
+                    "./src/tests/test_elf.c",
+                    "./src/common/print.c",
+                    "./src/common/convert.c",
+                    "./src/common/tagmalloc.c",
+                    "./src/common/cleanup.c",
+                    "./src/datastruct/array.c",
+                    "./src/datastruct/hashtable.c",
+                    "./src/datastruct/linkedlist.c",
+                    "./src/linker/parseElf.c",
+                    "./src/linker/staticlink.c",
+                    "-o", EXE_BIN_LINKER
+                ],
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-shared", "-fPIC",
+                    "./src/common/print.c",
+                    "./src/common/convert.c",
+                    "./src/common/tagmalloc.c",
+                    "./src/common/cleanup.c",
+                    "./src/datastruct/array.c",
+                    "./src/datastruct/hashtable.c",
+                    "./src/datastruct/linkedlist.c",
+                    "./src/linker/parseElf.c",
+                    "./src/linker/staticlink.c",
+                    "-o", "./bin/staticlink.so"
+                ],
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                    "-I", "./src",
+                    "./src/common/print.c",
+                    "./src/common/convert.c",
+                    "./src/common/tagmalloc.c",
+                    "./src/common/cleanup.c",
+                    "./src/datastruct/array.c",
+                    "./src/datastruct/hashtable.c",
+                    "./src/datastruct/linkedlist.c",
+                    "./src/linker/linker.c", 
+                    "-ldl", "-o", "./bin/link"
+                ],
+            ]
     }
 
     if not key in gcc_map:
         print("input the correct build key:", gcc_map.keys())
         exit()
-    subprocess.run(gcc_map[key])
+    for command in gcc_map[key]:
+        subprocess.run(command)
 
 def run(key):
     assert(os.path.isdir("./bin/"))
