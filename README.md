@@ -75,3 +75,11 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 **2021-04-10** 静态链接的第三步：将ELF文件中的符号引用重定位到它们在EOF中的符号：[video](https://www.bilibili.com/video/bv1GU4y1h7mt), [git-commit](https://github.com/yangminz/bcst_csapp/tree/d0be3855f2b679fae31a66096a53661c277890e1)
 
 **2021-04-18** 完成静态链接，计算符号的运行时地址。动态链接：GOT与PLT：[video](https://www.bilibili.com/video/BV1nQ4y1Z7us), [git-commit](https://github.com/yangminz/bcst_csapp/commit/316c38b76c329115d58d68e3fc626546ecab35ad)
+
+**2021-04-23** 链接部分的总结。C语言的`.c`源文件如何被预处理，编译，链接，然后加载到内存中执行。在运行时，进程怎样使用动态链接库：[video](https://www.bilibili.com/video/BV1WU4y1b78m/)
+
+#### Chapter 06 - The Memory Hierarchy
+
+编译与链接的知识可以帮助我们理解进程的内存模型。从这里开始，我们要真正开始讨论内存问题了，主要包括内存本身的实现以及虚拟内存与物理内存的转换。我们首先讨论内存体系，理解缓存思想在内存体系中的地位。实际上，计算机想要实现高性能的应用，也大量依赖缓存的技术。一旦涉及缓存，或者说共享的资源，我们就无法回避一致性的问题。缓存背后的局部性，如何设计缓存，如何分析缓存一致性带来的性能问题，是我们这一阶段的核心主题。
+
+**2021-04-27** 简单介绍一下关于内存的许多问题，这也是我们学习计算机系统的最核心知识。内存的层次、局部性、内存与缓存的一致性，以及我们怎么考虑虚拟内存。 [video](https://www.bilibili.com/video/BV1DA411V7LY/)
