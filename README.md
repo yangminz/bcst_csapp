@@ -85,3 +85,5 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 **2021-04-27** 简单介绍一下关于内存的许多问题，这也是我们学习计算机系统的最核心知识。内存的层次、局部性、内存与缓存的一致性，以及我们怎么考虑虚拟内存。 [video](https://www.bilibili.com/video/BV1DA411V7LY/)
 
 **2021-05-09** 关于cache的基本结构：cache视角下的物理地址，组相连的cache。[video](https://www.bilibili.com/video/BV14U4y1t7SJ), [git-commit](https://github.com/yangminz/bcst_csapp/commit/36503ec7b319658e08fd38aebcb76ec5f0ba6467)
+
+**2021-05-15** 一个简单的LRU cache模拟器，讨论cache的写回/写分配、直写/不写分配的不同状态转移。模拟总线上读写一个cache line，以及LRU cache的读写。[video](https://www.bilibili.com/video/bv1y64y1C7XH), [git-commit](https://github.com/yangminz/bcst_csapp/commit/17d4782f9c00526cb30c0d747f8ed9ab5a6b8c13)
