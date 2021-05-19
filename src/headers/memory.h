@@ -14,7 +14,6 @@
 #define MEMORY_GUARD
 
 #include <stdint.h>
-#include "headers/cpu.h"
 
 /*======================================*/
 /*      physical memory on dram chips   */

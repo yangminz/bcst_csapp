@@ -11,9 +11,36 @@
 #include "headers/address.h"
 #include "headers/memory.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
+/*
+    S = 2^s, s = 6
+    B = 2^b, b = 6
+    E is defined in sram.c, 8
+    For correctness verification, E can be 1, 2, 8, 1024
+    monitoring:
+    cache_hit_count
+    cache_miss_count
+    cache_evict_count
+    dirty_bytes_in_cache_count
+    dirty_bytes_evicted_count
+ */
+
+#ifdef CACHE_SIMULATION_VERIFICATION
+int cache_hit_count = 0;
+int cache_miss_count = 0;
+int cache_evict_count = 0;
+int dirty_bytes_in_cache_count = 0;
+int dirty_bytes_evicted_count = 0;
+
+char trace_buf[20];
+char *trace_ptr = (char *)&trace_buf;
+#else
 #define NUM_CACHE_LINE_PER_SET (8)
+#endif
 
 // write-back and write-allocate
 typedef enum
@@ -49,7 +76,7 @@ uint8_t sram_cache_read(uint64_t paddr_value)
         .paddr_value = paddr_value,
     };
     
-    sram_cacheset_t set = cache.sets[paddr.CI];
+    sram_cacheset_t *set = &cache.sets[paddr.CI];
 
     // update LRU time
     sram_cacheline_t *victim = NULL;
@@ -58,30 +85,37 @@ uint8_t sram_cache_read(uint64_t paddr_value)
 
     for (int i = 0; i < NUM_CACHE_LINE_PER_SET; ++ i)
     {
-        set.lines[i].time ++;
+        sram_cacheline_t *line = &(set->lines[i]);
 
-        if (max_time < set.lines[i].time)
+        line->time ++;
+
+        if (max_time < line->time)
         {
             // select this line as victim by LRU policy
             // replace it when all lines are valid
-            victim = &(set.lines[i]);
-            max_time = set.lines[i].time;
+            victim = line;
+            max_time = line->time;
         }
 
-        if (set.lines[i].state == CACHE_LINE_INVALID)
+        if (line->state == CACHE_LINE_INVALID)
         {
             // exist one invalid line as candidate for cache miss
-            invalid = &(set.lines[i]);
+            invalid = line;
         }
     }
 
     // try cache hit
     for (int i = 0; i < NUM_CACHE_LINE_PER_SET; ++ i)
     {
-        sram_cacheline_t line = set.lines[i];
+        sram_cacheline_t line = set->lines[i];
 
         if (line.state != CACHE_LINE_INVALID && line.tag == paddr.CT)
         {
+#ifdef CACHE_SIMULATION_VERIFICATION
+            sprintf(trace_buf, "hit");
+            cache_hit_count ++;
+#endif
+
             // cache hit
             // update LRU time
             line.time = 0;
@@ -91,14 +125,19 @@ uint8_t sram_cache_read(uint64_t paddr_value)
         }
     }
 
+#ifdef CACHE_SIMULATION_VERIFICATION
     // cache miss: load from memory
+    sprintf(trace_buf, "miss");
+    cache_miss_count ++;
+#endif
 
     // try to find one free cache line
     if (invalid != NULL)
     {
+#ifndef CACHE_SIMULATION_VERIFICATION
         // load data from DRAM to this invalid cache line
         bus_read_cacheline(paddr.paddr_value, &(invalid->block));
-
+#endif
         // update cache line state
         invalid->state = CACHE_LINE_CLEAN;
 
@@ -116,16 +155,28 @@ uint8_t sram_cache_read(uint64_t paddr_value)
 
     if (victim->state == CACHE_LINE_DIRTY)
     {
+#ifndef CACHE_SIMULATION_VERIFICATION
         // write back the dirty line to dram
         bus_write_cacheline(paddr.paddr_value, victim);
+#else
+        dirty_bytes_evicted_count   += (1 << SRAM_CACHE_OFFSET_LENGTH);
+        dirty_bytes_in_cache_count  -= (1 << SRAM_CACHE_OFFSET_LENGTH);
+#endif
     }
+#ifdef CACHE_SIMULATION_VERIFICATION
     // if CACHE_LINE_CLEAN discard this victim directly
+    sprintf(trace_buf, "miss eviction");
+    cache_evict_count ++;
+#endif
+
     // update state
     victim->state = CACHE_LINE_INVALID;
 
+#ifndef CACHE_SIMULATION_VERIFICATION
     // read from dram
     // load data from DRAM to this invalid cache line
     bus_read_cacheline(paddr.paddr_value, &(victim->block));
+#endif
 
     // update cache line state
     victim->state = CACHE_LINE_CLEAN;
@@ -145,7 +196,7 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
         .paddr_value = paddr_value,
     };
 
-    sram_cacheset_t set = cache.sets[paddr.CI];
+    sram_cacheset_t *set = &(cache.sets[paddr.CI]);
 
     // update LRU time
     sram_cacheline_t *victim = NULL;
@@ -154,54 +205,72 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
 
     for (int i = 0; i < NUM_CACHE_LINE_PER_SET; ++ i)
     {
-        set.lines[i].time ++;
+        sram_cacheline_t *line = &(set->lines[i]);
+        line->time ++;
 
-        if (max_time < set.lines[i].time)
+        if (max_time < line->time)
         {
             // select this line as victim by LRU policy
             // replace it when all lines are valid
-            victim = &(set.lines[i]);
-            max_time = set.lines[i].time;
+            victim = line;
+            max_time = line->time;
         }
 
-        if (set.lines[i].state == CACHE_LINE_INVALID)
+        if (line->state == CACHE_LINE_INVALID)
         {
             // exist one invalid line as candidate for cache miss
-            invalid = &(set.lines[i]);
+            invalid = line;
         }
     }
 
     // try cache hit
     for (int i = 0; i < NUM_CACHE_LINE_PER_SET; ++ i)
     {
-        sram_cacheline_t line = set.lines[i];
+        sram_cacheline_t *line = &(set->lines[i]);
 
-        if (line.state != CACHE_LINE_INVALID && line.tag == paddr.CT)
+        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.CT)
         {
+#ifdef CACHE_SIMULATION_VERIFICATION
             // cache hit
+            sprintf(trace_buf, "hit");
+            cache_hit_count ++;
+
+            if (line->state == CACHE_LINE_CLEAN)
+            {
+                dirty_bytes_in_cache_count += (1 << SRAM_CACHE_OFFSET_LENGTH);
+            }
+#endif
 
             // update LRU time
-            line.time = 0;
+            line->time = 0;
             
             // find the byte
-            line.block[paddr.CO] = data;
+            line->block[paddr.CO] = data;
             
             // update state
-            line.state = CACHE_LINE_DIRTY;
+            line->state = CACHE_LINE_DIRTY;
 
             return;
         }
     }
 
+#ifdef CACHE_SIMULATION_VERIFICATION
     // cache miss: load from memory
+    sprintf(trace_buf, "miss");
+    cache_miss_count ++;
+#endif
 
     // write-allocate
 
     // try to find one free cache line
     if (invalid != NULL)
     {
+#ifndef CACHE_SIMULATION_VERIFICATION
         // load data from DRAM to this invalid cache line
         bus_read_cacheline(paddr.paddr_value, &(invalid->block));
+#else
+        dirty_bytes_in_cache_count += (1 << SRAM_CACHE_OFFSET_LENGTH);
+#endif
 
         // update cache line state
         invalid->state = CACHE_LINE_DIRTY;
@@ -223,17 +292,31 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
 
     if (victim->state == CACHE_LINE_DIRTY)
     {
+#ifndef CACHE_SIMULATION_VERIFICATION
         // write back the dirty line to dram
         bus_write_cacheline(paddr.paddr_value, victim);
+#else
+        dirty_bytes_evicted_count   += (1 << SRAM_CACHE_OFFSET_LENGTH);
+        dirty_bytes_in_cache_count  -= (1 << SRAM_CACHE_OFFSET_LENGTH);
+#endif
     }
+
+#ifdef CACHE_SIMULATION_VERIFICATION
     // if CACHE_LINE_CLEAN discard this victim directly
+    sprintf(trace_buf, "miss eviction");
+    cache_evict_count ++;
+    dirty_bytes_in_cache_count += (1 << SRAM_CACHE_OFFSET_LENGTH);
+#endif
+
     // update state
     victim->state = CACHE_LINE_INVALID;
 
+#ifndef CACHE_SIMULATION_VERIFICATION
     // read from dram
     // write-allocate
     // load data from DRAM to this invalid cache line
     bus_read_cacheline(paddr.paddr_value, &(victim->block));
+#endif
 
     // update cache line state
     victim->state = CACHE_LINE_DIRTY;
@@ -247,3 +330,40 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
     victim->block[paddr.CO] = data;
 }
 
+#ifdef CACHE_SIMULATION_VERIFICATION
+void print_cache()
+{
+    for (int i = 0; i < (1 << SRAM_CACHE_INDEX_LENGTH); ++ i)
+    {
+        printf("set %x: [ ", i);
+
+        sram_cacheset_t set = cache.sets[i];
+
+        for (int j = 0; j < NUM_CACHE_LINE_PER_SET; ++ j)
+        {
+            sram_cacheline_t line = set.lines[j];
+
+            char state;
+            switch (line.state)
+            {
+            case CACHE_LINE_CLEAN:
+                state = 'c';
+                break;
+            case CACHE_LINE_DIRTY:
+                state = 'd';
+                break;
+            case CACHE_LINE_INVALID:
+                state = 'i';
+                break;            
+            default:
+                state = 'u';
+                break;
+            }
+
+            printf("(%lx: %c, %d), ", line.tag, state, line.time);
+        }
+
+        printf("\b\b ]\n");
+    }
+}
+#endif

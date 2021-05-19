@@ -246,33 +246,43 @@ def mem_check(key):
         bin_map[key]
     ])
 
+def cache_verify():
+    subprocess.run([
+        "/usr/bin/python3",
+        "./src/hardware/cpu/cache_verify.py",
+        "/mnt/e/Ubuntu/cache/csim-ref",
+        "/mnt/e/Ubuntu/cache/traces/"
+    ])
+
 # main
 assert(len(sys.argv) >= 2)
-argv_1_lower = sys.argv[1].lower()
+operation = sys.argv[1].lower()
 
-if "build".startswith(argv_1_lower):
+if operation == "build":
     assert(len(sys.argv) == 3)
     build(sys.argv[2])
-elif "run".startswith(argv_1_lower):
+elif operation == "run":
     assert(len(sys.argv) == 3)
     run(sys.argv[2])
-elif "debug".startswith(argv_1_lower):
+elif operation == "debug":
     assert(len(sys.argv) == 3)
     debug(sys.argv[2])
-elif KEY_MACHINE.lower().startswith(argv_1_lower):
+elif operation.lower() == KEY_MACHINE.lower():
     build(KEY_MACHINE)
     run(KEY_MACHINE)
-elif KEY_LINKER.lower().startswith(argv_1_lower):
+elif operation.lower() == KEY_LINKER.lower():
     build(KEY_LINKER)
     run(KEY_LINKER)
-elif "memorycheck".startswith(argv_1_lower):
+elif operation == "memorycheck":
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
-elif "count".startswith(argv_1_lower):
+elif operation == "count":
     count_lines()
-elif "clean".startswith(argv_1_lower):
+elif operation == "clean":
     pass
-elif "copyright".startswith(argv_1_lower):
+elif operation == "copyright":
     add_copyright_header()
-elif "format".startswith(argv_1_lower):
+elif operation == "format":
     format_code()
+elif operation == "csim":
+    cache_verify()
