@@ -247,12 +247,38 @@ def mem_check(key):
     ])
 
 def cache_verify():
-    subprocess.run([
-        "/usr/bin/python3",
-        "./src/hardware/cpu/cache_verify.py",
-        "/mnt/e/Ubuntu/cache/csim-ref",
-        "/mnt/e/Ubuntu/cache/traces/"
-    ])
+    csim_ref_file = "/mnt/e/Ubuntu/cache/csim-ref"
+    trace_dir = "/mnt/e/Ubuntu/cache/traces/"
+
+    assert(os.path.isfile(csim_ref_file))
+    assert(os.path.isdir(trace_dir))
+
+    test_cases = [
+        # s E b
+        [   2,  1,      2,  "wide.trace"    ],
+        [   3,  2,      2,  "load.trace"    ],
+        [   1,  1,      1,  "yi2.trace" ],
+        [   4,  2,      4,  "yi.trace"      ],
+        [   2,  1,      4,  "dave.trace"    ],
+        [   2,  1,      3,  "trans.trace"   ],
+        [   2,  2,      3,  "trans.trace"   ],
+        [   14, 1024,   3,  "trans.trace"   ],
+        [   5,  1,      5,  "trans.trace"   ],
+        [   5,  1,      5,  "long.trace"    ],
+    ]
+
+    for [s, E, b, file] in test_cases:
+        # need to reload shared library for each test run
+        # thus we start a new process
+        a = [
+            "/usr/bin/python3",
+            "./src/hardware/cpu/cache_verify.py",
+            "/mnt/e/Ubuntu/cache/csim-ref",
+            "/mnt/e/Ubuntu/cache/traces/" + file,
+            str(s), str(E), str(b),
+        ]
+        print(" ".join(a))
+        subprocess.run(a)
 
 # main
 assert(len(sys.argv) >= 2)
