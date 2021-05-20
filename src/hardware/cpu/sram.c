@@ -107,9 +107,9 @@ uint8_t sram_cache_read(uint64_t paddr_value)
     // try cache hit
     for (int i = 0; i < NUM_CACHE_LINE_PER_SET; ++ i)
     {
-        sram_cacheline_t line = set->lines[i];
+        sram_cacheline_t *line = &(set->lines[i]);
 
-        if (line.state != CACHE_LINE_INVALID && line.tag == paddr.CT)
+        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.CT)
         {
 #ifdef CACHE_SIMULATION_VERIFICATION
             sprintf(trace_buf, "hit");
@@ -118,10 +118,10 @@ uint8_t sram_cache_read(uint64_t paddr_value)
 
             // cache hit
             // update LRU time
-            line.time = 0;
+            line->time = 0;
 
             // find the byte
-            return line.block[paddr.CO];
+            return line->block[paddr.CO];
         }
     }
 

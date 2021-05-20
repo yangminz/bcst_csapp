@@ -5,11 +5,12 @@
 import sys
 import os
 import subprocess
+import copy
 from pathlib import Path
 from ctypes import *
 from functools import reduce
 
-debug = False;
+debug = False
 
 def scan_ints(s):
     results = []
@@ -51,7 +52,8 @@ def run_csim_ref(s, E, b, csim_ref_file, trace_file):
     # L 37f,1 miss
     # L 37b,1 hit
 
-    data = out.split("\n")[1:]
+    data = out.split("\n")
+    stat_line = ""
     trace = []
     for line in data:
         if line.endswith("hit"):
@@ -60,8 +62,10 @@ def run_csim_ref(s, E, b, csim_ref_file, trace_file):
             trace += ["miss"]
         elif line.endswith("miss eviction"):
             trace += ["miss eviction"]
+        elif line.startswith("hits:"):
+            stat_line = line
 
-    return scan_ints(data[-2]), trace
+    return scan_ints(stat_line), trace
 
 def read_trace(trace_file):
     try:
@@ -127,8 +131,8 @@ def run_csim(s, E, b, trace_file, ref_trace):
     pass_trace = True
     for [op, paddr, bsize] in trace:
         if debug:
-            print(op, "%x" % paddr, bsize)
             print_paddr(paddr, s, b)
+            print(op, "%x" % paddr, bsize)
         
         if op == "L":
             lib.sram_cache_read(c_ulonglong(paddr))
@@ -152,7 +156,6 @@ def run_csim(s, E, b, trace_file, ref_trace):
 
         if debug:
             print_stat(lib)
-            print("----")
 
     return pass_trace, [
         (c_int.in_dll(lib, "cache_hit_count")).value,
@@ -175,11 +178,56 @@ def cache_test(s, E, b, trace_file, csim_ref_file):
         return False
 
 def print_paddr(paddr, s, b):
-    offset = paddr & (~(0xffffffffffffffff << b))
-    addr = paddr >> b
-    index = addr & (~(0xffffffffffffffff << s))
-    tag = addr >> s
-    print("tag:0x%x index:0x%x offset:0x%x" % (tag, index, offset))
+    p = [2**i for i in range(64)]
+    string_hex = lambda b : "0x%lx" % reduce((lambda x, y: x + y), [b[i] * p[i] for i in range(len(b))])
+    string_binary = lambda b : "".join([str(b[i]) for i in range(len(b) - 1, -1, -1)])
+
+    bits = []
+    for i in range(64):
+        bits += [(paddr & 0x1)]
+        paddr = (paddr >> 1)
+    boffset = bits[0: b]
+    bindex = bits[b : b + s]
+    btag = bits[b + s: 64]
+
+    print_table(
+        [
+            ["tag", "index", "offset"],
+            [string_binary(btag), string_binary(bindex), string_binary(boffset)],
+            [string_hex(btag), string_hex(bindex), string_hex(boffset)]
+        ]
+    )
+
+def print_table(data):
+    nr = len(data)
+    nc = len(data[0])
+    width = [4 * (int(max([len(data[j][i]) + 2 for j in range(nr)]) / 4) + 1) for i in range(nc)]
+
+    bar = "+"
+    for w in width:
+        for i in range(w):
+            bar += "-"
+        bar += "+"
+    
+    def format_line(line):
+        temp = "|"
+        for j in range(nc):
+            temp += " "
+            temp += line[j]
+            for k in range(width[j] - len(line[j]) - 1):
+                temp += " "
+            temp += "|"
+        return temp
+
+    # print header
+    print(bar)
+    print(format_line(data[0]))
+    print(bar)
+    i = 1
+    while i < len(data):
+        print(format_line(data[i]))
+        i += 1
+    print(bar)
 
 # print arguments
 
