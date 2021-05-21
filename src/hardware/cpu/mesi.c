@@ -116,7 +116,7 @@ int read_cacheline(int i)
                 if (cache[j].state == SHARED)
                 {
                     // there exists multiple copies in the chip
-                    // copy from here to avoid I/O to DRAM
+                    // copy from here to avoid I/O to l3
                     cache[i].state = SHARED;
                     cache[i].value = cache[j].value;
 #ifdef DEBUG
@@ -127,7 +127,7 @@ int read_cacheline(int i)
                 else if (cache[j].state == EXCLUSIVE)
                 {
                     // there exists only one copy in the chip here
-                    // copy from here to avoid I/O to DRAM
+                    // copy from here to avoid I/O to l3
                     cache[i].state = SHARED;
                     cache[i].value = cache[j].value;
 
@@ -140,9 +140,9 @@ int read_cacheline(int i)
                 else if (cache[j].state == MODIFIED)
                 {
                     // there exists only one copy in the chip here
-                    // but it's DIRTY! write it back to DRAM
-                    // do I/O transaction over the bus to DRAM
-                    // copy from here to avoid I/O to DRAM
+                    // but it's DIRTY! write it back to l3
+                    // do I/O transaction over the bus to l3
+                    // copy from here to avoid I/O to l3
 
                     // write back the dirty data
                     l3_value = cache[j].value;
@@ -162,9 +162,9 @@ int read_cacheline(int i)
         // no return before means:
         // all other cache lines are invalid
         cache[i].state = EXCLUSIVE;     // so I am the only copy among all processors
-        cache[i].value = l3_value;    // do one I/O transaction over bus to DRAM
+        cache[i].value = l3_value;      // do one I/O transaction over bus to l3
 #ifdef DEBUG
-        printf("[%d] read miss; DRAM supplies data %d ** BUS READ **\n", i, l3_value);
+        printf("[%d] read miss; L3 shared cache supplies data %d ** BUS READ **\n", i, l3_value);
 #endif
         return 1;
     }
@@ -228,7 +228,7 @@ int write_cacheline(int i, int value)
                 if (cache[j].state == MODIFIED)
                 {
                     // existing only one modified copy, just invalid it
-                    // no bus transaction here, no I/O to DRAM
+                    // no bus transaction here, no I/O to l3
                     cache[j].state = INVALID;
                     cache[j].value = 0;
                     // update the current cache
@@ -242,7 +242,7 @@ int write_cacheline(int i, int value)
                 else if (cache[j].state == EXCLUSIVE)
                 {
                     // existing only one Exclusive copy, just invalid it
-                    // no bus transaction here, no I/O to DRAM
+                    // no bus transaction here, no I/O to l3
                     cache[j].state = INVALID;
                     cache[j].value = 0;
                     // update the current cache
@@ -276,7 +276,7 @@ int write_cacheline(int i, int value)
         }
 
         // all other processors are not holding any copy
-        // need to load from DRAM
+        // need to load from l3
         cache[i].state = MODIFIED;
         cache[i].value = value;
 #ifdef DEBUG
@@ -293,7 +293,7 @@ int evict_cacheline(int i)
 {
     if (cache[i].state == MODIFIED)
     {
-        // write back to DRAM and transit to invalid
+        // write back to l3 and transit to invalid
         l3_value = cache[i].value;
 
         // invalid this cache line since the physical address is no longer in the cache
@@ -346,7 +346,7 @@ void print_cache()
 
         printf("\t[%4d]   state %c   value %d\n", i, c, cache[i].value);
     }
-        printf("                            DRAM: %d\n", l3_value);
+        printf("                            L3 Shared cache copy: %d\n", l3_value);
 }
 #endif
 

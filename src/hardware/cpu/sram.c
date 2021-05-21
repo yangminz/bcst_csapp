@@ -16,12 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef CACHE_SIMULATION_VERIFICATION
 /*
-    S = 2^s, s = 6
-    B = 2^b, b = 6
-    E is defined in sram.c, 8
-    For correctness verification, E can be 1, 2, 8, 1024
-    monitoring:
+    For correctness verification monitoring:
     cache_hit_count
     cache_miss_count
     cache_evict_count
@@ -29,13 +26,13 @@
     dirty_bytes_evicted_count
  */
 
-#ifdef CACHE_SIMULATION_VERIFICATION
 int cache_hit_count = 0;
 int cache_miss_count = 0;
 int cache_evict_count = 0;
 int dirty_bytes_in_cache_count = 0;
 int dirty_bytes_evicted_count = 0;
 
+// to be read by python script
 char trace_buf[20];
 char *trace_ptr = (char *)&trace_buf;
 #else
