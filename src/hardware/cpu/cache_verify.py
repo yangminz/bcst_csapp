@@ -107,7 +107,7 @@ def run_csim(s, E, b, trace_file, ref_trace):
             "/usr/bin/gcc-7", 
             "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
             "-I", "./src",
-            "-D", "CACHE_SIMULATION_VERIFICATION", # define not to call the dram functions
+            "-DCACHE_SIMULATION_VERIFICATION", # define not to call the dram functions
             "-DSRAM_CACHE_INDEX_LENGTH=%d" % s, 
             "-DSRAM_CACHE_OFFSET_LENGTH=%d" % b, 
             "-DNUM_CACHE_LINE_PER_SET=%d" % E,
