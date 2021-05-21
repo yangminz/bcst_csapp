@@ -258,6 +258,7 @@ def mem_check(key):
     ])
 
 def cache_verify():
+    make_build_directory()
     csim_ref_file = "/mnt/e/Ubuntu/cache/csim-ref"
     trace_dir = "/mnt/e/Ubuntu/cache/traces/"
 
@@ -268,7 +269,7 @@ def cache_verify():
         # s E b
         [   2,  1,      2,  "wide.trace"    ],
         [   3,  2,      2,  "load.trace"    ],
-        [   1,  1,      1,  "yi2.trace" ],
+        [   1,  1,      1,  "yi2.trace"     ],
         [   4,  2,      4,  "yi.trace"      ],
         [   2,  1,      4,  "dave.trace"    ],
         [   2,  1,      3,  "trans.trace"   ],
