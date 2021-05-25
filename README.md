@@ -87,3 +87,7 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 **2021-05-09** 关于cache的基本结构：cache视角下的物理地址，组相连的cache。[video](https://www.bilibili.com/video/BV14U4y1t7SJ), [git-commit](https://github.com/yangminz/bcst_csapp/commit/36503ec7b319658e08fd38aebcb76ec5f0ba6467)
 
 **2021-05-15** 一个简单的LRU cache模拟器，讨论cache的写回/写分配、直写/不写分配的不同状态转移。模拟总线上读写一个cache line，以及LRU cache的读写。[video](https://www.bilibili.com/video/bv1y64y1C7XH), [git-commit](https://github.com/yangminz/bcst_csapp/commit/17d4782f9c00526cb30c0d747f8ed9ab5a6b8c13)
+
+**2021-05-22** 验证LRU cache的正确性，用一个Python脚本对比cache hit, miss, evict。对复杂度为O(n^3)的矩阵乘法的常数级优化，利用时间、空间局部性，写cache-friendly代码。[video](https://www.bilibili.com/video/BV1xK4y197tp/), [git-commit](https://github.com/yangminz/bcst_csapp/commit/9bad8ffe7338f90b2dbd2bd6ad7b4147048cb1aa)
+
+**2021-05-24** 线程级并行计算时，多处理器之间维护cache的一致性（coherence）。经典的MESI协议的实现：M - Exclusively Modified; E - Exclusively Clean; S - Shared Clean; I - Invalid. [video](https://www.bilibili.com/video/BV1zq4y1E7FE/), [git-commit](https://github.com/yangminz/bcst_csapp/commit/c62334dc7396e2d867fcf84f9c72588cf86dcab0)
