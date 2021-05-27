@@ -209,6 +209,16 @@ def build(key):
                     "-o", "./bin/mesi"
                 ],
             ],
+        "tshare" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
+                    "-I", "./src",
+                    "-pthread",
+                    "./src/tests/test_tshare.c",
+                    "-o", "./bin/thread_sharing"
+                ],
+            ],
     }
 
     if not key in gcc_map:
@@ -223,7 +233,8 @@ def run(key):
         KEY_MACHINE : [EXE_BIN_MACHINE],
         KEY_LINKER : [EXE_BIN_LINKER],
         "dll" : ["./bin/link", "main", "sum", "-o", "output"],
-        "mesi" : ["./bin/mesi"]
+        "mesi" : ["./bin/mesi"],
+        "tshare" : ["./bin/thread_sharing"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
