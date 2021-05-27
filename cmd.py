@@ -205,18 +205,18 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable",
                     "-I", "./src",
                     # "-DDEBUG",
-                    "./src/hardware/cpu/mesi.c",
+                    "./src/mains/mesi.c",
                     "-o", "./bin/mesi"
                 ],
             ],
-        "tshare" : [
+        "false_sharing" : [
                 [
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
                     "-I", "./src",
                     "-pthread",
-                    "./src/mains/test_tshare.c",
-                    "-o", "./bin/thread_sharing"
+                    "./src/mains/false_sharing.c",
+                    "-o", "./bin/false_sharing"
                 ],
             ],
     }
@@ -234,7 +234,7 @@ def run(key):
         KEY_LINKER : [EXE_BIN_LINKER],
         "dll" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
-        "tshare" : ["./bin/thread_sharing"],
+        "false_sharing" : ["./bin/false_sharing"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -295,7 +295,7 @@ def cache_verify():
         # thus we start a new process
         a = [
             "/usr/bin/python3",
-            "./src/hardware/cpu/cache_verify.py",
+            "./src/mains/cache_verify.py",
             "/mnt/e/Ubuntu/cache/csim-ref",
             "/mnt/e/Ubuntu/cache/traces/" + file,
             str(s), str(E), str(b),
