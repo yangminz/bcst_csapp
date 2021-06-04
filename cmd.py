@@ -224,6 +224,7 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
                     "-I", "./src",
+                    "-DUNIT_TEST",
                     "./src/algorithm/redblack.c",
                     "-o", "./bin/rb"
                 ],

@@ -6,7 +6,7 @@
 
 // 4 kinds of rotations
 
-void rb_rotate_node(rb_node_t *n)
+static void rb_rotate_node(rb_node_t *n)
 {
     assert(n != NULL && n->parent != NULL && n->parent->parent != NULL);
 
@@ -32,7 +32,22 @@ void rb_rotate_node(rb_node_t *n)
 
         if (n == p->right && p == g->right)
         {
-            // left rotate
+            /*  Left Rotation
+                Before Rotation
+                     [g]
+                     / \
+                    A  [p]
+                       / \
+                      B  [n]
+                         / \
+                        A   B
+                After Rotation
+                   [p]
+                   / \
+                 [g] [n]
+                 /\   /\
+                A  B C  D 
+             */
             *g_ref = p;
             p->parent = g->parent;
 
@@ -47,7 +62,22 @@ void rb_rotate_node(rb_node_t *n)
         }
         else if (n == p->left && p == g->left)
         {
-            // right rotate
+            /*  Right Rotation
+                Before Rotation
+                     [g]
+                     / \
+                   [p]  D
+                   / \
+                 [n]   C
+                 / \
+                A   B
+                After Rotation
+                   [p]
+                   / \
+                 [n] [g]
+                 /\   /\
+                A  B C  D 
+             */
             *g_ref = p;
             p->parent = g->parent;
 
@@ -62,7 +92,22 @@ void rb_rotate_node(rb_node_t *n)
         }
         else if (n == p->right && p == g->left)
         {
-            // left-right double rotate
+            /*  Left-Right Double Rotation
+                Before Rotation
+                     [g]
+                     / \
+                   [p]  D
+                   / \
+                  A  [n]
+                     / \
+                    B   C
+                After Rotation
+                   [n]
+                   / \
+                 [p] [n]
+                 /\   /\
+                A  B C  D 
+             */
             *g_ref = n;
             n->parent = g->parent;
 
@@ -85,7 +130,22 @@ void rb_rotate_node(rb_node_t *n)
         }
         else if (n == p->left && p == g->right)
         {
-            // right-left double rotate
+            /*  Right-Left Double Rotation
+                Before Rotation
+                     [g]
+                     / \
+                    A  [p]
+                       / \
+                      [n] D
+                      / \
+                     B   C
+                After Rotation
+                   [n]
+                   / \
+                 [g] [p]
+                 /\   /\
+                A  B C  D 
+             */
             *g_ref = n;
             n->parent = g->parent;
 
@@ -145,7 +205,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
                 n->left->value = val;
                 n->left->color = COLOR_RED;
 
-                goto FIXUP;
+                goto BOTTOM_UP_REBALANCING;
             }
             else
             {
@@ -164,7 +224,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
                 n->right->value = val;
                 n->right->color = COLOR_RED;
 
-                goto FIXUP;
+                goto BOTTOM_UP_REBALANCING;
             }
             else
             {
@@ -173,7 +233,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
         }
     }
 
-    FIXUP:
+    BOTTOM_UP_REBALANCING:
     // fix up the inserted red node (internal node in 2-3-4 tree)
     while (n != root)
     {
@@ -194,7 +254,13 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
                 g->right != NULL && g->right->color == COLOR_RED)
             {
                 // CASE 1: g is have 2 childs and both are red
-                // only continue in this case
+                // only continue in this case: Promotion
+                g->left->color = COLOR_BLACK;
+                g->right->color = COLOR_BLACK;
+                g->color = COLOR_RED;
+
+                n = g;
+                continue;
             }
             else
             {
@@ -304,31 +370,33 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *target)
 // find the node owning the target value
 rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
 {
-    rb_node_t *p = root;
-    uint64_t p_value;
+    rb_node_t *n = root;
+    uint64_t n_value;
 
-    while (p != NULL)
+    while (n != NULL)
     {
-        p_value = p->value;
+        n_value = n->value;
 
-        if (p_value == val)
+        if (n_value == val)
         {
-            return p;
+            return n;
         }
-        else if (val < p_value)
+        else if (val < n_value)
         {
-            p = p->left;
+            n = n->left;
         }
         else
         {
-            p = p->right;
+            n = n->right;
         }
     }
 
     return NULL;
 }
 
-void dfs_print(rb_node_t *root)
+#ifdef UNIT_TEST
+
+static void dfs_print(rb_node_t *root)
 {
     if (root == NULL)
     {
@@ -348,7 +416,7 @@ void dfs_print(rb_node_t *root)
     dfs_print(root->right);
 }
 
-void rb_print(rb_node_t *root)
+static void rb_print(rb_node_t *root)
 {
     printf("==================\n");
     dfs_print(root);
@@ -356,28 +424,11 @@ void rb_print(rb_node_t *root)
 
 void test_insert()
 {
-    rb_node_t *root = NULL;
+    rb_node_t *root = malloc(sizeof(rb_node_t));
+    root->color = COLOR_BLACK;
+    root->value = 11;
 
-    root = rb_insert_node(root, 6);
-    root = rb_insert_node(root, 3);
-    root = rb_insert_node(root, 8);
-    root = rb_insert_node(root, 2);
-    root = rb_insert_node(root, 4);
-    root = rb_insert_node(root, 1);
-    root = rb_insert_node(root, 5);
-    root = rb_insert_node(root, 7);
-    root = rb_insert_node(root, 11);
-    root = rb_insert_node(root, 9);
-    root = rb_insert_node(root, 10);
-    root = rb_insert_node(root, 12);
-    root = rb_insert_node(root, 13);
-
-    rb_print(root);
-
-    rb_node_t *n = rb_find_node(root, 8);    
-    root = rb_delete_node(root, n);
-    
-    rb_print(root);
+    rb_node_t *n = root;
 }
 
 void test_right_rotate()
@@ -519,3 +570,5 @@ int main()
     test_leftright_rotate();
     test_rightleft_rotate();
 }
+
+#endif

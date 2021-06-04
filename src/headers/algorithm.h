@@ -121,4 +121,8 @@ typedef struct RB_NODE_STRUCT
     uint64_t value;
 } rb_node_t;
 
+rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val);
+rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *target);
+rb_node_t *rb_find_node(rb_node_t *root, uint64_t val);
+
 #endif
