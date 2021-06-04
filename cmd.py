@@ -219,6 +219,15 @@ def build(key):
                     "-o", "./bin/false_sharing"
                 ],
             ],
+        "rb" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
+                    "-I", "./src",
+                    "./src/algorithm/redblack.c",
+                    "-o", "./bin/rb"
+                ],
+            ],
     }
 
     if not key in gcc_map:
@@ -235,6 +244,7 @@ def run(key):
         "dll" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
+        "rb" : ["./bin/rb"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
