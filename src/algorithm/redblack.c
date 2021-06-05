@@ -13,159 +13,179 @@ static void rb_rotate_node(rb_node_t *n)
     rb_node_t *p = n->parent;
     rb_node_t *g = p->parent;
 
+    int free_g_par = 0;
+    rb_node_t *g_par = NULL;
+
     if (g->parent == NULL)
     {
-        // TODO: g is root
+        // g is root
+        // create a dummy root for g
+        g_par = malloc(sizeof(rb_node_t));
+        g_par->left = g;
+        g->parent = g_par;
+        free_g_par = 1;
     }
     else
     {
         // g has parent
-        rb_node_t **g_ref = NULL;
-        if (g == g->parent->left)
-        {
-            g_ref = &(g->parent->left);
-        }
-        else
-        {
-            g_ref = &(g->parent->right);
-        }
+        g_par = g->parent;
+        free_g_par = 0;
+    }
 
-        if (n == p->right && p == g->right)
-        {
-            /*  Left Rotation
-                Before Rotation
-                     [g]
-                     / \
-                    A  [p]
-                       / \
-                      B  [n]
-                         / \
-                        A   B
-                After Rotation
-                   [p]
-                   / \
-                 [g] [n]
-                 /\   /\
-                A  B C  D 
-             */
-            *g_ref = p;
-            p->parent = g->parent;
+    // the address of g in its parent
+    rb_node_t **g_in_par = NULL;
+    if (g == g_par->left)
+    {
+        g_in_par = &(g_par->left);
+    }
+    else
+    {
+        g_in_par = &(g_par->right);
+    }
 
-            g->right = p->left;
-            if (g->right != NULL)
-            {
-                g->right->parent = g;
-            }
-
-            p->left = g;
-            p->left->parent = p;
-        }
-        else if (n == p->left && p == g->left)
-        {
-            /*  Right Rotation
-                Before Rotation
-                     [g]
-                     / \
-                   [p]  D
-                   / \
-                 [n]   C
+    if (n == p->right && p == g->right)
+    {
+        /*  Left Rotation
+            Before Rotation
+                 [g]
                  / \
-                A   B
-                After Rotation
-                   [p]
+                A  [p]
                    / \
-                 [n] [g]
-                 /\   /\
-                A  B C  D 
-             */
-            *g_ref = p;
-            p->parent = g->parent;
+                  B  [n]
+                     / \
+                    C   D
+            After Rotation
+               [p]
+               / \
+             [g] [n]
+             /\   /\
+            A  B C  D 
+            */
+        *g_in_par = p;
+        p->parent = g_par;
 
-            g->left = p->right;
-            if (g->left != NULL)
-            {
-                g->left->parent = g;
-            }
+        g->right = p->left;
+        if (g->right != NULL)
+        {
+            g->right->parent = g;
+        }
 
-            p->right = g;
+        p->left = g;
+        p->left->parent = p;
+    }
+    else if (n == p->left && p == g->left)
+    {
+        /*  Right Rotation
+            Before Rotation
+                 [g]
+                 / \
+               [p]  D
+               / \
+             [n]  C
+             / \
+            A   B
+            After Rotation
+               [p]
+               / \
+             [n] [g]
+             /\   /\
+            A  B C  D 
+            */
+        *g_in_par = p;
+        p->parent = g_par;
+
+        g->left = p->right;
+        if (g->left != NULL)
+        {
+            g->left->parent = g;
+        }
+
+        p->right = g;
+        p->right->parent = p;
+    }
+    else if (n == p->right && p == g->left)
+    {
+        /*  Left-Right Double Rotation
+            Before Rotation
+                   [g]
+                   / \
+                 [p]  D
+                 / \
+                A  [n]
+                   / \
+                  B   C
+            After Rotation
+               [n]
+               / \
+             [p] [g]
+             /\   /\
+            A  B C  D 
+            */
+        *g_in_par = n;
+        n->parent = g_par;
+
+        p->right = n->left;
+        if (p->right != NULL)
+        {
             p->right->parent = p;
         }
-        else if (n == p->right && p == g->left)
+
+        g->left = n->right;
+        if (g->left != NULL)
         {
-            /*  Left-Right Double Rotation
-                Before Rotation
-                     [g]
-                     / \
-                   [p]  D
-                   / \
-                  A  [n]
-                     / \
-                    B   C
-                After Rotation
-                   [n]
-                   / \
-                 [p] [n]
-                 /\   /\
-                A  B C  D 
-             */
-            *g_ref = n;
-            n->parent = g->parent;
-
-            p->right = n->left;
-            if (p->right != NULL)
-            {
-                p->right->parent = p;
-            }
-
-            g->left = n->right;
-            if (g->left != NULL)
-            {
-                g->left->parent = g;
-            }
-
-            n->left = p;
-            n->left->parent = n;
-            n->right = g;
-            n->right->parent = n;
+            g->left->parent = g;
         }
-        else if (n == p->left && p == g->right)
+
+        n->left = p;
+        n->left->parent = n;
+        n->right = g;
+        n->right->parent = n;
+    }
+    else if (n == p->left && p == g->right)
+    {
+        /*  Right-Left Double Rotation
+            Before Rotation
+                 [g]
+                 / \
+                A  [p]
+                   / \
+                  [n] D
+                  / \
+                 B   C
+            After Rotation
+               [n]
+               / \
+             [g] [p]
+             /\   /\
+            A  B C  D 
+            */
+        *g_in_par = n;
+        n->parent = g_par;
+
+        p->left = n->right;
+        if (p->left != NULL)
         {
-            /*  Right-Left Double Rotation
-                Before Rotation
-                     [g]
-                     / \
-                    A  [p]
-                       / \
-                      [n] D
-                      / \
-                     B   C
-                After Rotation
-                   [n]
-                   / \
-                 [g] [p]
-                 /\   /\
-                A  B C  D 
-             */
-            *g_ref = n;
-            n->parent = g->parent;
-
-            p->left = n->right;
-            if (p->left != NULL)
-            {
-                p->left->parent = p;
-            }
-
-            g->right = n->left;
-            if (g->right != NULL)
-            {
-                g->right->parent = g;
-            }
-
-            n->right = p;
-            n->right->parent = n;
-            n->left = g;
-            n->left->parent = n;
+            p->left->parent = p;
         }
+
+        g->right = n->left;
+        if (g->right != NULL)
+        {
+            g->right->parent = g;
+        }
+
+        n->right = p;
+        n->right->parent = n;
+        n->left = g;
+        n->left->parent = n;
+    }
+    
+    if (free_g_par == 1)
+    {
+        // g_par is a dummy node, we need to free it
+        // and we notice that g_par's child may not be g any more
+        g_par->left->parent = NULL;
+        free(g_par);
     }
 }
 
@@ -431,144 +451,412 @@ void test_insert()
     rb_node_t *n = root;
 }
 
-void test_right_rotate()
+void test_rotate()
 {
+    // malloc the nodes
     rb_node_t *r = malloc(sizeof(rb_node_t));
-    r->value = 10;
+    rb_node_t *g = malloc(sizeof(rb_node_t));
+    rb_node_t *p = malloc(sizeof(rb_node_t));
+    rb_node_t *n = malloc(sizeof(rb_node_t));
+    rb_node_t *a = malloc(sizeof(rb_node_t));
+    rb_node_t *b = malloc(sizeof(rb_node_t));
+    rb_node_t *c = malloc(sizeof(rb_node_t));
+    rb_node_t *d = malloc(sizeof(rb_node_t));
+    rb_node_t *e = malloc(sizeof(rb_node_t));
 
-    // g
-    r->left = malloc(sizeof(rb_node_t));
-    rb_node_t *g = r->left;
+    //////////////////////////
+    // left rotate 1        //
+    //////////////////////////
+    g->parent = NULL;
+    g->left = a;
+    g->right = p;
 
-    g->value = 9;
-    g->parent = r;
-
-    // p
-    g->left = malloc(sizeof(rb_node_t));
-    rb_node_t *p = g->left;
-    
-    p->value = 8;
     p->parent = g;
+    p->left = b;
+    p->right = n;
 
-    // n
-    p->left = malloc(sizeof(rb_node_t));
-    rb_node_t *n = p->left;
-
-    n->value = 7;
     n->parent = p;
+    n->left = c;
+    n->right = d;
 
-    rb_print(r);
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = p;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = n;
+    d->left = NULL;
+    d->right = NULL;
+
+    rb_rotate_node(n);
+    
+    assert(p->parent == NULL);
+    assert(p->left == g);
+    assert(p->right == n);
+
+    assert(g->parent == p);
+    assert(g->left == a);
+    assert(g->right == b);
+
+    assert(n->parent == p);
+    assert(n->left == c);
+    assert(n->right == d);
+
+    //////////////////////////
+    // left rotate 2        //
+    //////////////////////////
+    r->parent = NULL;
+    r->left = g;
+    r->right = NULL;
+
+    g->parent = r;
+    g->left = a;
+    g->right = p;
+
+    p->parent = g;
+    p->left = b;
+    p->right = n;
+
+    n->parent = p;
+    n->left = c;
+    n->right = d;
+
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = p;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = n;
+    d->left = NULL;
+    d->right = NULL;
+
+    rb_rotate_node(n);
+    
+    assert(p->parent == r);
+    assert(p->left == g);
+    assert(p->right == n);
+
+    assert(g->parent == p);
+    assert(g->left == a);
+    assert(g->right == b);
+
+    assert(n->parent == p);
+    assert(n->left == c);
+    assert(n->right == d);
+
+    //////////////////////////
+    // right rotate 1       //
+    //////////////////////////
+    g->parent = NULL;
+    g->left = p;
+    g->right = d;
+
+    p->parent = g;
+    p->left = n;
+    p->right = c;
+
+    n->parent = p;
+    n->left = a;
+    n->right = b;
+
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = p;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = n;
+    d->left = NULL;
+    d->right = NULL;
+
+    rb_rotate_node(n);
+    
+    assert(p->parent == NULL);
+    assert(p->left == n);
+    assert(p->right == g);
+
+    assert(n->parent == p);
+    assert(n->left == a);
+    assert(n->right == b);
+
+    assert(g->parent == p);
+    assert(g->left == c);
+    assert(g->right == d);
+
+    //////////////////////////
+    // right rotate 2       //
+    //////////////////////////
+    r->parent = NULL;
+    r->left = g;
+    r->right = NULL;
+
+    g->parent = r;
+    g->left = p;
+    g->right = d;
+
+    p->parent = g;
+    p->left = n;
+    p->right = c;
+
+    n->parent = p;
+    n->left = a;
+    n->right = b;
+
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = p;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = n;
+    d->left = NULL;
+    d->right = NULL;
+
+    rb_rotate_node(n);
+    
+    assert(p->parent == r);
+    assert(p->left == n);
+    assert(p->right == g);
+
+    assert(n->parent == p);
+    assert(n->left == a);
+    assert(n->right == b);
+
+    assert(g->parent == p);
+    assert(g->left == c);
+    assert(g->right == d);
+
+    //////////////////////////
+    // left right rotate 1  //
+    //////////////////////////
+    g->parent = NULL;
+    g->left = p;
+    g->right = d;
+
+    p->parent = g;
+    p->left = a;
+    p->right = n;
+
+    n->parent = p;
+    n->left = b;
+    n->right = c;
+
+    a->parent = p;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = n;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = g;
+    d->left = NULL;
+    d->right = NULL;
 
     rb_rotate_node(n);
 
-    rb_print(r);
-}
-
-void test_left_rotate()
-{
-    rb_node_t *r = malloc(sizeof(rb_node_t));
-    r->value = 10;
-
-    // g
-    r->right = malloc(sizeof(rb_node_t));
-    rb_node_t *g = r->right;
-
-    g->value = 9;
-    g->parent = r;
-
-    // p
-    g->right = malloc(sizeof(rb_node_t));
-    rb_node_t *p = g->right;
+    assert(n->parent == NULL);
+    assert(n->left == p);
+    assert(n->right == g);
     
-    p->value = 8;
+    assert(p->parent == n);
+    assert(p->left == a);
+    assert(p->right == b);
+
+    assert(g->parent == n);
+    assert(g->left == c);
+    assert(g->right == d);
+
+    //////////////////////////
+    // left right rotate 2  //
+    //////////////////////////
+    r->parent = NULL;
+    r->left = g;
+    r->right = NULL;
+
+    g->parent = r;
+    g->left = p;
+    g->right = d;
+
     p->parent = g;
+    p->left = a;
+    p->right = n;
 
-    // n
-    p->right = malloc(sizeof(rb_node_t));
-    rb_node_t *n = p->right;
-
-    n->value = 7;
     n->parent = p;
+    n->left = b;
+    n->right = c;
 
-    rb_print(r);
+    a->parent = p;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = n;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = g;
+    d->left = NULL;
+    d->right = NULL;
 
     rb_rotate_node(n);
 
-    rb_print(r);
-}
-
-void test_leftright_rotate()
-{
-    rb_node_t *r = malloc(sizeof(rb_node_t));
-    r->value = 10;
-
-    // g
-    r->left = malloc(sizeof(rb_node_t));
-    rb_node_t *g = r->left;
-
-    g->value = 9;
-    g->parent = r;
-
-    // p
-    g->left = malloc(sizeof(rb_node_t));
-    rb_node_t *p = g->left;
+    assert(n->parent == r);
+    assert(n->left == p);
+    assert(n->right == g);
     
-    p->value = 8;
+    assert(p->parent == n);
+    assert(p->left == a);
+    assert(p->right == b);
+
+    assert(g->parent == n);
+    assert(g->left == c);
+    assert(g->right == d);
+
+    //////////////////////////
+    // right left rotate 1  //
+    //////////////////////////
+    g->parent = NULL;
+    g->left = a;
+    g->right = p;
+
     p->parent = g;
+    p->left = n;
+    p->right = d;
 
-    // n
-    p->right = malloc(sizeof(rb_node_t));
-    rb_node_t *n = p->right;
-
-    n->value = 7;
     n->parent = p;
+    n->left = b;
+    n->right = c;
 
-    rb_print(r);
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = n;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = p;
+    d->left = NULL;
+    d->right = NULL;
 
     rb_rotate_node(n);
 
-    rb_print(r);
-}
-
-void test_rightleft_rotate()
-{
-    rb_node_t *r = malloc(sizeof(rb_node_t));
-    r->value = 10;
-
-    // g
-    r->right = malloc(sizeof(rb_node_t));
-    rb_node_t *g = r->right;
-
-    g->value = 9;
-    g->parent = r;
-
-    // p
-    g->right = malloc(sizeof(rb_node_t));
-    rb_node_t *p = g->right;
+    assert(n->parent == NULL);
+    assert(n->left == g);
+    assert(n->right == p);
     
-    p->value = 8;
+    assert(g->parent == n);
+    assert(g->left == a);
+    assert(g->right == b);
+
+    assert(p->parent == n);
+    assert(p->left == c);
+    assert(p->right == d);
+
+    //////////////////////////
+    // right left rotate 2  //
+    //////////////////////////
+    r->parent = NULL;
+    r->left = g;
+    r->right = NULL;
+
+    g->parent = r;
+    g->left = a;
+    g->right = p;
+
     p->parent = g;
+    p->left = n;
+    p->right = d;
 
-    // n
-    p->left = malloc(sizeof(rb_node_t));
-    rb_node_t *n = p->left;
-
-    n->value = 7;
     n->parent = p;
+    n->left = b;
+    n->right = c;
 
-    rb_print(r);
+    a->parent = g;
+    a->left = NULL;
+    a->right = NULL;
+
+    b->parent = n;
+    b->left = NULL;
+    b->right = NULL;
+
+    c->parent = n;
+    c->left = NULL;
+    c->right = NULL;
+    
+    d->parent = p;
+    d->left = NULL;
+    d->right = NULL;
 
     rb_rotate_node(n);
 
-    rb_print(r);
+    assert(n->parent == r);
+    assert(n->left == g);
+    assert(n->right == p);
+    
+    assert(g->parent == n);
+    assert(g->left == a);
+    assert(g->right == b);
+
+    assert(p->parent == n);
+    assert(p->left == c);
+    assert(p->right == d);
+
+    printf("pass rotation test\n");
+
+    // free all nodes
+    free(r);
+    free(g);
+    free(p);
+    free(n);
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+    free(e);
 }
 
 int main()
 {
-    test_left_rotate();
-    test_right_rotate();
-    test_leftright_rotate();
-    test_rightleft_rotate();
+    test_rotate();
 }
 
 #endif
