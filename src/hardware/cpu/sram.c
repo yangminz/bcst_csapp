@@ -43,7 +43,7 @@ char *trace_ptr = (char *)&trace_buf;
 typedef enum
 {
     CACHE_LINE_INVALID,
-    CACHE_LINE_CLEAN,
+    CACHE_LINE_CLEAN, // in MESI: E, S
     CACHE_LINE_DIRTY
 } sram_cacheline_state_t;
 
