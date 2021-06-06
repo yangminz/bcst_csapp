@@ -17,7 +17,7 @@ typedef struct
     int value;
 } line_t;
 
-#define NUM_PROCESSOR (1000)
+#define NUM_PROCESSOR (2048)
 
 line_t cache[NUM_PROCESSOR];
 
@@ -64,7 +64,8 @@ int check_state()
 
     if ((m_count == 1 && i_count == (NUM_PROCESSOR - 1)) || 
         (e_count == 1 && i_count == (NUM_PROCESSOR - 1)) || 
-        (s_count >= 2 && i_count == (NUM_PROCESSOR - s_count)))
+        (s_count >= 2 && i_count == (NUM_PROCESSOR - s_count)) ||
+        (i_count == NUM_PROCESSOR))
     {
         return 1;
     }
@@ -73,6 +74,8 @@ int check_state()
 }
 
 // i - the index of processor
+// read_value - the address of read value
+// int return - if this event is related with target physical address
 int read_cacheline(int i, int *read_value)
 {
     if (cache[i].state == MODIFIED)
@@ -136,7 +139,7 @@ int read_cacheline(int i, int *read_value)
                     cache[i].value = cache[j].value;
 
                     // there are eaxctly 2 copies in processors
-                    cache[i].state = SHARED;
+                    cache[j].state = SHARED;
 
                     *read_value = cache[i].value;
 
@@ -179,6 +182,9 @@ int read_cacheline(int i, int *read_value)
     return 0;
 }
 
+// i - the index of processor
+// write_value - the value to be written to the physical address
+// int return - if this event is related with target physical address
 int write_cacheline(int i, int write_value)
 {
     if (cache[i].state == MODIFIED)
@@ -232,10 +238,17 @@ int write_cacheline(int i, int write_value)
             {
                 if (cache[j].state == MODIFIED)
                 {
+                    // write back
                     mem_value = cache[j].value;
+
+                    // invalid old cache line
                     cache[j].state = INVALID;
                     cache[j].value = 0;
 
+                    // write allocate
+                    cache[i].value = mem_value;
+
+                    // update to modified
                     cache[i].state = MODIFIED;
                     cache[i].value = write_value;
         
@@ -295,6 +308,8 @@ int write_cacheline(int i, int write_value)
     return 0;
 }
 
+// i - the index of processor
+// int return - if this event is related with target physical address
 int evict_cacheline(int i)
 {
     if (cache[i].state == MODIFIED)
@@ -310,7 +325,7 @@ int evict_cacheline(int i)
 
         return 1;
     }
-    else if (cache[i].state == EXCLUSIVE || cache[i].state == SHARED)
+    else if (cache[i].state == EXCLUSIVE)
     {
         cache[i].state = INVALID;
         cache[i].value = 0;
@@ -321,10 +336,40 @@ int evict_cacheline(int i)
 
         return 1;
     }
+    else if (cache[i].state == SHARED)
+    {
+        cache[i].state = INVALID;
+        cache[i].value = 0;
 
+        // may left only one shared to be exclusive
+        int s_count = 0;
+        int last_s = -1;
+
+        for (int j = 0; j < NUM_PROCESSOR; ++ j)
+        {
+            if (cache[j].state == SHARED)
+            {
+                last_s = j;
+                s_count ++;
+            }
+        }
+
+        if (s_count == 1)
+        {
+            cache[last_s].state = EXCLUSIVE;
+        }
+        
+        #ifdef DEBUG
+        printf("[%d] evict\n", i);
+        #endif
+
+        return 1;
+    }
+
+    // evict when cache line is Invalid
+    // not related with target physical address
     return 0;
 }
-
 
 void print_cacheline()
 {
@@ -359,7 +404,6 @@ int main()
 {
     srand(123456);
 
-
     int read_value;
 
     for (int i = 0; i < NUM_PROCESSOR; ++ i)
@@ -372,7 +416,7 @@ int main()
     print_cacheline();
     #endif
 
-    for (int i = 0; i < 10000; ++ i)
+    for (int i = 0; i < 100000; ++ i)
     {
         int core_index = rand() % NUM_PROCESSOR;
         int op = rand() % 3;
@@ -394,7 +438,7 @@ int main()
             // printf("evict [%d]\n", core_index);
             do_print = evict_cacheline(core_index);
         }
-        
+
         #ifdef DEBUG
         if (do_print)
         {
