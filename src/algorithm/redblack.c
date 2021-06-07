@@ -444,11 +444,128 @@ static void rb_print(rb_node_t *root)
 
 void test_insert()
 {
-    rb_node_t *root = malloc(sizeof(rb_node_t));
-    root->color = COLOR_BLACK;
-    root->value = 11;
+    // From CLRS chapter 13.3 Red-Black Tree Insertion
+    rb_node_t *n1 = malloc(sizeof(rb_node_t));
+    rb_node_t *n2 = malloc(sizeof(rb_node_t));
+    rb_node_t *n5 = malloc(sizeof(rb_node_t));
+    rb_node_t *n7 = malloc(sizeof(rb_node_t));
+    rb_node_t *n8 = malloc(sizeof(rb_node_t));
+    rb_node_t *n11 = malloc(sizeof(rb_node_t));
+    rb_node_t *n14 = malloc(sizeof(rb_node_t));
+    rb_node_t *n15 = malloc(sizeof(rb_node_t));
 
-    rb_node_t *n = root;
+    n1->color = COLOR_BLACK;
+    n1->value = 1;
+    n1->parent = n2;
+    n1->left = NULL;
+    n1->right = NULL;
+
+    n2->color = COLOR_RED;
+    n2->value = 2;
+    n2->parent = n11;
+    n2->left = n1;
+    n2->right = n7;
+
+    n5->color = COLOR_RED;
+    n5->value = 5;
+    n5->parent = n7;
+    n5->left = NULL;
+    n5->right = NULL;
+
+    n7->color = COLOR_BLACK;
+    n7->value = 7;
+    n7->parent = n2;
+    n7->left = n5;
+    n7->right = n8;
+
+    n8->color = COLOR_RED;
+    n8->value = 8;
+    n8->parent = n7;
+    n8->left = NULL;
+    n8->right = NULL;
+
+    n11->color = COLOR_BLACK;
+    n11->value = 11;
+    n11->parent = NULL;
+    n11->left = n2;
+    n11->right = n14;
+
+    n14->color = COLOR_BLACK;
+    n14->value = 14;
+    n14->parent = n11;
+    n14->left = NULL;
+    n14->right = n15;
+
+    n15->color = COLOR_RED;
+    n15->value = 15;
+    n15->parent = n14;
+    n15->left = NULL;
+    n15->right = NULL;
+
+    // test insert
+    rb_node_t *r = rb_insert_node(n11, 8);
+
+    assert(r == n7);
+
+    assert(n1->parent == n2);
+    assert(n1->left == NULL);
+    assert(n1->right == NULL);
+    assert(n1->color == COLOR_BLACK);
+
+    assert(n2->parent == n7);
+    assert(n2->left == n1);
+    assert(n2->right == n5);
+    assert(n2->color == COLOR_RED);
+
+    // insert n4 here
+    rb_node_t *n4 = n5->left;
+    assert(n4 != NULL);
+    assert(n4->parent == n5);
+    assert(n4->left == NULL);
+    assert(n4->right == NULL);
+    assert(n4->color == COLOR_RED);
+
+    assert(n5->parent == n2);
+    assert(n5->left != NULL);
+    assert(n5->right == NULL);
+    assert(n5->color == COLOR_BLACK);
+
+    assert(n7->parent == NULL);
+    assert(n7->left == n2);
+    assert(n7->right == n11);
+    assert(n7->color == COLOR_BLACK);
+
+    assert(n8->parent == n11);
+    assert(n8->left == NULL);
+    assert(n8->right == NULL);
+    assert(n8->color == COLOR_BLACK);
+
+    assert(n11->parent == n7);
+    assert(n11->left == n8);
+    assert(n11->right == n14);
+    assert(n11->color == COLOR_RED);
+
+    assert(n14->parent == n11);
+    assert(n14->left == NULL);
+    assert(n14->right == n15);
+    assert(n14->color == COLOR_BLACK);
+
+    assert(n15->parent == n14);
+    assert(n15->left == NULL);
+    assert(n15->right == NULL);
+    assert(n15->color == COLOR_RED);
+
+    printf("pass insertion test\n");
+
+    free(n1);
+    free(n2);
+    free(n4);
+    free(n5);
+    free(n7);
+    free(n8);
+    free(n11);
+    free(n14);
+    free(n15);
 }
 
 void test_rotate()
@@ -857,6 +974,7 @@ void test_rotate()
 int main()
 {
     test_rotate();
+    test_insert();
 }
 
 #endif
