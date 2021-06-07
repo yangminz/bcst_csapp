@@ -6,12 +6,16 @@
 
 // 4 kinds of rotations
 
-static void rb_rotate_node(rb_node_t *n)
+// return root node
+static rb_node_t * rb_rotate_node(rb_node_t *n)
 {
     assert(n != NULL && n->parent != NULL && n->parent->parent != NULL);
 
     rb_node_t *p = n->parent;
     rb_node_t *g = p->parent;
+    assert(n->color == COLOR_RED && p->color == COLOR_RED && g->color == COLOR_BLACK);
+
+    rb_node_t *r = NULL;
 
     int free_g_par = 0;
     rb_node_t *g_par = NULL;
@@ -72,6 +76,12 @@ static void rb_rotate_node(rb_node_t *n)
 
         p->left = g;
         p->left->parent = p;
+
+        p->color = COLOR_RED;
+        g->color = COLOR_BLACK;
+        n->color = COLOR_BLACK;
+
+        r = p;
     }
     else if (n == p->left && p == g->left)
     {
@@ -102,6 +112,12 @@ static void rb_rotate_node(rb_node_t *n)
 
         p->right = g;
         p->right->parent = p;
+
+        p->color = COLOR_RED;
+        g->color = COLOR_BLACK;
+        n->color = COLOR_BLACK;
+
+        r = p;
     }
     else if (n == p->right && p == g->left)
     {
@@ -140,6 +156,12 @@ static void rb_rotate_node(rb_node_t *n)
         n->left->parent = n;
         n->right = g;
         n->right->parent = n;
+
+        n->color = COLOR_BLACK;
+        p->color = COLOR_RED;
+        g->color = COLOR_RED;
+
+        r = n;
     }
     else if (n == p->left && p == g->right)
     {
@@ -178,6 +200,12 @@ static void rb_rotate_node(rb_node_t *n)
         n->right->parent = n;
         n->left = g;
         n->left->parent = n;
+
+        n->color = COLOR_BLACK;
+        p->color = COLOR_RED;
+        g->color = COLOR_RED;
+
+        r = n;
     }
     
     if (free_g_par == 1)
@@ -187,6 +215,8 @@ static void rb_rotate_node(rb_node_t *n)
         g_par->left->parent = NULL;
         free(g_par);
     }
+
+    return r;
 }
 
 // insert value to the tree
@@ -225,6 +255,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
                 n->left->value = val;
                 n->left->color = COLOR_RED;
 
+                n = n->left;
                 goto BOTTOM_UP_REBALANCING;
             }
             else
@@ -244,6 +275,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
                 n->right->value = val;
                 n->right->color = COLOR_RED;
 
+                n = n->right;
                 goto BOTTOM_UP_REBALANCING;
             }
             else
@@ -285,7 +317,11 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
             else
             {
                 // CASE 2: g is having only 1 RED child branch and that's just parent
-                rb_rotate_node(n);
+                rb_node_t *rotate_root = rb_rotate_node(n);
+                if (rotate_root != NULL && rotate_root->parent == NULL)
+                {
+                    return rotate_root;
+                }
 
                 return root;
             }
@@ -503,7 +539,7 @@ void test_insert()
     n15->right = NULL;
 
     // test insert
-    rb_node_t *r = rb_insert_node(n11, 8);
+    rb_node_t *r = rb_insert_node(n11, 4);
 
     assert(r == n7);
 
@@ -579,7 +615,6 @@ void test_rotate()
     rb_node_t *b = malloc(sizeof(rb_node_t));
     rb_node_t *c = malloc(sizeof(rb_node_t));
     rb_node_t *d = malloc(sizeof(rb_node_t));
-    rb_node_t *e = malloc(sizeof(rb_node_t));
 
     //////////////////////////
     // left rotate 1        //
@@ -587,30 +622,37 @@ void test_rotate()
     g->parent = NULL;
     g->left = a;
     g->right = p;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = b;
     p->right = n;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = c;
     n->right = d;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = p;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = n;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
     
@@ -632,34 +674,42 @@ void test_rotate()
     r->parent = NULL;
     r->left = g;
     r->right = NULL;
+    r->color = COLOR_BLACK;
 
     g->parent = r;
     g->left = a;
     g->right = p;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = b;
     p->right = n;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = c;
     n->right = d;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = p;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = n;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
     
@@ -681,30 +731,37 @@ void test_rotate()
     g->parent = NULL;
     g->left = p;
     g->right = d;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = n;
     p->right = c;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = a;
     n->right = b;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = p;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = n;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
     
@@ -726,34 +783,42 @@ void test_rotate()
     r->parent = NULL;
     r->left = g;
     r->right = NULL;
+    r->color = COLOR_BLACK;
 
     g->parent = r;
     g->left = p;
     g->right = d;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = n;
     p->right = c;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = a;
     n->right = b;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = p;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = n;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
     
@@ -775,30 +840,37 @@ void test_rotate()
     g->parent = NULL;
     g->left = p;
     g->right = d;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = a;
     p->right = n;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = b;
     n->right = c;
+    n->color = COLOR_RED;
 
     a->parent = p;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = n;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = g;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
 
@@ -820,34 +892,42 @@ void test_rotate()
     r->parent = NULL;
     r->left = g;
     r->right = NULL;
+    r->color = COLOR_BLACK;
 
     g->parent = r;
     g->left = p;
     g->right = d;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = a;
     p->right = n;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = b;
     n->right = c;
+    n->color = COLOR_RED;
 
     a->parent = p;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = n;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
-    
+    c->color = COLOR_BLACK;
+
     d->parent = g;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
 
@@ -869,30 +949,37 @@ void test_rotate()
     g->parent = NULL;
     g->left = a;
     g->right = p;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = n;
     p->right = d;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = b;
     n->right = c;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = n;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
-    
+    c->color = COLOR_BLACK;
+
     d->parent = p;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
 
@@ -914,34 +1001,42 @@ void test_rotate()
     r->parent = NULL;
     r->left = g;
     r->right = NULL;
+    r->color = COLOR_BLACK;
 
     g->parent = r;
     g->left = a;
     g->right = p;
+    g->color = COLOR_BLACK;
 
     p->parent = g;
     p->left = n;
     p->right = d;
+    p->color = COLOR_RED;
 
     n->parent = p;
     n->left = b;
     n->right = c;
+    n->color = COLOR_RED;
 
     a->parent = g;
     a->left = NULL;
     a->right = NULL;
+    a->color = COLOR_BLACK;
 
     b->parent = n;
     b->left = NULL;
     b->right = NULL;
+    b->color = COLOR_BLACK;
 
     c->parent = n;
     c->left = NULL;
     c->right = NULL;
+    c->color = COLOR_BLACK;
     
     d->parent = p;
     d->left = NULL;
     d->right = NULL;
+    d->color = COLOR_BLACK;
 
     rb_rotate_node(n);
 
@@ -968,7 +1063,6 @@ void test_rotate()
     free(b);
     free(c);
     free(d);
-    free(e);
 }
 
 int main()
