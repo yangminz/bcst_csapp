@@ -367,16 +367,13 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
 
     // the address of the to be deleted node
     rb_node_t **par_child = NULL;
-    rb_node_t *s = NULL;    // sibling
     if (n == p->left)
     {
         par_child = &(p->left);
-        s = p->right;
     }
     else
     {
         par_child = &(p->right);
-        s = p->left;
     }
 
     /****************************************************/
@@ -519,14 +516,146 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
         // 2. red rule - min_upper can be a red and its child can be red
         // 3. black height rule - all sub-tree black height deduct 1
 
-        // double black!
-
-        // case 1: sibling is black and at least one of the childs is red
-        if (s != NULL && s->color == COLOR_BLACK && s->left != NULL && s->left->color == COLOR_RED)
+        rb_node_t *s = NULL;    // sibling
+        while (1)
         {
-            // sibling's left child is red
+            p = v->parent;
+            if (v == p->left)
+            {
+                s = p->right;
+            }
+            else
+            {
+                s = p->left;
+            }
 
+            if (s != NULL && s->color == COLOR_BLACK)
+            {
+                // BLACK Silbing
+
+                // At least one of the childs is red - restructuring
+                
+                if (s->left != NULL && s->left->color == COLOR_RED)
+                {
+                    // Restructuring Case 1
+                    // sibling's left child is red
+                    rb_node_t *t = rb_rotate_node(s->left, s, p);
+                    t->left->color = COLOR_BLACK;
+                    t->right->color = COLOR_BLACK;
+
+                    return root;
+                }
+
+                if (s->right != NULL && s->right->color == COLOR_RED)
+                {
+                    // Restructuring Case 2
+                    // sibling's right child is red
+                    rb_node_t *t = rb_rotate_node(s->right, s, p);
+                    t->left->color = COLOR_BLACK;
+                    t->right->color = COLOR_BLACK;
+
+                    return root;
+                }
+
+                // Both childs are black - Recoloring
+                if (s->left != NULL && s->left->color == COLOR_BLACK && s->right != NULL && s->right->color == COLOR_BLACK)
+                {
+                    if (p->color == COLOR_RED)
+                    {
+                        // Recoloring Case 1
+                        // parent is red
+                        p->color = COLOR_BLACK;
+                        s->color = COLOR_RED;
+
+                        return root;
+                    }
+
+                    if (p->color == COLOR_BLACK)
+                    {
+                        // Recoloring Case 2
+                        // parent is black
+                        s->color = COLOR_RED;
+
+                        // continue
+                        v = p;
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                // RED Sibling
+                // adjust to black sibling
+
+                rb_node_t *g = NULL;
+                int is_p_root = 0;
+                if (p->parent == NULL)
+                {
+                    g = malloc(sizeof(rb_node_t));
+                    g->color = COLOR_BLACK;
+                    g->left = p;
+                    p->parent = g;
+                    is_p_root = 1;
+                }
+                else
+                {
+                    g = p->parent;
+                    is_p_root = 0;
+                }
+
+                rb_node_t ** p_addr = NULL;
+                if (p == g->left)
+                {
+                    p_addr = &g->left;
+                }
+                else
+                {
+                    p_addr = &g->right;
+                }
+
+                if (s == p->right)
+                {
+                    // case 1: sibling is right
+                    p->right = s->right;
+                    if (p->right != NULL)
+                    {
+                        p->right->parent = p;
+                    }
+
+                    s->right = p;
+                    p->parent = s;
+                    p->color = COLOR_RED;
+
+                    *p_addr = s;
+                }
+                else
+                {
+                    // case 2: sibling is left
+                    p->left = s->left;
+                    if (p->left != NULL)
+                    {
+                        p->left->parent = p;
+                    }
+
+                    s->left = p;
+                    p->parent = s;
+                    p->color = COLOR_RED;
+
+                    *p_addr = s;
+                }
+
+                if (is_p_root == 1)
+                {
+                    free(g);
+                    s->parent = NULL;
+                }
+
+                // finish the adjustment
+                // switch to the BLACK Silbing case
+                continue;
+            }
         }
+
     }
     return root;
 }
