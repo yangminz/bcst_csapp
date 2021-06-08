@@ -7,17 +7,14 @@
 // 4 kinds of rotations
 
 // return root node
-static rb_node_t * rb_rotate_node(rb_node_t *n)
+static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
 {
-    assert(n != NULL && n->parent != NULL && n->parent->parent != NULL);
-
-    rb_node_t *p = n->parent;
-    rb_node_t *g = p->parent;
-    assert(n->color == COLOR_RED && p->color == COLOR_RED && g->color == COLOR_BLACK);
+    assert(n != NULL && p != NULL && g != NULL);
+    assert(n->parent == p && p->parent == g);
 
     rb_node_t *r = NULL;
 
-    int free_g_par = 0;
+    int is_g_root = 0;
     rb_node_t *g_par = NULL;
 
     if (g->parent == NULL)
@@ -27,13 +24,13 @@ static rb_node_t * rb_rotate_node(rb_node_t *n)
         g_par = malloc(sizeof(rb_node_t));
         g_par->left = g;
         g->parent = g_par;
-        free_g_par = 1;
+        is_g_root = 1;
     }
     else
     {
         // g has parent
         g_par = g->parent;
-        free_g_par = 0;
+        is_g_root = 0;
     }
 
     // the address of g in its parent
@@ -77,10 +74,6 @@ static rb_node_t * rb_rotate_node(rb_node_t *n)
         p->left = g;
         p->left->parent = p;
 
-        p->color = COLOR_RED;
-        g->color = COLOR_BLACK;
-        n->color = COLOR_BLACK;
-
         r = p;
     }
     else if (n == p->left && p == g->left)
@@ -112,10 +105,6 @@ static rb_node_t * rb_rotate_node(rb_node_t *n)
 
         p->right = g;
         p->right->parent = p;
-
-        p->color = COLOR_RED;
-        g->color = COLOR_BLACK;
-        n->color = COLOR_BLACK;
 
         r = p;
     }
@@ -157,10 +146,6 @@ static rb_node_t * rb_rotate_node(rb_node_t *n)
         n->right = g;
         n->right->parent = n;
 
-        n->color = COLOR_BLACK;
-        p->color = COLOR_RED;
-        g->color = COLOR_RED;
-
         r = n;
     }
     else if (n == p->left && p == g->right)
@@ -201,14 +186,10 @@ static rb_node_t * rb_rotate_node(rb_node_t *n)
         n->left = g;
         n->left->parent = n;
 
-        n->color = COLOR_BLACK;
-        p->color = COLOR_RED;
-        g->color = COLOR_RED;
-
         r = n;
     }
     
-    if (free_g_par == 1)
+    if (is_g_root == 1)
     {
         // g_par is a dummy node, we need to free it
         // and we notice that g_par's child may not be g any more
@@ -238,7 +219,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
         return root;
     }
 
-    // search the right place to insert data
+    // search the right place (leaf node) to insert data
     rb_node_t *n = root;
 
     while (n != NULL)
@@ -287,7 +268,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
 
     BOTTOM_UP_REBALANCING:
     // fix up the inserted red node (internal node in 2-3-4 tree)
-    while (n != root)
+    while (1)
     {
         rb_node_t *p = n->parent;
 
@@ -317,10 +298,28 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
             else
             {
                 // CASE 2: g is having only 1 RED child branch and that's just parent
-                rb_node_t *rotate_root = rb_rotate_node(n);
-                if (rotate_root != NULL && rotate_root->parent == NULL)
+                rb_node_t *rotate_root = rb_rotate_node(n, p, g);
+
+                // recoloring
+                if (rotate_root != NULL)
                 {
-                    return rotate_root;
+                    if (rotate_root == p)
+                    {
+                        p->color = COLOR_BLACK;
+                        n->color = COLOR_RED;
+                        g->color = COLOR_RED;
+                    }
+                    else if (rotate_root == n)
+                    {
+                        n->color = COLOR_BLACK;
+                        p->color = COLOR_RED;
+                        g->color = COLOR_RED;
+                    }
+
+                    if (rotate_root->parent == NULL)
+                    {
+                        return rotate_root;
+                    }
                 }
 
                 return root;
@@ -333,93 +332,202 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
 
 // insert value to the tree
 // return the updated tree root node
-rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *target)
+rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
 {
-    if (target == root)
+    if (n == NULL)
     {
-        // no parent pointer
         return NULL;
+    }
+
+    // record the color of the to-be-deleted node
+    // if it's red, just delete
+    // if it's black, may cause a double black situation
+    // and we need to do color compensation
+    rb_color_t n_color = n->color;
+
+    // in case root is deleted
+    rb_node_t *p = NULL;
+    int is_n_root = 0;
+    if (n == root)
+    {
+        // no parent pointer, create a dummy one
+        p = malloc(sizeof(rb_node_t));
+        p->color = COLOR_BLACK;
+        p->left = n;
+        n->parent = p;
+        p->parent = NULL;
+        p->right = NULL;
+        is_n_root = 1;
+    }
+    else
+    {
+        p = n->parent;
+        is_n_root = 0;
     }
 
     // the address of the to be deleted node
     rb_node_t **par_child = NULL;
-    if (target == target->parent->left)
+    rb_node_t *s = NULL;    // sibling
+    if (n == p->left)
     {
-        par_child = &(target->parent->left);
+        par_child = &(p->left);
+        s = p->right;
     }
     else
     {
-        par_child = &(target->parent->right);
+        par_child = &(p->right);
+        s = p->left;
     }
 
-    // case 1: single hanging
-    if (target->left == NULL && target->right == NULL)
+    /****************************************************/
+    /* The following logic is the same as BST deletion  */
+    /****************************************************/
+
+    if (n->left == NULL && n->right == NULL)
     {
+        //////////////////////////////////////////////
+        // case 1: leaf node                        //
+        //////////////////////////////////////////////
+
         *par_child = NULL;
-        free(target);
-        return root;
+        free(n);
+        
+        if (is_n_root == 1)
+        {
+            root = NULL;
+        }
     }
-    
-    // case 2: one sub-tree is empty
-    // transplant the other sub-tree to the node to be deleted
-    if (target->left == NULL && target->right != NULL)
+    else if (n->left == NULL && n->right != NULL)
     {
-        *par_child = target->right;
-        target->right->parent = target->parent;
-        free(target);
-        return root;
+        //////////////////////////////////////////////
+        // case 2: one sub-tree is empty            //
+        // 2.1: left tree is empty                  //
+        //////////////////////////////////////////////
+
+        // transplant the other sub-tree to the node to be deleted
+        *par_child = n->right;
+        n->right->parent = p;
+        free(n);
+
+        if (is_n_root == 1)
+        {
+            root = n->right;
+        }
     }
-
-    if (target->left != NULL && target->right == NULL)
+    else if (n->left != NULL && n->right == NULL)
     {
-        *par_child = target->left;
-        target->left->parent = target->parent;
-        free(target);
-        return root;
+        // 2.2 right tree is empty
+
+        *par_child = n->left;
+        n->left->parent = p;
+        free(n);
+
+        if (is_n_root == 1)
+        {
+            root = n->left;
+        }
     }
-
-    // case 3: both sub-trees are not empty
-
-    // 3.1: a simple remove will do the job
-    if (target->right->left == NULL)
+    else if (n->right->left == NULL)
     {
+        //////////////////////////////////////////////
+        // case 3: both sub-trees are not empty     //
+        // 3.1: a simple remove will do the job     //
+        //////////////////////////////////////////////
+
         // transplant the left sub-tree
-        target->right->left = target->left;
-        target->left->parent = target->right;
+        n->right->left = n->left;
+        n->left->parent = n->right;
 
-        *par_child = target->right;
-        target->right->parent = target->parent;
+        *par_child = n->right;
+        n->right->parent = p;
 
-        free(target);
+        free(n);
+
+        if (is_n_root == 1)
+        {
+            root = n->right;
+        }
+    }
+    else if (n->right->left != NULL)
+    {
+        //////////////////////////////////////////////
+        // 3.2: float up the tight upper bound      //
+        // as root of sub-tree                      //
+        //////////////////////////////////////////////
+
+        rb_node_t *min_upper = n->right;
+        while (min_upper->left != NULL)
+        {
+            min_upper = min_upper->left;
+        }
+
+        // float up min_upper
+        min_upper->parent->left = min_upper->right;
+        if (min_upper->right != NULL)
+        {
+            min_upper->right->parent = min_upper->parent;
+        }
+
+        // transplant
+        min_upper->right = n->right;
+        n->right->parent = min_upper;
+
+        min_upper->left = n->left;
+        n->left->parent = min_upper;
+
+        min_upper->parent = p;
+        
+        *par_child = min_upper;
+        free(n);
+
+        if (is_n_root == 1)
+        {
+            root = min_upper;
+        }
+    }
+
+    // set the pointer to the address of the deleted node
+    rb_node_t *v = *par_child;
+    
+    if (is_n_root == 1)
+    {
+        free(p);
+
+        if (root != NULL)
+        {
+            root->parent = NULL;
+        }
+    }
+
+    /****************************************************/
+    /* recoloring and restructuring                     */
+    /****************************************************/
+
+    // check coloring
+    if (n_color == COLOR_RED)
+    {
+        // when red is removed, safe:
+        // 1. root rule - red node is never the root
+        // 2. red rule - red's parent & childs are all black
+        // 3. black height rule - red is not counted to black height
         return root;
     }
-
-    // 3.2
-    // float up the upper bound as root of sub-tree
-    rb_node_t *min_upper = target->right;
-    while (min_upper->left != NULL)
+    else
     {
-        min_upper = min_upper->left;
+        // black is removed, may violate:
+        // 1. root rule - min_upper can be root
+        // 2. red rule - min_upper can be a red and its child can be red
+        // 3. black height rule - all sub-tree black height deduct 1
+
+        // double black!
+
+        // case 1: sibling is black and at least one of the childs is red
+        if (s != NULL && s->color == COLOR_BLACK && s->left != NULL && s->left->color == COLOR_RED)
+        {
+            // sibling's left child is red
+
+        }
     }
-
-    // float up min_upper
-    min_upper->parent->left = min_upper->right;
-    if (min_upper->right != NULL)
-    {
-        min_upper->right->parent = min_upper->parent;
-    }
-
-    // transplant
-    min_upper->right = target->right;
-    target->right->parent = min_upper;
-
-    min_upper->left = target->left;
-    target->left->parent = min_upper;
-
-    min_upper->parent = target->parent;
-    
-    *par_child = min_upper;
-    free(target);
     return root;
 }
 
@@ -451,32 +559,6 @@ rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
 }
 
 #ifdef UNIT_TEST
-
-static void dfs_print(rb_node_t *root)
-{
-    if (root == NULL)
-    {
-        return;
-    }
-
-    char c = root->color == COLOR_RED ? 'R' : 'B';
-
-    dfs_print(root->left);
-
-    printf("color: %c; value: %lu; left: %lu; parent %lu; right: %lu\n", 
-        c, root->value, 
-        root->left == NULL ? 0 : root->left->value, 
-        root->parent == NULL ? 0 : root->parent->value, 
-        root->right == NULL ? 0 : root->right->value);
-
-    dfs_print(root->right);
-}
-
-static void rb_print(rb_node_t *root)
-{
-    printf("==================\n");
-    dfs_print(root);
-}
 
 void test_insert()
 {
@@ -654,7 +736,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
     
     assert(p->parent == NULL);
     assert(p->left == g);
@@ -711,7 +793,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
     
     assert(p->parent == r);
     assert(p->left == g);
@@ -763,7 +845,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
     
     assert(p->parent == NULL);
     assert(p->left == n);
@@ -820,7 +902,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
     
     assert(p->parent == r);
     assert(p->left == n);
@@ -872,7 +954,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
 
     assert(n->parent == NULL);
     assert(n->left == p);
@@ -929,7 +1011,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
 
     assert(n->parent == r);
     assert(n->left == p);
@@ -981,7 +1063,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
 
     assert(n->parent == NULL);
     assert(n->left == g);
@@ -1038,7 +1120,7 @@ void test_rotate()
     d->right = NULL;
     d->color = COLOR_BLACK;
 
-    rb_rotate_node(n);
+    rb_rotate_node(n, p, g);
 
     assert(n->parent == r);
     assert(n->left == g);
