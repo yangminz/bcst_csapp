@@ -279,13 +279,10 @@ static void insert_bucket_tail(hashtable_t *tab, hashtable_bucket_t *b, char *ke
     b->counter ++;
 }
 
+#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
+
 void print_hashtable(hashtable_t *tab)
 {
-    if ((DEBUG_VERBOSE_SET & DEBUG_DATASTRUCTURE) == 0)
-    {
-        return;
-    }
-
     printf("----------\n");
     printf("global %d\n", tab->globaldepth);
     for (int i = 0; i < tab->num; ++ i)
@@ -299,3 +296,5 @@ void print_hashtable(hashtable_t *tab)
         printf("\n");
     }
 }
+
+#endif

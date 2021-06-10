@@ -15,9 +15,7 @@ for argv in sys.argv:
 print("================")
 
 KEY_MACHINE = "m"
-KEY_LINKER = "l"
 
-EXE_BIN_LINKER = "./bin/test_elf"
 EXE_BIN_MACHINE = "./bin/test_machine"
 
 # file headers contains copyright information
@@ -88,7 +86,7 @@ def format_marco(s, line_index):
     a = a.strip(" ")
     if (len(a) >= 1 and a[len(a) - 1] == ";"):
         return s
-    if (a.startswith("#ifdef") or a.startswith("#ifndef") or a.startswith("#endif") or a.startswith("#else") or a.startswith("#define")):
+    if (a.startswith("#if") or a.startswith("#endif") or a.startswith("#else") or a.startswith("#define")):
         a = a + "\n"
         print("\tline [%d] marco rule: \"%s\" ==> \"%s\"" % (line_index, s, a))
         return a
@@ -182,6 +180,7 @@ def build(key):
                     "./src/common/print.c",
                     "./src/common/convert.c",
                     "./src/common/cleanup.c",
+                    "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
                     "./src/hardware/cpu/isa.c",
@@ -190,23 +189,7 @@ def build(key):
                     "-o", EXE_BIN_MACHINE
                 ]
             ],
-        KEY_LINKER : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-                    "-I", "./src",
-                    "./src/mains/test_elf.c",
-                    "./src/common/print.c",
-                    "./src/common/convert.c",
-                    "./src/common/tagmalloc.c",
-                    "./src/common/cleanup.c",
-                    "./src/algorithm/array.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/linkedlist.c",
-                    "./src/linker/parseElf.c",
-                    "./src/linker/staticlink.c",
-                    "-o", EXE_BIN_LINKER
-                ],
+        "link" : [
                 [
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
@@ -290,8 +273,7 @@ def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
         KEY_MACHINE : [EXE_BIN_MACHINE],
-        KEY_LINKER : [EXE_BIN_LINKER],
-        "dll" : ["./bin/link", "main", "sum", "-o", "output"],
+        "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
         "rb" : ["./bin/rb"],
@@ -306,7 +288,7 @@ def debug(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
         KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        "link" : "./bin/link"
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -317,7 +299,7 @@ def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
         KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        "link" : "./bin/link"
     }
     if not key in bin_map:
         print("input the correct memory check key:", bin_map.keys())
@@ -377,13 +359,7 @@ elif operation == "run":
 elif operation == "debug":
     assert(len(sys.argv) == 3)
     debug(sys.argv[2])
-elif operation.lower() == KEY_MACHINE.lower():
-    build(KEY_MACHINE)
-    run(KEY_MACHINE)
-elif operation.lower() == KEY_LINKER.lower():
-    build(KEY_LINKER)
-    run(KEY_LINKER)
-elif operation == "memorycheck":
+elif operation == "memcheck":
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
 elif operation == "count":

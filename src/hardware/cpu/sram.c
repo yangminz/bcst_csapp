@@ -72,7 +72,7 @@ uint8_t sram_cache_read(uint64_t paddr_value)
     address_t paddr = {
         .paddr_value = paddr_value,
     };
-    
+
     sram_cacheset_t *set = &cache.sets[paddr.CI];
 
     // update LRU time
@@ -240,10 +240,10 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
 
             // update LRU time
             line->time = 0;
-            
+
             // find the byte
             line->block[paddr.CO] = data;
-            
+
             // update state
             line->state = CACHE_LINE_DIRTY;
 

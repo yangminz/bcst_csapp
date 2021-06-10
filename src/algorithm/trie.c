@@ -160,7 +160,7 @@ int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
     return 0;
 }
 
-#ifdef UNIT_TEST
+#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
 
 static void trie_dfs_print(trie_node_t *x, int level, char c)
 {

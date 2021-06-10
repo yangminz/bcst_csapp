@@ -122,8 +122,10 @@ static void lazy_initialize_trie()
     trie_insert(&operator_mapping, "jne",    INST_JNE    );
     trie_insert(&operator_mapping, "jmp",    INST_JMP    );
 
+#ifdef DEBUG_DATASTRUCTURE
     trie_print(operator_mapping);
     trie_print(register_mapping);
+#endif
 
     // add the cleanup events
     add_cleanup_event(&trie_cleanup);

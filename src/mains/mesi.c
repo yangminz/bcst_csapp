@@ -1,3 +1,13 @@
+/* BCST - Introduction to Computer Systems
+ * Author:      yangminz@outlook.com
+ * Github:      https://github.com/yangminz/bcst_csapp
+ * Bilibili:    https://space.bilibili.com/4564101
+ * Zhihu:       https://www.zhihu.com/people/zhao-yang-min
+ * This project (code repository and videos) is exclusively owned by yangminz 
+ * and shall not be used for commercial and profitting purpose 
+ * without yangminz's permission.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -58,9 +68,9 @@ int check_state()
     I   O   O   O   O
     */
 
-    #ifdef DEBUG
+#ifdef DEBUG
     printf("M %d\t E %d\t S %d\t I %d\n", m_count, e_count, s_count, i_count);
-    #endif
+#endif
 
     if ((m_count == 1 && i_count == (NUM_PROCESSOR - 1)) || 
         (e_count == 1 && i_count == (NUM_PROCESSOR - 1)) || 
@@ -81,27 +91,27 @@ int read_cacheline(int i, int *read_value)
     if (cache[i].state == MODIFIED)
     {
         // read hit
-        #ifdef DEBUG
+#ifdef DEBUG
         printf("[%d] read hit; dirty value %d\n", i, cache[i].value);
-        #endif
+#endif
         *read_value = cache[i].value;
         return 1;
     }
     else if (cache[i].state == EXCLUSIVE)
     {
         // read hit
-        #ifdef DEBUG
+#ifdef DEBUG
         printf("[%d] read hit; exclusive clean value %d\n", i, cache[i].value);
-        #endif
+#endif
         *read_value = cache[i].value;
         return 1;
     }
     else if (cache[i].state == SHARED)
     {
         // read hit
-        #ifdef DEBUG
+#ifdef DEBUG
         printf("[%d] read hit; shared clean value %d\n", i, cache[i].value);
-        #endif
+#endif
         *read_value = cache[i].value;
         return 1;
     }
@@ -126,9 +136,9 @@ int read_cacheline(int i, int *read_value)
 
                     *read_value = cache[i].value;
 
-                    #ifdef DEBUG
+#ifdef DEBUG
                     printf("[%d] read miss; [%d] supplies dirty value %d; write back; s_count == 2\n", i, j, cache[i].value);
-                    #endif
+#endif
 
                     return 1;
                 }
@@ -143,9 +153,9 @@ int read_cacheline(int i, int *read_value)
 
                     *read_value = cache[i].value;
 
-                    #ifdef DEBUG
+#ifdef DEBUG
                     printf("[%d] read miss; [%d] supplies clean value %d; s_count == 2\n", i, j, cache[i].value);
-                    #endif
+#endif
 
                     return 1;
                 }
@@ -157,9 +167,9 @@ int read_cacheline(int i, int *read_value)
 
                     *read_value = cache[i].value;
 
-                    #ifdef DEBUG
+#ifdef DEBUG
                     printf("[%d] read miss; [%d] supplies clean value %d; s_count >= 3\n", i, j, cache[i].value);
-                    #endif
+#endif
 
                     return 1;
                 }
@@ -172,9 +182,9 @@ int read_cacheline(int i, int *read_value)
 
         *read_value = cache[i].value;
 
-        #ifdef DEBUG
+#ifdef DEBUG
         printf("[%d] read miss; mem supplies clean value %d; e_count == 1\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -191,10 +201,10 @@ int write_cacheline(int i, int write_value)
     {
         // write hit
         cache[i].value = write_value;
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] write hit; update to value %d\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -202,10 +212,10 @@ int write_cacheline(int i, int write_value)
     {
         cache[i].state = MODIFIED;
         cache[i].value = write_value;
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] write hit; update to value %d\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -223,10 +233,10 @@ int write_cacheline(int i, int write_value)
 
         cache[i].state = MODIFIED;
         cache[i].value = write_value;
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] write hit; boardcast invalid; update to value %d\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -251,10 +261,10 @@ int write_cacheline(int i, int write_value)
                     // update to modified
                     cache[i].state = MODIFIED;
                     cache[i].value = write_value;
-        
-                    #ifdef DEBUG
+
+#ifdef DEBUG
                     printf("[%d] write miss; boardcast invalid to M; update to value %d\n", i, cache[i].value);
-                    #endif
+#endif
                     return 1;
                 }
                 else if (cache[j].state == EXCLUSIVE)
@@ -264,10 +274,10 @@ int write_cacheline(int i, int write_value)
 
                     cache[i].state = MODIFIED;
                     cache[i].value = write_value;
-        
-                    #ifdef DEBUG
+
+#ifdef DEBUG
                     printf("[%d] write miss; boardcast invalid to E; update to value %d\n", i, cache[i].value);
-                    #endif
+#endif
                     return 1;
                 }
                 else if (cache[j].state == SHARED)
@@ -283,10 +293,10 @@ int write_cacheline(int i, int write_value)
 
                     cache[i].state = MODIFIED;
                     cache[i].value = write_value;
-                    
-                    #ifdef DEBUG
+
+#ifdef DEBUG
                     printf("[%d] write miss; boardcast invalid to S; update to value %d\n", i, cache[i].value);
-                    #endif
+#endif
                     return 1;
                 }
             }
@@ -298,9 +308,9 @@ int write_cacheline(int i, int write_value)
         cache[i].state = MODIFIED;
         cache[i].value = write_value;
 
-        #ifdef DEBUG
+#ifdef DEBUG
         printf("[%d] write miss; all invalid; update to value %d\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -318,10 +328,10 @@ int evict_cacheline(int i)
         mem_value = cache[i].value;
         cache[i].state = INVALID;
         cache[i].value = 0;
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] evict; write back value %d\n", i, cache[i].value);
-        #endif
+#endif
 
         return 1;
     }
@@ -329,10 +339,10 @@ int evict_cacheline(int i)
     {
         cache[i].state = INVALID;
         cache[i].value = 0;
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] evict\n", i);
-        #endif
+#endif
 
         return 1;
     }
@@ -358,10 +368,10 @@ int evict_cacheline(int i)
         {
             cache[last_s].state = EXCLUSIVE;
         }
-        
-        #ifdef DEBUG
+
+#ifdef DEBUG
         printf("[%d] evict\n", i);
-        #endif
+#endif
 
         return 1;
     }
@@ -394,7 +404,7 @@ void print_cacheline()
         default:
             c = '?';
         }
-        
+
         printf("\t[%d]      state %c        value %d\n", i, c, cache[i].value);
     }
         printf("\t                          mem value %d\n", mem_value);
@@ -412,15 +422,15 @@ int main()
         cache[i].value = 0;
     }
 
-    #ifdef DEBUG
+#ifdef DEBUG
     print_cacheline();
-    #endif
+#endif
 
     for (int i = 0; i < 100000; ++ i)
     {
         int core_index = rand() % NUM_PROCESSOR;
         int op = rand() % 3;
-    
+
         int do_print = 0;
 
         if (op == 0)
@@ -439,12 +449,12 @@ int main()
             do_print = evict_cacheline(core_index);
         }
 
-        #ifdef DEBUG
+#ifdef DEBUG
         if (do_print)
         {
             print_cacheline();
         }
-        #endif
+#endif
 
         if (check_state() == 0)
         {

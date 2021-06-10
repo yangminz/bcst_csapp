@@ -192,7 +192,7 @@ static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
                 smap_table[*smap_count].elf = elfp;
                 (*smap_count) ++;
             }
-            NEXT_SYMBOL_PROCESS:
+NEXT_SYMBOL_PROCESS:
             // do nothing
             ;
         }
@@ -682,7 +682,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
                     }
                 }
             }
-            NEXT_REFERENCE_IN_TEXT:
+NEXT_REFERENCE_IN_TEXT:
             ;
         }
 
@@ -744,7 +744,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst,
                     }
                 }
             }
-            NEXT_REFERENCE_IN_DATA:
+NEXT_REFERENCE_IN_DATA:
             ;
         }
     }
@@ -778,7 +778,7 @@ static uint64_t get_symbol_runtime_address(elf_t *dst, st_entry_t *sym)
             data_base = rodata_base + sht[i].sh_size * data_size;
         }
     }
-    
+
     // check this symbol's section
     if (strcmp(sym->st_shndx, ".text") == 0)
     {

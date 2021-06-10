@@ -125,16 +125,15 @@ int array_get(array_t *arr, int index, uint64_t *valptr)
     }
 }
 
+#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
+
 void print_array(array_t *arr)
 {
-    if ((DEBUG_VERBOSE_SET & DEBUG_DATASTRUCTURE) == 0)
-    {
-        return;
-    }
-
     printf("array size: %u count: %u\n", arr->size, arr->count);
     for (int i = 0; i < arr->count; ++ i)
     {
         printf("\t[%d] %16lx\n", i, arr->table[i]);
     }
 }
+
+#endif
