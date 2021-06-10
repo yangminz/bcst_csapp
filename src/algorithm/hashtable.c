@@ -71,8 +71,10 @@ void hashtable_free(hashtable_t *tab)
         return;
     }
 
-    debug_printf(DEBUG_DATASTRUCTURE, "free hashtable:\n");
+#ifdef DEBUG_DATASTRUCTURE
+    printf("free hashtable:\n");
     print_hashtable(tab);
+#endif
 
     for (int i = 0; i < tab->num; ++ i)
     {

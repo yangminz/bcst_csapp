@@ -56,23 +56,6 @@ int array_get(array_t *arr, int index, uint64_t *valptr);
 void print_array(array_t *arr);
 
 /*======================================*/
-/*      Trie - Prefix Tree              */
-/*======================================*/
-typedef struct TRIE_NODE_STRUCT
-{
-    // '0'-'9','a'-'z','%'
-    struct TRIE_NODE_STRUCT *next[37];
-    uint64_t value;
-    int isvalid;
-} trie_node_t;
-
-trie_node_t * trie_construct();
-void trie_free(trie_node_t *root);
-int trie_insert(trie_node_t **address, char *key, uint64_t value);
-int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
-void trie_print(trie_node_t *root);
-
-/*======================================*/
 /*      Extendible Hash Table           */
 /*======================================*/
 typedef struct
@@ -96,6 +79,50 @@ hashtable_t *hashtable_construct(int size);
 void hashtable_free(hashtable_t *tab);
 int hashtable_get(hashtable_t *tab, char *key, uint64_t *valptr);
 int hashtable_insert(hashtable_t **address, char *key, uint64_t val);
+
+/*======================================*/
+/*      Trie - Prefix Tree              */
+/*======================================*/
+typedef struct TRIE_NODE_STRUCT
+{
+    // use hash table for char - node mapping
+    hashtable_t *next;
+    uint64_t value;
+    int isvalue;
+} trie_node_t;
+
+trie_node_t * trie_construct();
+void trie_free(trie_node_t *root);
+int trie_insert(trie_node_t **address, char *key, uint64_t value);
+int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
+void trie_print(trie_node_t *root);
 void print_hashtable(hashtable_t *tab);
+
+/*======================================*/
+/*      Red Black Tree                  */
+/*======================================*/
+typedef enum
+{
+    COLOR_RED,
+    COLOR_BLACK,
+} rb_color_t;
+
+typedef struct RB_NODE_STRUCT
+{
+    // pointers
+    struct RB_NODE_STRUCT *parent;
+    struct RB_NODE_STRUCT *left;
+    struct RB_NODE_STRUCT *right;
+
+    // edge color to parent
+    rb_color_t color;
+
+    // tree node value
+    uint64_t value;
+} rb_node_t;
+
+rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val);
+rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *target);
+rb_node_t *rb_find_node(rb_node_t *root, uint64_t val);
 
 #endif

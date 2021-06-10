@@ -268,6 +268,16 @@ def build(key):
                     "-o", "./bin/rb"
                 ],
             ],
+        "trie" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DUNIT_TEST",
+                    "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
+                    "-o", "./bin/trie"
+                ],
+            ],
     }
 
     if not key in gcc_map:
@@ -285,6 +295,7 @@ def run(key):
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
         "rb" : ["./bin/rb"],
+        "trie" : ["./bin/trie"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
