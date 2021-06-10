@@ -15,7 +15,6 @@ for argv in sys.argv:
 print("================")
 
 KEY_MACHINE = "m"
-
 EXE_BIN_MACHINE = "./bin/test_machine"
 
 # file headers contains copyright information
