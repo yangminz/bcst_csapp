@@ -56,23 +56,6 @@ int array_get(array_t *arr, int index, uint64_t *valptr);
 void print_array(array_t *arr);
 
 /*======================================*/
-/*      Trie - Prefix Tree              */
-/*======================================*/
-typedef struct TRIE_NODE_STRUCT
-{
-    // '0'-'9','a'-'z','%'
-    struct TRIE_NODE_STRUCT *next[37];
-    uint64_t value;
-    int isvalid;
-} trie_node_t;
-
-trie_node_t * trie_construct();
-void trie_free(trie_node_t *root);
-int trie_insert(trie_node_t **address, char *key, uint64_t value);
-int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
-void trie_print(trie_node_t *root);
-
-/*======================================*/
 /*      Extendible Hash Table           */
 /*======================================*/
 typedef struct
@@ -97,6 +80,22 @@ void hashtable_free(hashtable_t *tab);
 int hashtable_get(hashtable_t *tab, char *key, uint64_t *valptr);
 int hashtable_insert(hashtable_t **address, char *key, uint64_t val);
 void print_hashtable(hashtable_t *tab);
+
+/*======================================*/
+/*      Trie - Prefix Tree              */
+/*======================================*/
+typedef struct TRIE_NODE_STRUCT
+{
+    hashtable_t *next;
+    uint64_t value;
+    int isvalue;
+} trie_node_t;
+
+trie_node_t * trie_construct();
+void trie_free(trie_node_t *root);
+int trie_insert(trie_node_t **address, char *key, uint64_t value);
+int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
+void trie_print(trie_node_t *root);
 
 /*======================================*/
 /*      Red Black Tree                  */

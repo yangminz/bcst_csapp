@@ -191,11 +191,6 @@ static void trie_dfs_print(trie_node_t *x, int level, char c)
 
 void trie_print(trie_node_t *root)
 {
-    if ((DEBUG_VERBOSE_SET & DEBUG_DATASTRUCTURE) == 0)
-    {
-        return;
-    }
-
     if (root == NULL)
     {
         printf("NULL\n");
