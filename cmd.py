@@ -60,9 +60,11 @@ def add_copyright_header():
         except UnicodeDecodeError:
             print(filename)
 
-def format_include(s):
+def format_include(s, line_index):
     a = "#include<headers/"
     b = "#include<"
+    update = False
+    old = s
 
     # check include
     if s.startswith(a):
@@ -72,17 +74,51 @@ def format_include(s):
                 l = list(s)
                 l[j] = "\""
                 s = "".join(l)
+        update = True
     elif s.startswith(b):
         s = "#include <" + s[len(b):]
+        update = True
+    
+    if update:
+        print("\tline [%d] #include rule: \"%s\" ==> \"%s\"" % (line_index, old, s))
     return s
 
-def format_whiteline(s):
+def format_marco(s, line_index):
+    a = s.strip("\n")
+    a = a.strip(" ")
+    if (len(a) >= 1 and a[len(a) - 1] == ";"):
+        return s
+    if (a.startswith("#ifdef") or a.startswith("#ifndef") or a.startswith("#endif") or a.startswith("#else") or a.startswith("#define")):
+        a = a + "\n"
+        print("\tline [%d] marco rule: \"%s\" ==> \"%s\"" % (line_index, s, a))
+        return a
+    return s
+
+def format_tag(s, line_index):
+    a = s.strip("\n")
+    a = a.strip(" ")
+    if (len(a) >= 1 and a[len(a) - 1] == ";"):
+        return s
+    charset = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "_" }
+    for i in range(len(a) - 1):
+        if not a[i] in charset:
+            return s
+    # are all in char set
+    if len(a) >= 1 and a[len(a) - 1] == ":":
+        # this is a tag
+        a = a + "\n"
+        print("\tline [%d] tag rule: \"%s\" ==> \"%s\"" % (line_index, s, a))
+        return a
+    return s
+
+def format_whiteline(s, line_index):
     space = 0
     for c in s:
         if c == ' ':
             space += 1
     if space == len(s) - 1 and s[-1] == '\n':
         s = "\n"
+        # print("\tline [%d] white line rule: delete" % (line_index))
     return s
 
 def format_code():
@@ -94,9 +130,12 @@ def format_code():
         try:
             with open(filename, "r", encoding = 'ascii') as fr:
                 content = fr.readlines()
+                print(filename, ":")
                 for i in range(len(content)):
-                    content[i] = format_include(content[i])
-                    content[i] = format_whiteline(content[i])
+                    content[i] = format_include(content[i], i)
+                    content[i] = format_whiteline(content[i], i)
+                    content[i] = format_marco(content[i], i)
+                    content[i] = format_tag(content[i], i)
                 fr.close()
                 # reopen and write data: this is a safer approach
                 # try to not open in r+ mode
@@ -219,6 +258,16 @@ def build(key):
                     "-o", "./bin/false_sharing"
                 ],
             ],
+        "rb" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DUNIT_TEST",
+                    "./src/algorithm/redblack.c",
+                    "-o", "./bin/rb"
+                ],
+            ],
     }
 
     if not key in gcc_map:
@@ -235,6 +284,7 @@ def run(key):
         "dll" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
+        "rb" : ["./bin/rb"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
