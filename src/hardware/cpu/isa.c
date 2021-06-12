@@ -9,6 +9,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "headers/cpu.h"
@@ -155,17 +156,17 @@ static uint64_t compute_operand(od_t *od);
 // interpret the operand
 static uint64_t compute_operand(od_t *od)
 {
-    if (od->type == IMM)
+    if (od->type == OD_IMM)
     {
         // immediate signed number can be negative: convert to bitmap
         return *(uint64_t *)&od->imm;
     }
-    else if (od->type == REG)
+    else if (od->type == OD_REG)
     {
         // default register 1
         return od->reg1;
     }
-    else if (od->type == EMPTY)
+    else if (od->type == OD_EMPTY)
     {
         return 0;
     }
@@ -174,39 +175,39 @@ static uint64_t compute_operand(od_t *od)
         // access memory: return the physical address
         uint64_t vaddr = 0;
 
-        if (od->type == MEM_IMM)
+        if (od->type == OD_MEM_IMM)
         {
             vaddr = od->imm;
         }
-        else if (od->type == MEM_REG1)
+        else if (od->type == OD_MEM_REG1)
         {
             vaddr = *((uint64_t *)od->reg1);
         }
-        else if (od->type == MEM_IMM_REG1)
+        else if (od->type == OD_MEM_IMM_REG1)
         {
             vaddr = od->imm + (*((uint64_t *)od->reg1));
         }
-        else if (od->type == MEM_REG1_REG2)
+        else if (od->type == OD_MEM_REG1_REG2)
         {
             vaddr = (*((uint64_t *)od->reg1)) + (*((uint64_t *)od->reg2));
         }
-        else if (od->type == MEM_IMM_REG1_REG2)
+        else if (od->type == OD_MEM_IMM_REG1_REG2)
         {
             vaddr = od->imm +  (*((uint64_t *)od->reg1)) + (*((uint64_t *)od->reg2));
         }
-        else if (od->type == MEM_REG2_SCAL)
+        else if (od->type == OD_MEM_REG2_SCAL)
         {
             vaddr = (*((uint64_t *)od->reg2)) * od->scal;
         }
-        else if (od->type == MEM_IMM_REG2_SCAL)
+        else if (od->type == OD_MEM_IMM_REG2_SCAL)
         {
             vaddr = od->imm + (*((uint64_t *)od->reg2)) * od->scal;
         }
-        else if (od->type == MEM_REG1_REG2_SCAL)
+        else if (od->type == OD_MEM_REG1_REG2_SCAL)
         {
             vaddr = (*((uint64_t *)od->reg1)) + (*((uint64_t *)od->reg2)) * od->scal;
         }
-        else if (od->type == MEM_IMM_REG1_REG2_SCAL)
+        else if (od->type == OD_MEM_IMM_REG1_REG2_SCAL)
         {
             vaddr = od->imm + (*((uint64_t *)od->reg1)) + (*((uint64_t *)od->reg2)) * od->scal;
         }
@@ -301,7 +302,7 @@ static void parse_operand(const char *str, od_t *od)
 {
     // str: the stripped compact operand string: turned to lower cases before parsing
     // od: the data structure to store operand
-    od->type = EMPTY;
+    od->type = OD_EMPTY;
     od->imm = 0;
     od->scal = 0;
     od->reg1 = 0;
@@ -318,7 +319,7 @@ static void parse_operand(const char *str, od_t *od)
     if (str[0] == '$')
     {
         // immediate number
-        od->type = IMM;
+        od->type = OD_IMM;
         // try to parse the immediate number 64
         // condition short cut would not bring extra burden
         od->imm = string2uint_range(str, 1, -1);
@@ -326,7 +327,7 @@ static void parse_operand(const char *str, od_t *od)
     else if (str[0] == '%')
     {
         // register
-        od->type = REG;
+        od->type = OD_REG;
         // match the correct register name
         od->reg1 = try_get_from_trie(&register_mapping, (char *)str);
         return;
@@ -398,14 +399,14 @@ static void parse_operand(const char *str, od_t *od)
             if (count_parentheses == 0)
             {
                 // imm
-                od->type = MEM_IMM;
+                od->type = OD_MEM_IMM;
                 return;
             }
         }
         // parse scale
         if (scal_len > 0)
         {
-            od->imm = string2uint(scal);
+            od->scal = string2uint(scal);
             if (od->scal != 1 && od->scal != 2 && od->scal != 4 && od->scal != 8)
             {
                 debug_printf(DEBUG_PARSEINST, "parse operand %s\n    scale number %s must be 1,2,4,8\n", scal);
@@ -427,24 +428,24 @@ static void parse_operand(const char *str, od_t *od)
         if (count_comma == 0)
         {
             // (r)
-            od->type = MEM_REG1;
+            od->type = OD_MEM_REG1;
         }
         else if (count_comma == 1)
         {
             // (r,r)
-            od->type = MEM_REG1_REG2;
+            od->type = OD_MEM_REG1_REG2;
         }
         else if (count_comma == 2)
         {
             if (reg1_len == 0)
             {
                 // (,r,s)
-                od->type = MEM_REG2_SCAL;
+                od->type = OD_MEM_REG2_SCAL;
             }
             else
             {
                 // (r,r,s)
-                od->type = MEM_REG1_REG2_SCAL;
+                od->type = OD_MEM_REG1_REG2_SCAL;
             }
         }
         // bias 1 for MEM_IMM_[.*]
@@ -510,7 +511,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == REG && dst_od->type == REG)
+    if (src_od->type == OD_REG && dst_od->type == OD_REG)
     {
         // src: register
         // dst: register
@@ -519,7 +520,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         cpu_flags.__flags_value = 0;
         return;
     }
-    else if (src_od->type == REG && dst_od->type >= MEM_IMM)
+    else if (src_od->type == OD_REG && dst_od->type >= OD_MEM_IMM)
     {
         // src: register
         // dst: virtual address
@@ -530,7 +531,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         cpu_flags.__flags_value = 0;
         return;
     }
-    else if (src_od->type >= MEM_IMM && dst_od->type == REG)
+    else if (src_od->type >= OD_MEM_IMM && dst_od->type == OD_REG)
     {
         // src: virtual address
         // dst: register
@@ -539,7 +540,7 @@ static void mov_handler(od_t *src_od, od_t *dst_od)
         cpu_flags.__flags_value = 0;
         return;
     }
-    else if (src_od->type == IMM && dst_od->type == REG)
+    else if (src_od->type == OD_IMM && dst_od->type == OD_REG)
     {
         // src: immediate number (uint64_t bit map)
         // dst: register
@@ -555,7 +556,7 @@ static void push_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     // uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == REG)
+    if (src_od->type == OD_REG)
     {
         // src: register
         // dst: empty
@@ -574,7 +575,7 @@ static void pop_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     // uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == REG)
+    if (src_od->type == OD_REG)
     {
         // src: register
         // dst: empty
@@ -641,7 +642,7 @@ static void add_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == REG && dst_od->type == REG)
+    if (src_od->type == OD_REG && dst_od->type == OD_REG)
     {
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
@@ -671,7 +672,7 @@ static void sub_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == IMM && dst_od->type == REG)
+    if (src_od->type == OD_IMM && dst_od->type == OD_REG)
     {
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
@@ -704,7 +705,7 @@ static void cmp_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     uint64_t dst = compute_operand(dst_od);
 
-    if (src_od->type == IMM && dst_od->type >= MEM_IMM)
+    if (src_od->type == OD_IMM && dst_od->type >= OD_MEM_IMM)
     {
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
@@ -777,6 +778,8 @@ void instruction_cycle()
     handler(&(inst.src), &(inst.dst));
 }
 
+#ifdef DEBUG_REGISTERS
+
 void print_register()
 {
     if ((DEBUG_VERBOSE_SET & DEBUG_REGISTERS) == 0x0)
@@ -819,8 +822,58 @@ void print_stack()
     }
 }
 
-void TestParsingInstruction()
+#endif
+
+#define DEBUG_PARSE_INSTRUCTION 1
+
+#ifdef DEBUG_PARSE_INSTRUCTION
+
+static int operand_equal(od_t *a, od_t *b)
 {
+    if (a == NULL && b == NULL)
+    {
+        return 1;
+    }
+
+    if (a == NULL || b == NULL)
+    {
+        return 0;
+    }
+
+    int equal = 1;
+    equal = equal && (a->type == b->type);
+    equal = equal && (a->imm == b->imm);
+    equal = equal && (a->scal == b->scal);
+    equal = equal && (a->reg1 == b->reg1);
+    equal = equal && (a->reg2 == b->reg2);
+
+    return equal;
+}
+
+static int instruction_equal(inst_t *a, inst_t *b)
+{
+    if (a == NULL && b == NULL)
+    {
+        return 1;
+    }
+
+    if (a == NULL || b == NULL)
+    {
+        return 0;
+    }
+
+    int equal = 1;
+    equal = equal && (a->op == b->op);
+    equal = equal && operand_equal(&a->src, &b->src);
+    equal = equal && operand_equal(&a->dst, &b->dst);
+
+    return equal;
+}
+
+static void TestParsingInstruction()
+{
+    printf("Testing instruction parsing ...\n");
+
     char assembly[15][MAX_INSTRUCTION_CHAR] = {
         "push   %rbp",              // 0
         "mov    %rsp,%rbp",         // 1
@@ -839,15 +892,125 @@ void TestParsingInstruction()
         "mov    %rax,-0x8(%rbp)",   // 14
     };
 
-    inst_t inst;
+    inst_t std_inst[15] = {
+        // push   %rbp
+        {
+            .op = INST_PUSH,
+            .src = 
+                {
+                    .type = OD_REG,
+                    .imm = 0,
+                    .scal = 0,
+                    .reg1 = (uint64_t)(&cpu_reg.rbp),
+                    .reg2 = 0
+                },
+            .dst = 
+                {
+                    .type = OD_EMPTY,
+                    .imm = 0,
+                    .scal = 0,
+                    .reg1 = 0,
+                    .reg2 = 0
+                }
+        },        
+        // mov    %rsp,%rbp
+        {
+            .op = INST_MOV, 
+            .src = {
+                .type = OD_REG, 
+                .imm = 0, 
+                .scal = 0, 
+                .reg1 = (uint64_t)(&cpu_reg.rsp), 
+                .reg2 = 0
+            }, 
+            .dst = {
+                .type = OD_REG,
+                .imm = 0, 
+                .scal = 0, 
+                .reg1 = (uint64_t)(&cpu_reg.rbp), 
+                .reg2 = 0}
+        },
+        // mov    %rdi,-0x18(%rbp)
+        {
+            .op = INST_MOV, 
+            .src = {
+                .type = OD_REG, 
+                .imm = 0, 
+                .scal = 0, 
+                .reg1 = (uint64_t)(&cpu_reg.rdi), 
+                .reg2 = 0
+            }, 
+            .dst = {
+                .type = OD_MEM_IMM_REG1, 
+                .imm = 0x1LL + (~0x18LL), 
+                .scal = 0, 
+                .reg1 = (uint64_t)(&cpu_reg.rbp), 
+                .reg2 = 0
+            }
+        },
+        // mov    %rsi,-0x20(%rbp)
+        {
+            .op = INST_MOV, 
+            .src = {
+                .type = OD_REG, 
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rsi),
+                .reg2 = 0
+            }, 
+            .dst = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x20LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            }
+        },
+        // mov    -0x18(%rbp),%rdx
+        {
+            .op = INST_MOV, 
+            .src = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x18LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rdx),
+                .reg2 = 0
+            }
+        // mov    -0x20(%rbp),%rax
+        // add    %rdx,%rax
+        // mov    %rax,-0x8(%rbp)
+        // mov    -0x8(%rbp),%rax
+        // pop    %rbp
+        // retq
+        // mov    %rdx,%rsi
+        // mov    %rax,%rdi
+        // callq  0
+        // mov    %rax,-0x8(%rbp)
+        }
+    };
+    
+    inst_t inst_parsed;
+
     for (int i = 0; i < 15; ++ i)
     {
-        parse_instruction(assembly[i], &inst);
+        parse_instruction(assembly[i], &inst_parsed);
+        // assert(instruction_equal(&std_inst[i], &inst_parsed) == 1);
     }
+
+    printf("\tPass\n");
 }
 
-void TestParsingOperand()
+static void TestParsingOperand()
 {
+    printf("Testing operand parsing ...\n");
+
     const char *strs[11] = {
         "$0x1234",
         "%rax",
@@ -861,21 +1024,309 @@ void TestParsingOperand()
         "(%rsp,%rbx,8)",
         "0xabcd(%rsp,%rbx,8)",
     };
-
-    printf("rax %p\n", &(cpu_reg.rax));
-    printf("rsp %p\n", &(cpu_reg.rsp));
-    printf("rbx %p\n", &(cpu_reg.rbx));
+    
+    od_t std_ods[11] = 
+    {
+        // $0x1234
+        {
+            .type   = OD_IMM,
+            .imm    = 0x1234,
+            .scal   = 0,
+            .reg1   = 0,
+            .reg2   = 0
+        },
+        // %rax
+        {
+            .type   = OD_REG,
+            .imm    = 0,
+            .scal   = 0,
+            .reg1   = (uint64_t)(&cpu_reg.rax),
+            .reg2   = 0
+        },
+        // 0xabcd
+        {
+            .type   = OD_MEM_IMM,
+            .imm    = 0xabcd,
+            .scal   = 0,
+            .reg1   = 0,
+            .reg2   = 0
+        },
+        // (%rsp)
+        {
+            .type   = OD_MEM_REG1,
+            .imm    = 0,
+            .scal   = 0,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = 0
+        },
+        // 0xabcd(%rsp)
+        {
+            .type   = OD_MEM_IMM_REG1,
+            .imm    = 0xabcd,
+            .scal   = 0,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = 0
+        },
+        // (%rsp,%rbx)
+        {
+            .type   = OD_MEM_REG1_REG2,
+            .imm    = 0,
+            .scal   = 0,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+        // 0xabcd(%rsp,%rbx)
+        {
+            .type   = OD_MEM_IMM_REG1_REG2,
+            .imm    = 0xabcd,
+            .scal   = 0,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+        // (,%rbx,8)
+        {
+            .type   = OD_MEM_REG2_SCAL,
+            .imm    = 0,
+            .scal   = 8,
+            .reg1   = 0,
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+        // 0xabcd(,%rbx,8)
+        {
+            .type   = OD_MEM_IMM_REG2_SCAL,
+            .imm    = 0xabcd,
+            .scal   = 8,
+            .reg1   = 0,
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+        // (%rsp,%rbx,8)
+        {
+            .type   = OD_MEM_REG1_REG2_SCAL,
+            .imm    = 0,
+            .scal   = 8,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+        // 0xabcd(%rsp,%rbx,8)
+        {
+            .type   = OD_MEM_IMM_REG1_REG2_SCAL,
+            .imm    = 0xabcd,
+            .scal   = 8,
+            .reg1   = (uint64_t)(&cpu_reg.rsp),
+            .reg2   = (uint64_t)(&cpu_reg.rbx)
+        },
+    };
+    
+    od_t od_parsed;
 
     for (int i = 0; i < 11; ++ i)
     {
-        od_t od;
-        parse_operand(strs[i], &od);
+        parse_operand(strs[i], &od_parsed);
+        assert(operand_equal(&std_ods[i], &od_parsed) == 1);
+    }
 
-        printf("\n%s\n", strs[i]);
-        printf("od enum type: %d\n", od.type);
-        printf("od imm: %lx\n", od.imm);
-        printf("od reg1: %lx\n", od.reg1);
-        printf("od reg2: %lx\n", od.reg2);
-        printf("od scal: %lx\n", od.scal);
+    printf("\tPass\n");
+}
+
+static void TestAddFunctionCallAndComputation()
+{
+    // init state
+    cpu_reg.rax = 0xabcd;
+    cpu_reg.rbx = 0x8000670;
+    cpu_reg.rcx = 0x8000670;
+    cpu_reg.rdx = 0x12340000;
+    cpu_reg.rsi = 0x7ffffffee208;
+    cpu_reg.rdi = 0x1;
+    cpu_reg.rbp = 0x7ffffffee110;
+    cpu_reg.rsp = 0x7ffffffee0f0;
+
+    cpu_write64bits_dram(va2pa(0x7ffffffee110), 0x0000000000000000);    // rbp
+    cpu_write64bits_dram(va2pa(0x7ffffffee108), 0x0000000000000000);
+    cpu_write64bits_dram(va2pa(0x7ffffffee100), 0x0000000012340000);
+    cpu_write64bits_dram(va2pa(0x7ffffffee0f8), 0x000000000000abcd);
+    cpu_write64bits_dram(va2pa(0x7ffffffee0f0), 0x0000000000000000);    // rsp
+
+    // 2 before call
+    // 3 after call before push
+    // 5 after rbp
+    // 13 before pop
+    // 14 after pop before ret
+    // 15 after ret
+    char assembly[15][MAX_INSTRUCTION_CHAR] = {
+        "push   %rbp",              // 0
+        "mov    %rsp,%rbp",         // 1
+        "mov    %rdi,-0x18(%rbp)",  // 2
+        "mov    %rsi,-0x20(%rbp)",  // 3
+        "mov    -0x18(%rbp),%rdx",  // 4
+        "mov    -0x20(%rbp),%rax",  // 5
+        "add    %rdx,%rax",         // 6
+        "mov    %rax,-0x8(%rbp)",   // 7
+        "mov    -0x8(%rbp),%rax",   // 8
+        "pop    %rbp",              // 9
+        "retq",                     // 10
+        "mov    %rdx,%rsi",         // 11
+        "mov    %rax,%rdi",         // 12
+        "callq  0x00400000",        // 13
+        "mov    %rax,-0x8(%rbp)",   // 14
+    };
+
+    // copy to physical memory
+    for (int i = 0; i < 15; ++ i)
+    {
+        cpu_writeinst_dram(va2pa(i * 0x40 + 0x00400000), assembly[i]);
+    }
+    cpu_pc.rip = MAX_INSTRUCTION_CHAR * sizeof(char) * 11 + 0x00400000;
+
+    printf("begin\n");
+    int time = 0;
+    while (time < 15)
+    {
+        instruction_cycle();
+        print_register();
+        print_stack();
+        time ++;
+    } 
+
+    // gdb state ret from func
+    int match = 1;
+    match = match && cpu_reg.rax == 0x1234abcd;
+    match = match && cpu_reg.rbx == 0x8000670;
+    match = match && cpu_reg.rcx == 0x8000670;
+    match = match && cpu_reg.rdx == 0xabcd;
+    match = match && cpu_reg.rsi == 0x12340000;
+    match = match && cpu_reg.rdi == 0xabcd;
+    match = match && cpu_reg.rbp == 0x7ffffffee110;
+    match = match && cpu_reg.rsp == 0x7ffffffee0f0;
+
+    if (match)
+    {
+        printf("register match\n");
+    }
+    else
+    {
+        printf("register mismatch\n");
+    }
+
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee110)) == 0x0000000000000000); // rbp
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee108)) == 0x000000001234abcd);
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee100)) == 0x0000000012340000);
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee0f8)) == 0x000000000000abcd);
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee0f0)) == 0x0000000000000000); // rsp
+
+    if (match)
+    {
+        printf("memory match\n");
+    }
+    else
+    {
+        printf("memory mismatch\n");
     }
 }
+
+static void TestSumRecursiveCondition()
+{
+    // init state
+    cpu_reg.rax = 0x8000630;
+    cpu_reg.rbx = 0x0;
+    cpu_reg.rcx = 0x8000650;
+    cpu_reg.rdx = 0x7ffffffee328;
+    cpu_reg.rsi = 0x7ffffffee318;
+    cpu_reg.rdi = 0x1;
+    cpu_reg.rbp = 0x7ffffffee230;
+    cpu_reg.rsp = 0x7ffffffee220;
+
+    cpu_flags.__flags_value = 0;
+
+    cpu_write64bits_dram(va2pa(0x7ffffffee230), 0x0000000008000650);    // rbp
+    cpu_write64bits_dram(va2pa(0x7ffffffee228), 0x0000000000000000);
+    cpu_write64bits_dram(va2pa(0x7ffffffee220), 0x00007ffffffee310);    // rsp
+
+    char assembly[19][MAX_INSTRUCTION_CHAR] = {
+        "push   %rbp",              // 0
+        "mov    %rsp,%rbp",         // 1
+        "sub    $0x10,%rsp",        // 2
+        "mov    %rdi,-0x8(%rbp)",   // 3
+        "cmpq   $0x0,-0x8(%rbp)",   // 4
+        "jne    0x400200",          // 5: jump to 8
+        "mov    $0x0,%eax",         // 6
+        "jmp    0x400380",          // 7: jump to 14
+        "mov    -0x8(%rbp),%rax",   // 8
+        "sub    $0x1,%rax",         // 9
+        "mov    %rax,%rdi",         // 10
+        "callq  0x00400000",        // 11
+        "mov    -0x8(%rbp),%rdx",   // 12
+        "add    %rdx,%rax",         // 13
+        "leaveq ",                  // 14
+        "retq   ",                  // 15
+        "mov    $0x3,%edi",         // 16
+        "callq  0x00400000",        // 17
+        "mov    %rax,-0x8(%rbp)",   // 18
+    };
+
+    // copy to physical memory
+    for (int i = 0; i < 19; ++ i)
+    {
+        cpu_writeinst_dram(va2pa(i * 0x40 + 0x00400000), assembly[i]);
+    }
+    cpu_pc.rip = MAX_INSTRUCTION_CHAR * sizeof(char) * 16 + 0x00400000;
+
+    printf("begin\n");
+    int time = 0;
+    while ((cpu_pc.rip <= 18 * 0x40 + 0x00400000) &&
+           time < MAX_NUM_INSTRUCTION_CYCLE)
+    {
+        instruction_cycle();
+        print_register();
+        print_stack();
+        time ++;
+    } 
+
+    // gdb state ret from func
+    int match = 1;
+    match = match && cpu_reg.rax == 0x6;
+    match = match && cpu_reg.rbx == 0x0;
+    match = match && cpu_reg.rcx == 0x8000650;
+    match = match && cpu_reg.rdx == 0x3;
+    match = match && cpu_reg.rsi == 0x7ffffffee318;
+    match = match && cpu_reg.rdi == 0x0;
+    match = match && cpu_reg.rbp == 0x7ffffffee230;
+    match = match && cpu_reg.rsp == 0x7ffffffee220;
+
+    if (match)
+    {
+        printf("register match\n");
+    }
+    else
+    {
+        printf("register mismatch\n");
+    }
+
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee230)) == 0x0000000008000650); // rbp
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee228)) == 0x0000000000000006);
+    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee220)) == 0x00007ffffffee310); // rsp
+
+    if (match)
+    {
+        printf("memory match\n");
+    }
+    else
+    {
+        printf("memory mismatch\n");
+    }
+}
+
+int main()
+{
+    // TestAddFunctionCallAndComputation();
+    // TestSumRecursiveCondition();
+
+    TestParsingOperand();
+
+    TestParsingInstruction();
+
+    finally_cleanup();
+
+    return 0;
+}
+
+#endif

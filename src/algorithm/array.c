@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "headers/common.h"
 #include "headers/algorithm.h"
 
 array_t *array_construct(int size)
@@ -125,7 +124,7 @@ int array_get(array_t *arr, int index, uint64_t *valptr)
     }
 }
 
-#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
+#ifdef DEBUG_ARRAY
 
 void print_array(array_t *arr)
 {

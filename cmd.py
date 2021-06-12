@@ -14,9 +14,6 @@ for argv in sys.argv:
     i += 1
 print("================")
 
-KEY_MACHINE = "m"
-EXE_BIN_MACHINE = "./bin/test_machine"
-
 # file headers contains copyright information
 notification = "/* BCST - Introduction to Computer Systems\n" \
 " * Author:      yangminz@outlook.com\n" \
@@ -170,12 +167,11 @@ def count_lines():
 def build(key):
     make_build_directory()
     gcc_map = {
-        KEY_MACHINE : [
+        "isa" : [
                 [
                     "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
                     "-I", "./src",
-                    "./src/mains/test_machine.c",
                     "./src/common/print.c",
                     "./src/common/convert.c",
                     "./src/common/cleanup.c",
@@ -185,7 +181,7 @@ def build(key):
                     "./src/hardware/cpu/isa.c",
                     "./src/hardware/cpu/mmu.c",
                     "./src/hardware/memory/dram.c",
-                    "-o", EXE_BIN_MACHINE
+                    "-o", "./bin/isa"
                 ]
             ],
         "link" : [
@@ -245,7 +241,7 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
-                    "-DUNIT_TEST",
+                    "-DDEBUG_REDBLACK",
                     "./src/algorithm/redblack.c",
                     "-o", "./bin/rb"
                 ],
@@ -255,7 +251,7 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
-                    "-DUNIT_TEST",
+                    "-DDEBUG_TRIE",
                     "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
                     "-o", "./bin/trie"
                 ],
@@ -271,7 +267,7 @@ def build(key):
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : [EXE_BIN_MACHINE],
+        "isa" : ["./bin/ut_isa"],
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
@@ -286,7 +282,7 @@ def run(key):
 def debug(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
+        "isa" : "./bin/ut_isa",
         "link" : "./bin/link"
     }
     if not key in bin_map:
@@ -297,7 +293,7 @@ def debug(key):
 def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
+        "isa" : "./bin/ut_isa",
         "link" : "./bin/link"
     }
     if not key in bin_map:

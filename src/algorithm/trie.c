@@ -12,9 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "headers/cpu.h"
-#include "headers/memory.h"
-#include "headers/common.h"
 #include "headers/algorithm.h"
 
 // constructor
@@ -160,7 +157,7 @@ int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
     return 0;
 }
 
-#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
+#ifdef DEBUG_TRIE
 
 static void trie_dfs_print(trie_node_t *x, int level, char c)
 {

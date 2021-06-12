@@ -284,8 +284,6 @@ static void init_dictionary()
     hashtable_insert(&link_constant_dict, "R_X86_64_32", R_X86_64_32);
     hashtable_insert(&link_constant_dict, "R_X86_64_PC32", R_X86_64_PC32);
     hashtable_insert(&link_constant_dict, "R_X86_64_PLT32", R_X86_64_PLT32);
-
-    print_hashtable(link_constant_dict);
 }
 
 void parse_elf(char *filename, elf_t *elf)

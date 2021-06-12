@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "headers/common.h"
 #include "headers/algorithm.h"
 
 static uint64_t hash_function(char *str)
@@ -279,7 +278,7 @@ static void insert_bucket_tail(hashtable_t *tab, hashtable_bucket_t *b, char *ke
     b->counter ++;
 }
 
-#if (defined UNIT_TEST) || (defined DEBUG_DATASTRUCTURE)
+#ifdef DEBUG_HASHTABLE
 
 void print_hashtable(hashtable_t *tab)
 {

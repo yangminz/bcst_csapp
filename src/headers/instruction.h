@@ -37,23 +37,23 @@ typedef enum INST_OPERATOR
 
 typedef enum OPERAND_TYPE
 {
-    EMPTY,                  // 0
-    IMM,                    // 1
-    REG,                    // 2
-    MEM_IMM,                // 3
-    MEM_REG1,               // 4
-    MEM_IMM_REG1,           // 5
-    MEM_REG1_REG2,          // 6
-    MEM_IMM_REG1_REG2,      // 7
-    MEM_REG2_SCAL,          // 8
-    MEM_IMM_REG2_SCAL,      // 9
-    MEM_REG1_REG2_SCAL,     // 10
-    MEM_IMM_REG1_REG2_SCAL  // 11
+    OD_EMPTY,                  // 0
+    OD_IMM,                    // 1
+    OD_REG,                    // 2
+    OD_MEM_IMM,                // 3
+    OD_MEM_REG1,               // 4
+    OD_MEM_IMM_REG1,           // 5
+    OD_MEM_REG1_REG2,          // 6
+    OD_MEM_IMM_REG1_REG2,      // 7
+    OD_MEM_REG2_SCAL,          // 8
+    OD_MEM_IMM_REG2_SCAL,      // 9
+    OD_MEM_REG1_REG2_SCAL,     // 10
+    OD_MEM_IMM_REG1_REG2_SCAL  // 11
 } od_type_t;
 
 typedef struct OPERAND_STRUCT
 {
-    od_type_t   type;   // IMM, REG, MEM
+    od_type_t   type;   // OD_IMM, OD_REG, OD_MEM
     uint64_t    imm;    // immediate number
     uint64_t    scal;   // scale number to register 2
     uint64_t    reg1;   // main register
@@ -70,5 +70,7 @@ typedef struct INST_STRUCT
     od_t    src;        // operand src of instruction
     od_t    dst;        // operand dst of instruction
 } inst_t;
+
+#define MAX_NUM_INSTRUCTION_CYCLE 100
 
 #endif

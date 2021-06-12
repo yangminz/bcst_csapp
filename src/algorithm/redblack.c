@@ -687,7 +687,7 @@ rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
     return NULL;
 }
 
-#ifdef UNIT_TEST
+#ifdef DEBUG_REDBLACK
 
 void test_insert()
 {
