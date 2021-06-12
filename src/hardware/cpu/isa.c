@@ -35,98 +35,93 @@ static void lazy_initialize_trie()
 {
     // initialize the register mapping
     register_mapping = trie_construct();
-    trie_insert(&register_mapping, "%rax",   (uint64_t)&(cpu_reg.rax)    );
-    trie_insert(&register_mapping, "%eax",   (uint64_t)&(cpu_reg.eax)    );
-    trie_insert(&register_mapping, "%ax",    (uint64_t)&(cpu_reg.ax)     );
-    trie_insert(&register_mapping, "%ah",    (uint64_t)&(cpu_reg.ah)     );
-    trie_insert(&register_mapping, "%al",    (uint64_t)&(cpu_reg.al)     );
-    trie_insert(&register_mapping, "%rbx",   (uint64_t)&(cpu_reg.rbx)    );
-    trie_insert(&register_mapping, "%ebx",   (uint64_t)&(cpu_reg.ebx)    );
-    trie_insert(&register_mapping, "%bx",    (uint64_t)&(cpu_reg.bx)     );
-    trie_insert(&register_mapping, "%bh",    (uint64_t)&(cpu_reg.bh)     );
-    trie_insert(&register_mapping, "%bl",    (uint64_t)&(cpu_reg.bl)     );
-    trie_insert(&register_mapping, "%rcx",   (uint64_t)&(cpu_reg.rcx)    );
-    trie_insert(&register_mapping, "%ecx",   (uint64_t)&(cpu_reg.ecx)    );
-    trie_insert(&register_mapping, "%cx",    (uint64_t)&(cpu_reg.cx)     );
-    trie_insert(&register_mapping, "%ch",    (uint64_t)&(cpu_reg.ch)     );
-    trie_insert(&register_mapping, "%cl",    (uint64_t)&(cpu_reg.cl)     );
-    trie_insert(&register_mapping, "%rdx",   (uint64_t)&(cpu_reg.rdx)    );
-    trie_insert(&register_mapping, "%edx",   (uint64_t)&(cpu_reg.edx)    );
-    trie_insert(&register_mapping, "%dx",    (uint64_t)&(cpu_reg.dx)     );
-    trie_insert(&register_mapping, "%dh",    (uint64_t)&(cpu_reg.dh)     );
-    trie_insert(&register_mapping, "%dl",    (uint64_t)&(cpu_reg.dl)     );
-    trie_insert(&register_mapping, "%rsi",   (uint64_t)&(cpu_reg.rsi)    );
-    trie_insert(&register_mapping, "%esi",   (uint64_t)&(cpu_reg.esi)    );
-    trie_insert(&register_mapping, "%si",    (uint64_t)&(cpu_reg.si)     );
-    trie_insert(&register_mapping, "%sih",   (uint64_t)&(cpu_reg.sih)    );
-    trie_insert(&register_mapping, "%sil",   (uint64_t)&(cpu_reg.sil)    );
-    trie_insert(&register_mapping, "%rdi",   (uint64_t)&(cpu_reg.rdi)    );
-    trie_insert(&register_mapping, "%edi",   (uint64_t)&(cpu_reg.edi)    );
-    trie_insert(&register_mapping, "%di",    (uint64_t)&(cpu_reg.di)     );
-    trie_insert(&register_mapping, "%dih",   (uint64_t)&(cpu_reg.dih)    );
-    trie_insert(&register_mapping, "%dil",   (uint64_t)&(cpu_reg.dil)    );
-    trie_insert(&register_mapping, "%rbp",   (uint64_t)&(cpu_reg.rbp)    );
-    trie_insert(&register_mapping, "%ebp",   (uint64_t)&(cpu_reg.ebp)    );
-    trie_insert(&register_mapping, "%bp",    (uint64_t)&(cpu_reg.bp)     );
-    trie_insert(&register_mapping, "%bph",   (uint64_t)&(cpu_reg.bph)    );
-    trie_insert(&register_mapping, "%bpl",   (uint64_t)&(cpu_reg.bpl)    );
-    trie_insert(&register_mapping, "%rsp",   (uint64_t)&(cpu_reg.rsp)    );
-    trie_insert(&register_mapping, "%esp",   (uint64_t)&(cpu_reg.esp)    );
-    trie_insert(&register_mapping, "%sp",    (uint64_t)&(cpu_reg.sp)     );
-    trie_insert(&register_mapping, "%sph",   (uint64_t)&(cpu_reg.sph)    );
-    trie_insert(&register_mapping, "%spl",   (uint64_t)&(cpu_reg.spl)    );
-    trie_insert(&register_mapping, "%r8",    (uint64_t)&(cpu_reg.r8)     );
-    trie_insert(&register_mapping, "%r8d",   (uint64_t)&(cpu_reg.r8d)    );
-    trie_insert(&register_mapping, "%r8w",   (uint64_t)&(cpu_reg.r8w)    );
-    trie_insert(&register_mapping, "%r8b",   (uint64_t)&(cpu_reg.r8b)    );
-    trie_insert(&register_mapping, "%r9",    (uint64_t)&(cpu_reg.r9)     );
-    trie_insert(&register_mapping, "%r9d",   (uint64_t)&(cpu_reg.r9d)    );
-    trie_insert(&register_mapping, "%r9w",   (uint64_t)&(cpu_reg.r9w)    );
-    trie_insert(&register_mapping, "%r9b",   (uint64_t)&(cpu_reg.r9b)    );
-    trie_insert(&register_mapping, "%r10",   (uint64_t)&(cpu_reg.r10)    );
-    trie_insert(&register_mapping, "%r10d",  (uint64_t)&(cpu_reg.r10d)   );
-    trie_insert(&register_mapping, "%r10w",  (uint64_t)&(cpu_reg.r10w)   );
-    trie_insert(&register_mapping, "%r10b",  (uint64_t)&(cpu_reg.r10b)   );
-    trie_insert(&register_mapping, "%r11",   (uint64_t)&(cpu_reg.r11)    );
-    trie_insert(&register_mapping, "%r11d",  (uint64_t)&(cpu_reg.r11d)   );
-    trie_insert(&register_mapping, "%r11w",  (uint64_t)&(cpu_reg.r11w)   );
-    trie_insert(&register_mapping, "%r11b",  (uint64_t)&(cpu_reg.r11b)   );
-    trie_insert(&register_mapping, "%r12",   (uint64_t)&(cpu_reg.r12)    );
-    trie_insert(&register_mapping, "%r12d",  (uint64_t)&(cpu_reg.r12d)   );
-    trie_insert(&register_mapping, "%r12w",  (uint64_t)&(cpu_reg.r12w)   );
-    trie_insert(&register_mapping, "%r12b",  (uint64_t)&(cpu_reg.r12b)   );
-    trie_insert(&register_mapping, "%r13",   (uint64_t)&(cpu_reg.r13)    );
-    trie_insert(&register_mapping, "%r13d",  (uint64_t)&(cpu_reg.r13d)   );
-    trie_insert(&register_mapping, "%r13w",  (uint64_t)&(cpu_reg.r13w)   );
-    trie_insert(&register_mapping, "%r13b",  (uint64_t)&(cpu_reg.r13b)   );
-    trie_insert(&register_mapping, "%r14",   (uint64_t)&(cpu_reg.r14)    );
-    trie_insert(&register_mapping, "%r14d",  (uint64_t)&(cpu_reg.r14d)   );
-    trie_insert(&register_mapping, "%r14w",  (uint64_t)&(cpu_reg.r14w)   );
-    trie_insert(&register_mapping, "%r14b",  (uint64_t)&(cpu_reg.r14b)   );
-    trie_insert(&register_mapping, "%r15",   (uint64_t)&(cpu_reg.r15)    );
-    trie_insert(&register_mapping, "%r15d",  (uint64_t)&(cpu_reg.r15d)   );
-    trie_insert(&register_mapping, "%r15w",  (uint64_t)&(cpu_reg.r15w)   );
-    trie_insert(&register_mapping, "%r15b",  (uint64_t)&(cpu_reg.r15b)   );
+    register_mapping = trie_insert(register_mapping, "%rax",   (uint64_t)&(cpu_reg.rax)    );
+    register_mapping = trie_insert(register_mapping, "%eax",   (uint64_t)&(cpu_reg.eax)    );
+    register_mapping = trie_insert(register_mapping, "%ax",    (uint64_t)&(cpu_reg.ax)     );
+    register_mapping = trie_insert(register_mapping, "%ah",    (uint64_t)&(cpu_reg.ah)     );
+    register_mapping = trie_insert(register_mapping, "%al",    (uint64_t)&(cpu_reg.al)     );
+    register_mapping = trie_insert(register_mapping, "%rbx",   (uint64_t)&(cpu_reg.rbx)    );
+    register_mapping = trie_insert(register_mapping, "%ebx",   (uint64_t)&(cpu_reg.ebx)    );
+    register_mapping = trie_insert(register_mapping, "%bx",    (uint64_t)&(cpu_reg.bx)     );
+    register_mapping = trie_insert(register_mapping, "%bh",    (uint64_t)&(cpu_reg.bh)     );
+    register_mapping = trie_insert(register_mapping, "%bl",    (uint64_t)&(cpu_reg.bl)     );
+    register_mapping = trie_insert(register_mapping, "%rcx",   (uint64_t)&(cpu_reg.rcx)    );
+    register_mapping = trie_insert(register_mapping, "%ecx",   (uint64_t)&(cpu_reg.ecx)    );
+    register_mapping = trie_insert(register_mapping, "%cx",    (uint64_t)&(cpu_reg.cx)     );
+    register_mapping = trie_insert(register_mapping, "%ch",    (uint64_t)&(cpu_reg.ch)     );
+    register_mapping = trie_insert(register_mapping, "%cl",    (uint64_t)&(cpu_reg.cl)     );
+    register_mapping = trie_insert(register_mapping, "%rdx",   (uint64_t)&(cpu_reg.rdx)    );
+    register_mapping = trie_insert(register_mapping, "%edx",   (uint64_t)&(cpu_reg.edx)    );
+    register_mapping = trie_insert(register_mapping, "%dx",    (uint64_t)&(cpu_reg.dx)     );
+    register_mapping = trie_insert(register_mapping, "%dh",    (uint64_t)&(cpu_reg.dh)     );
+    register_mapping = trie_insert(register_mapping, "%dl",    (uint64_t)&(cpu_reg.dl)     );
+    register_mapping = trie_insert(register_mapping, "%rsi",   (uint64_t)&(cpu_reg.rsi)    );
+    register_mapping = trie_insert(register_mapping, "%esi",   (uint64_t)&(cpu_reg.esi)    );
+    register_mapping = trie_insert(register_mapping, "%si",    (uint64_t)&(cpu_reg.si)     );
+    register_mapping = trie_insert(register_mapping, "%sih",   (uint64_t)&(cpu_reg.sih)    );
+    register_mapping = trie_insert(register_mapping, "%sil",   (uint64_t)&(cpu_reg.sil)    );
+    register_mapping = trie_insert(register_mapping, "%rdi",   (uint64_t)&(cpu_reg.rdi)    );
+    register_mapping = trie_insert(register_mapping, "%edi",   (uint64_t)&(cpu_reg.edi)    );
+    register_mapping = trie_insert(register_mapping, "%di",    (uint64_t)&(cpu_reg.di)     );
+    register_mapping = trie_insert(register_mapping, "%dih",   (uint64_t)&(cpu_reg.dih)    );
+    register_mapping = trie_insert(register_mapping, "%dil",   (uint64_t)&(cpu_reg.dil)    );
+    register_mapping = trie_insert(register_mapping, "%rbp",   (uint64_t)&(cpu_reg.rbp)    );
+    register_mapping = trie_insert(register_mapping, "%ebp",   (uint64_t)&(cpu_reg.ebp)    );
+    register_mapping = trie_insert(register_mapping, "%bp",    (uint64_t)&(cpu_reg.bp)     );
+    register_mapping = trie_insert(register_mapping, "%bph",   (uint64_t)&(cpu_reg.bph)    );
+    register_mapping = trie_insert(register_mapping, "%bpl",   (uint64_t)&(cpu_reg.bpl)    );
+    register_mapping = trie_insert(register_mapping, "%rsp",   (uint64_t)&(cpu_reg.rsp)    );
+    register_mapping = trie_insert(register_mapping, "%esp",   (uint64_t)&(cpu_reg.esp)    );
+    register_mapping = trie_insert(register_mapping, "%sp",    (uint64_t)&(cpu_reg.sp)     );
+    register_mapping = trie_insert(register_mapping, "%sph",   (uint64_t)&(cpu_reg.sph)    );
+    register_mapping = trie_insert(register_mapping, "%spl",   (uint64_t)&(cpu_reg.spl)    );
+    register_mapping = trie_insert(register_mapping, "%r8",    (uint64_t)&(cpu_reg.r8)     );
+    register_mapping = trie_insert(register_mapping, "%r8d",   (uint64_t)&(cpu_reg.r8d)    );
+    register_mapping = trie_insert(register_mapping, "%r8w",   (uint64_t)&(cpu_reg.r8w)    );
+    register_mapping = trie_insert(register_mapping, "%r8b",   (uint64_t)&(cpu_reg.r8b)    );
+    register_mapping = trie_insert(register_mapping, "%r9",    (uint64_t)&(cpu_reg.r9)     );
+    register_mapping = trie_insert(register_mapping, "%r9d",   (uint64_t)&(cpu_reg.r9d)    );
+    register_mapping = trie_insert(register_mapping, "%r9w",   (uint64_t)&(cpu_reg.r9w)    );
+    register_mapping = trie_insert(register_mapping, "%r9b",   (uint64_t)&(cpu_reg.r9b)    );
+    register_mapping = trie_insert(register_mapping, "%r10",   (uint64_t)&(cpu_reg.r10)    );
+    register_mapping = trie_insert(register_mapping, "%r10d",  (uint64_t)&(cpu_reg.r10d)   );
+    register_mapping = trie_insert(register_mapping, "%r10w",  (uint64_t)&(cpu_reg.r10w)   );
+    register_mapping = trie_insert(register_mapping, "%r10b",  (uint64_t)&(cpu_reg.r10b)   );
+    register_mapping = trie_insert(register_mapping, "%r11",   (uint64_t)&(cpu_reg.r11)    );
+    register_mapping = trie_insert(register_mapping, "%r11d",  (uint64_t)&(cpu_reg.r11d)   );
+    register_mapping = trie_insert(register_mapping, "%r11w",  (uint64_t)&(cpu_reg.r11w)   );
+    register_mapping = trie_insert(register_mapping, "%r11b",  (uint64_t)&(cpu_reg.r11b)   );
+    register_mapping = trie_insert(register_mapping, "%r12",   (uint64_t)&(cpu_reg.r12)    );
+    register_mapping = trie_insert(register_mapping, "%r12d",  (uint64_t)&(cpu_reg.r12d)   );
+    register_mapping = trie_insert(register_mapping, "%r12w",  (uint64_t)&(cpu_reg.r12w)   );
+    register_mapping = trie_insert(register_mapping, "%r12b",  (uint64_t)&(cpu_reg.r12b)   );
+    register_mapping = trie_insert(register_mapping, "%r13",   (uint64_t)&(cpu_reg.r13)    );
+    register_mapping = trie_insert(register_mapping, "%r13d",  (uint64_t)&(cpu_reg.r13d)   );
+    register_mapping = trie_insert(register_mapping, "%r13w",  (uint64_t)&(cpu_reg.r13w)   );
+    register_mapping = trie_insert(register_mapping, "%r13b",  (uint64_t)&(cpu_reg.r13b)   );
+    register_mapping = trie_insert(register_mapping, "%r14",   (uint64_t)&(cpu_reg.r14)    );
+    register_mapping = trie_insert(register_mapping, "%r14d",  (uint64_t)&(cpu_reg.r14d)   );
+    register_mapping = trie_insert(register_mapping, "%r14w",  (uint64_t)&(cpu_reg.r14w)   );
+    register_mapping = trie_insert(register_mapping, "%r14b",  (uint64_t)&(cpu_reg.r14b)   );
+    register_mapping = trie_insert(register_mapping, "%r15",   (uint64_t)&(cpu_reg.r15)    );
+    register_mapping = trie_insert(register_mapping, "%r15d",  (uint64_t)&(cpu_reg.r15d)   );
+    register_mapping = trie_insert(register_mapping, "%r15w",  (uint64_t)&(cpu_reg.r15w)   );
+    register_mapping = trie_insert(register_mapping, "%r15b",  (uint64_t)&(cpu_reg.r15b)   );
 
     // initialize the operator mapping
     operator_mapping = trie_construct();
-    trie_insert(&operator_mapping, "movq",   INST_MOV    );
-    trie_insert(&operator_mapping, "mov",    INST_MOV    );
-    trie_insert(&operator_mapping, "push",   INST_PUSH   );
-    trie_insert(&operator_mapping, "pop",    INST_POP    );
-    trie_insert(&operator_mapping, "leaveq", INST_LEAVE  );
-    trie_insert(&operator_mapping, "callq",  INST_CALL   );
-    trie_insert(&operator_mapping, "retq",   INST_RET    );
-    trie_insert(&operator_mapping, "add",    INST_ADD    );
-    trie_insert(&operator_mapping, "sub",    INST_SUB    );
-    trie_insert(&operator_mapping, "cmpq",   INST_CMP    );
-    trie_insert(&operator_mapping, "jne",    INST_JNE    );
-    trie_insert(&operator_mapping, "jmp",    INST_JMP    );
-
-#ifdef DEBUG_DATASTRUCTURE
-    trie_print(operator_mapping);
-    trie_print(register_mapping);
-#endif
+    operator_mapping= trie_insert(operator_mapping, "movq",   INST_MOV    );
+    operator_mapping= trie_insert(operator_mapping, "mov",    INST_MOV    );
+    operator_mapping= trie_insert(operator_mapping, "push",   INST_PUSH   );
+    operator_mapping= trie_insert(operator_mapping, "pop",    INST_POP    );
+    operator_mapping= trie_insert(operator_mapping, "leaveq", INST_LEAVE  );
+    operator_mapping= trie_insert(operator_mapping, "callq",  INST_CALL   );
+    operator_mapping= trie_insert(operator_mapping, "retq",   INST_RET    );
+    operator_mapping= trie_insert(operator_mapping, "add",    INST_ADD    );
+    operator_mapping= trie_insert(operator_mapping, "sub",    INST_SUB    );
+    operator_mapping= trie_insert(operator_mapping, "cmpq",   INST_CMP    );
+    operator_mapping= trie_insert(operator_mapping, "jne",    INST_JNE    );
+    operator_mapping= trie_insert(operator_mapping, "jmp",    INST_JMP    );
 
     // add the cleanup events
     add_cleanup_event(&trie_cleanup);
@@ -766,7 +761,9 @@ void instruction_cycle()
     char inst_str[MAX_INSTRUCTION_CHAR + 10];
     cpu_readinst_dram(va2pa(cpu_pc.rip), inst_str);
 
-    debug_printf(DEBUG_INSTRUCTIONCYCLE, "%8lx    %s\n", cpu_pc.rip, inst_str);
+#ifdef DEBUG_INSTRUCTION_CYCLE
+    printf("%8lx    %s\n", cpu_pc.rip, inst_str);
+#endif
 
     // DECODE: decode the run-time instruction operands
     inst_t inst;
@@ -777,54 +774,6 @@ void instruction_cycle()
     // update CPU and memory according the instruction
     handler(&(inst.src), &(inst.dst));
 }
-
-#ifdef DEBUG_REGISTERS
-
-void print_register()
-{
-    if ((DEBUG_VERBOSE_SET & DEBUG_REGISTERS) == 0x0)
-    {
-        return;
-    }
-
-    printf("rax = %16lx\trbx = %16lx\trcx = %16lx\trdx = %16lx\n",
-        cpu_reg.rax, cpu_reg.rbx, cpu_reg.rcx, cpu_reg.rdx);
-    printf("rsi = %16lx\trdi = %16lx\trbp = %16lx\trsp = %16lx\n",
-        cpu_reg.rsi, cpu_reg.rdi, cpu_reg.rbp, cpu_reg.rsp);
-    printf("rip = %16lx\n", cpu_pc.rip);
-    printf("CF = %u\tZF = %u\tSF = %u\tOF = %u\n",
-        cpu_flags.CF, cpu_flags.ZF, cpu_flags.SF, cpu_flags.OF);
-}
-
-void print_stack()
-{
-    if ((DEBUG_VERBOSE_SET & DEBUG_PRINTSTACK) == 0x0)
-    {
-        return;
-    }
-
-    int n = 10;    
-    uint64_t *high = (uint64_t*)&pm[va2pa(cpu_reg.rsp)];
-    high = &high[n];
-    uint64_t va = cpu_reg.rsp + n * 8;
-
-    for (int i = 0; i < 2 * n; ++ i)
-    {
-        uint64_t *ptr = (uint64_t *)(high - i);
-        printf("0x%16lx : %16lx", va, (uint64_t)*ptr);
-
-        if (i == n)
-        {
-            printf(" <== rsp");
-        }
-        printf("\n");
-        va -= 8;
-    }
-}
-
-#endif
-
-#define DEBUG_PARSE_INSTRUCTION 1
 
 #ifdef DEBUG_PARSE_INSTRUCTION
 
@@ -983,17 +932,186 @@ static void TestParsingInstruction()
                 .reg1 = (uint64_t)(&cpu_reg.rdx),
                 .reg2 = 0
             }
+        },
         // mov    -0x20(%rbp),%rax
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x20LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            }
+        },
         // add    %rdx,%rax
+        {
+            .op = INST_ADD,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rdx),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            }
+        },
         // mov    %rax,-0x8(%rbp)
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x8LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            }
+        },
         // mov    -0x8(%rbp),%rax
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x8LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0},
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            }
+        },
         // pop    %rbp
+        {
+            .op = INST_POP,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_EMPTY,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = 0,
+                .reg2 = 0
+            }
+        },
         // retq
+        {
+            .op = INST_RET,
+            .src = {
+                .type = OD_EMPTY,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = 0,
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_EMPTY,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = 0,
+                .reg2 = 0
+            }
+        },
         // mov    %rdx,%rsi
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rdx),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rsi),
+                .reg2 = 0
+            }
+        },
         // mov    %rax,%rdi
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rdi),
+                .reg2 = 0
+            }
+        },
         // callq  0
+        {
+            .op = INST_CALL,
+            .src = {
+                .type = OD_MEM_IMM,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = 0,
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_EMPTY,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = 0,
+                .reg2 = 0
+            }
+        },
         // mov    %rax,-0x8(%rbp)
-        }
+        {
+            .op = INST_MOV,
+            .src = {
+                .type = OD_REG,
+                .imm = 0,
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rax),
+                .reg2 = 0
+            },
+            .dst = {
+                .type = OD_MEM_IMM_REG1,
+                .imm = 0x1LL + (~0x8LL),
+                .scal = 0,
+                .reg1 = (uint64_t)(&cpu_reg.rbp),
+                .reg2 = 0
+            }
+        },
     };
     
     inst_t inst_parsed;
@@ -1001,7 +1119,7 @@ static void TestParsingInstruction()
     for (int i = 0; i < 15; ++ i)
     {
         parse_instruction(assembly[i], &inst_parsed);
-        // assert(instruction_equal(&std_inst[i], &inst_parsed) == 1);
+        assert(instruction_equal(&std_inst[i], &inst_parsed) == 1);
     }
 
     printf("\tPass\n");
@@ -1128,8 +1246,56 @@ static void TestParsingOperand()
     printf("\tPass\n");
 }
 
+int main()
+{
+    TestParsingOperand();
+    TestParsingInstruction();
+
+    finally_cleanup();
+
+    return 0;
+}
+
+#endif
+
+#ifdef DEBUG_INSTRUCTION_CYCLE
+
+static void print_register()
+{
+    printf("rax = %16lx\trbx = %16lx\trcx = %16lx\trdx = %16lx\n",
+        cpu_reg.rax, cpu_reg.rbx, cpu_reg.rcx, cpu_reg.rdx);
+    printf("rsi = %16lx\trdi = %16lx\trbp = %16lx\trsp = %16lx\n",
+        cpu_reg.rsi, cpu_reg.rdi, cpu_reg.rbp, cpu_reg.rsp);
+    printf("rip = %16lx\n", cpu_pc.rip);
+    printf("CF = %u\tZF = %u\tSF = %u\tOF = %u\n",
+        cpu_flags.CF, cpu_flags.ZF, cpu_flags.SF, cpu_flags.OF);
+}
+
+static void print_stack()
+{
+    int n = 10;    
+    uint64_t *high = (uint64_t*)&pm[va2pa(cpu_reg.rsp)];
+    high = &high[n];
+    uint64_t va = cpu_reg.rsp + n * 8;
+
+    for (int i = 0; i < 2 * n; ++ i)
+    {
+        uint64_t *ptr = (uint64_t *)(high - i);
+        printf("0x%16lx : %16lx", va, (uint64_t)*ptr);
+
+        if (i == n)
+        {
+            printf(" <== rsp");
+        }
+        printf("\n");
+        va -= 8;
+    }
+}
+
 static void TestAddFunctionCallAndComputation()
 {
+    printf("Testing add function call ...\n");
+ 
     // init state
     cpu_reg.rax = 0xabcd;
     cpu_reg.rbx = 0x8000670;
@@ -1182,49 +1348,36 @@ static void TestAddFunctionCallAndComputation()
     while (time < 15)
     {
         instruction_cycle();
+#ifdef DEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK
         print_register();
         print_stack();
+#endif
         time ++;
     } 
 
     // gdb state ret from func
-    int match = 1;
-    match = match && cpu_reg.rax == 0x1234abcd;
-    match = match && cpu_reg.rbx == 0x8000670;
-    match = match && cpu_reg.rcx == 0x8000670;
-    match = match && cpu_reg.rdx == 0xabcd;
-    match = match && cpu_reg.rsi == 0x12340000;
-    match = match && cpu_reg.rdi == 0xabcd;
-    match = match && cpu_reg.rbp == 0x7ffffffee110;
-    match = match && cpu_reg.rsp == 0x7ffffffee0f0;
+    assert(cpu_reg.rax == 0x1234abcd);
+    assert(cpu_reg.rbx == 0x8000670);
+    assert(cpu_reg.rcx == 0x8000670);
+    assert(cpu_reg.rdx == 0xabcd);
+    assert(cpu_reg.rsi == 0x12340000);
+    assert(cpu_reg.rdi == 0xabcd);
+    assert(cpu_reg.rbp == 0x7ffffffee110);
+    assert(cpu_reg.rsp == 0x7ffffffee0f0);
 
-    if (match)
-    {
-        printf("register match\n");
-    }
-    else
-    {
-        printf("register mismatch\n");
-    }
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee110)) == 0x0000000000000000); // rbp
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee108)) == 0x000000001234abcd);
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee100)) == 0x0000000012340000);
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee0f8)) == 0x000000000000abcd);
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee0f0)) == 0x0000000000000000); // rsp
 
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee110)) == 0x0000000000000000); // rbp
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee108)) == 0x000000001234abcd);
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee100)) == 0x0000000012340000);
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee0f8)) == 0x000000000000abcd);
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee0f0)) == 0x0000000000000000); // rsp
-
-    if (match)
-    {
-        printf("memory match\n");
-    }
-    else
-    {
-        printf("memory mismatch\n");
-    }
+    printf("\tPass\n");
 }
 
 static void TestSumRecursiveCondition()
 {
+    printf("Testing sum recursive function call ...\n");
+
     // init state
     cpu_reg.rax = 0x8000630;
     cpu_reg.rbx = 0x0;
@@ -1276,56 +1429,35 @@ static void TestSumRecursiveCondition()
            time < MAX_NUM_INSTRUCTION_CYCLE)
     {
         instruction_cycle();
+#ifdef DEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK
         print_register();
         print_stack();
+#endif
         time ++;
     } 
 
     // gdb state ret from func
-    int match = 1;
-    match = match && cpu_reg.rax == 0x6;
-    match = match && cpu_reg.rbx == 0x0;
-    match = match && cpu_reg.rcx == 0x8000650;
-    match = match && cpu_reg.rdx == 0x3;
-    match = match && cpu_reg.rsi == 0x7ffffffee318;
-    match = match && cpu_reg.rdi == 0x0;
-    match = match && cpu_reg.rbp == 0x7ffffffee230;
-    match = match && cpu_reg.rsp == 0x7ffffffee220;
+    assert(cpu_reg.rax == 0x6);
+    assert(cpu_reg.rbx == 0x0);
+    assert(cpu_reg.rcx == 0x8000650);
+    assert(cpu_reg.rdx == 0x3);
+    assert(cpu_reg.rsi == 0x7ffffffee318);
+    assert(cpu_reg.rdi == 0x0);
+    assert(cpu_reg.rbp == 0x7ffffffee230);
+    assert(cpu_reg.rsp == 0x7ffffffee220);
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee230)) == 0x0000000008000650); // rbp
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee228)) == 0x0000000000000006);
+    assert(cpu_read64bits_dram(va2pa(0x7ffffffee220)) == 0x00007ffffffee310); // rsp
 
-    if (match)
-    {
-        printf("register match\n");
-    }
-    else
-    {
-        printf("register mismatch\n");
-    }
-
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee230)) == 0x0000000008000650); // rbp
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee228)) == 0x0000000000000006);
-    match = match && (cpu_read64bits_dram(va2pa(0x7ffffffee220)) == 0x00007ffffffee310); // rsp
-
-    if (match)
-    {
-        printf("memory match\n");
-    }
-    else
-    {
-        printf("memory mismatch\n");
-    }
+    printf("\tPass\n");
 }
 
 int main()
 {
-    // TestAddFunctionCallAndComputation();
-    // TestSumRecursiveCondition();
-
-    TestParsingOperand();
-
-    TestParsingInstruction();
+    TestAddFunctionCallAndComputation();
+    TestSumRecursiveCondition();
 
     finally_cleanup();
-
     return 0;
 }
 

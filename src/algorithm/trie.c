@@ -59,12 +59,12 @@ void trie_free(trie_node_t *root)
     free(root);
 }
 
-int trie_insert(trie_node_t **address, char *key, uint64_t value)
+trie_node_t *trie_insert(trie_node_t *root, char *key, uint64_t value)
 {
-    trie_node_t *p = *address;
+    trie_node_t *p = root;
     if (p == NULL)
     {
-        return 0;
+        return NULL;
     }
 
     for (int i = 0; i < strlen(key); ++ i)
@@ -96,7 +96,7 @@ int trie_insert(trie_node_t **address, char *key, uint64_t value)
             n->isvalue = 0;
             n->next = NULL;     // leaf node has no next
 
-            hashtable_insert(&p->next, hashkey, (uint64_t)n);
+            p->next = hashtable_insert(p->next, hashkey, (uint64_t)n);
 
             // goto next node
             p = n;
@@ -107,7 +107,7 @@ int trie_insert(trie_node_t **address, char *key, uint64_t value)
     // may overwrite
     p->value = value;
     p->isvalue = 1;
-    return 1;
+    return root;
 }
 
 int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
@@ -202,12 +202,14 @@ void trie_print(trie_node_t *root)
 
 static void test_insert()
 {
+    printf("Testing Trie ...\n");
+
     trie_node_t *root = trie_construct();
     uint64_t result;
 
-    trie_insert(&root, "abcd", 12);
-    trie_insert(&root, "ab", 108);
-    trie_insert(&root, "abef", 1022);
+    root = trie_insert(root, "abcd", 12);
+    root = trie_insert(root, "ab", 108);
+    root = trie_insert(root, "abef", 1022);
 
     assert(trie_get(root, "abcd", &result) == 1);
     assert(result == 12);
@@ -223,7 +225,7 @@ static void test_insert()
 
     trie_free(root);
 
-    printf("trie pass insert\n");
+    printf("\tPass\n");
 }
 
 int main()

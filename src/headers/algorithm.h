@@ -33,7 +33,7 @@ typedef struct
 
 linkedlist_t *linkedlist_construct();
 void linkedlist_free(linkedlist_t *list);
-int linkedlist_add(linkedlist_t **address, uint64_t value);
+linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
 int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
 linkedlist_node_t *linkedlist_get(linkedlist_t *list, uint64_t value);
 linkedlist_node_t *linkedlist_next(linkedlist_t *list);
@@ -50,7 +50,7 @@ typedef struct
 
 array_t *array_construct(int size);
 void array_free(array_t *arr);
-int array_insert(array_t **address, uint64_t value);
+array_t *array_insert(array_t *arr, uint64_t value);
 int array_delete(array_t *arr, int index);
 int array_get(array_t *arr, int index, uint64_t *valptr);
 
@@ -77,7 +77,7 @@ typedef struct
 hashtable_t *hashtable_construct(int size);
 void hashtable_free(hashtable_t *tab);
 int hashtable_get(hashtable_t *tab, char *key, uint64_t *valptr);
-int hashtable_insert(hashtable_t **address, char *key, uint64_t val);
+hashtable_t *hashtable_insert(hashtable_t *tab, char *key, uint64_t val);
 
 /*======================================*/
 /*      Trie - Prefix Tree              */
@@ -91,7 +91,7 @@ typedef struct TRIE_NODE_STRUCT
 
 trie_node_t * trie_construct();
 void trie_free(trie_node_t *root);
-int trie_insert(trie_node_t **address, char *key, uint64_t value);
+trie_node_t *trie_insert(trie_node_t *root, char *key, uint64_t value);
 int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
 
 /*======================================*/

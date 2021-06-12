@@ -28,12 +28,11 @@ void array_free(array_t *arr)
     free(arr);
 }
 
-int array_insert(array_t **addr, uint64_t value)
+array_t *array_insert(array_t *arr, uint64_t value)
 {
-    array_t *arr = *addr;
     if (arr == NULL)
     {
-        return 0;
+        return NULL;
     }
 
     if (arr->count == arr->size)
@@ -58,7 +57,7 @@ int array_insert(array_t **addr, uint64_t value)
     arr->table[arr->count] = value;
     arr->count += 1;
 
-    return 1;
+    return arr;
 }
 
 int array_delete(array_t *arr, int index)

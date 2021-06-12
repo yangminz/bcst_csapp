@@ -57,6 +57,12 @@ hashtable_t *hashtable_construct(int size)
         b->karray = malloc(tab->size * sizeof(char *));
         b->varray = malloc(tab->size * sizeof(uint64_t));
 
+        for (int j = 0; j < tab->size; ++ j)
+        {
+            b->karray[j] = NULL;
+            b->varray[j] = 0;
+        }
+
         tab->directory[i] = b;
     }
     return tab;
@@ -131,9 +137,8 @@ int hashtable_get(hashtable_t *tab, char *key, uint64_t *valptr)
     return 0;
 }
 
-int hashtable_insert(hashtable_t **address, char *key, uint64_t value)
+hashtable_t *hashtable_insert(hashtable_t *tab, char *key, uint64_t value)
 {
-    hashtable_t *tab = *address;
     assert(tab != NULL);
 
     uint64_t hid64 = hash_function(key);
@@ -144,7 +149,7 @@ int hashtable_insert(hashtable_t **address, char *key, uint64_t value)
     {
         // existing empty slot for inserting
         insert_bucket_tail(tab, b, key, value);
-        return 1;
+        return tab;
     }
     else
     {
@@ -179,18 +184,18 @@ int hashtable_insert(hashtable_t **address, char *key, uint64_t value)
             insert_bucket_tail(tab, tab->directory[hid], key, value);
 
             free(old_array);
-            return 1;
+            return tab;
         }
         else
         {
             // localdepth < globaldepth, split
             split_bucket_full(tab, b);
             insert_bucket_tail(tab, tab->directory[hid], key, value);
-            return 1;
+            return tab;
         }
     }
 
-    return 0;
+    return NULL;
 }
 
 static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b)
@@ -216,6 +221,12 @@ static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b)
     b1->karray = malloc(tab->size * sizeof(char *));
     b1->varray = malloc(tab->size * sizeof(uint64_t));
 
+    for (int i = 0; i < tab->size; ++ i)
+    {
+        b1->karray[i] = NULL;
+        b1->varray[i] = 0;
+    }
+
     // copy the k-v pairs to the new
     uint64_t hid64 = 0;
     for (int i = 0; i < before_counter; ++ i)
@@ -239,6 +250,13 @@ static void split_bucket_full(hashtable_t *tab, hashtable_bucket_t *b)
             b0->varray[b0->counter] = val;
             b0->counter += 1;
         }
+    }
+
+    // clear the remaining in b0
+    for (int i = b0->counter; i <= tab->size - 1; ++ i)
+    {
+        b0->karray[i] = NULL;
+        b0->varray[i] = 0;
     }
 
     // till now, all pairs from b have been moved to b0(b) and b1

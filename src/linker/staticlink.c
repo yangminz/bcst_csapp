@@ -89,12 +89,13 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst)
     symbol_processing(srcs, num_srcs, dst,
         (smap_t *)&smap_table, &smap_count);
 
+#ifdef DEBUG_LINK
     printf("----------------------\n");
 
     for (int i = 0; i < smap_count; ++ i)
     {
         st_entry_t *ste = smap_table[i].src;
-        debug_printf(DEBUG_LINKER, "%s\t%d\t%d\t%s\t%d\t%d\n",
+        printf("%s\t%d\t%d\t%s\t%d\t%d\n",
             ste->st_name,
             ste->bind,
             ste->type,
@@ -102,6 +103,7 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst)
             ste->st_value,
             ste->st_size);
     }
+#endif
 
     // compute dst Section Header Table and write into buffer
     // UPDATE section headert table: compute runtime address of each section
@@ -120,25 +122,26 @@ void link_elf(elf_t **srcs, int num_srcs, elf_t *dst)
     // merge the symbol content from ELF src into dst sections
     merge_section(srcs, num_srcs, dst, smap_table, &smap_count);
 
+#ifdef DEBUG_LINK
     printf("----------------------\n");
     printf("after merging the sections\n");
     for (int i = 0; i < dst->line_count; ++ i)
     {
         printf("%s\n", dst->buffer[i]);
     }
+#endif
 
     // relocating: update the relocation entries from ELF files into EOF buffer
     relocation_processing(srcs, num_srcs, dst, smap_table, &smap_count);
 
+#ifdef DEBUG_LINK
     // finally, check EOF file
-    if ((DEBUG_VERBOSE_SET & DEBUG_LINKER) != 0)
+    printf("----\nfinal output EOF:\n");
+    for (int i = 0; i < dst->line_count; ++ i)
     {
-        printf("----\nfinal output EOF:\n");
-        for (int i = 0; i < dst->line_count; ++ i)
-        {
-            printf("%s\n", dst->buffer[i]);
-        }
+        printf("%s\n", dst->buffer[i]);
     }
+#endif
 }
 
 static void symbol_processing(elf_t **srcs, int num_srcs, elf_t *dst,
@@ -266,7 +269,7 @@ static inline int symbol_precedence(st_entry_t *sym)
         return 2;
     }
 
-    debug_printf(DEBUG_LINKER, "symbol resolution: cannot determine the symbol \"%s\" precedence", sym->st_name);
+    printf("symbol resolution: cannot determine the symbol \"%s\" precedence", sym->st_name);
     exit(0);
 }
 
@@ -289,7 +292,7 @@ static void simple_resolution(st_entry_t *sym, elf_t *sym_elf, smap_t *candidate
             ---------------------
                 2       2
          */
-        debug_printf(DEBUG_LINKER, 
+        printf(
             "symbol resolution: strong symbol \"%s\" is redeclared\n", sym->st_name);
         exit(0);
     }
@@ -467,15 +470,14 @@ static void compute_section_header(elf_t *dst, smap_t *smap_table, int *smap_cou
     assert(sh_index + 1 == dst->sht_count);
 
     // print and check
-    if ((DEBUG_VERBOSE_SET & DEBUG_LINKER) != 0)
+#ifdef DEBUG_LINK
+    printf("----------------------\n");
+    printf("Destination ELF's SHT in Buffer:\n");
+    for (int i = 0; i < 2 + dst->sht_count; ++ i)
     {
-        printf("----------------------\n");
-        printf("Destination ELF's SHT in Buffer:\n");
-        for (int i = 0; i < 2 + dst->sht_count; ++ i)
-        {
-            printf("%s\n", dst->buffer[i]);
-        }
+        printf("%s\n", dst->buffer[i]);
     }
+#endif
 }
 
 // precondition: dst should know the section offset of each section
@@ -494,13 +496,16 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
         // get the section by section id
         sh_entry_t *target_sh = &dst->sht[section_index];
         sym_section_offset = 0;
-        debug_printf(DEBUG_LINKER, "merging section '%s'\n", target_sh->sh_name);
-
+#ifdef DEBUG_LINK
+        printf("merging section '%s'\n", target_sh->sh_name);
+#endif
         // merge the sections
         // scan every input ELF file
         for (int i = 0; i < num_srcs; ++ i)
         {
-            debug_printf(DEBUG_LINKER, "\tfrom source elf [%d]\n", i);
+#ifdef DEBUG_LINK
+            printf("\tfrom source elf [%d]\n", i);
+#endif
             int src_section_index = -1;
             // scan every section in this elf
             for (int j = 0; j < srcs[i]->sht_count; ++ j)
@@ -538,7 +543,9 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst,
                             if (sym == smap_table[k].src)
                             {
                                 // exactly the cached symbol
-                                debug_printf(DEBUG_LINKER, "\t\tsymbol '%s'\n", sym->st_name);
+#ifdef DEBUG_LINK
+                                printf("\t\tsymbol '%s'\n", sym->st_name);
+#endif
 
                                 // this symbol should be merged into dst's section target_sh
                                 // copy this symbol from srcs[i].buffer into dst.buffer

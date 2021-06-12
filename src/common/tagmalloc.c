@@ -51,7 +51,7 @@ void *tag_malloc(uint64_t size, char *tagstr)
         add_cleanup_event(&tag_destroy);
     }
     // add the heap address to the managing list
-    linkedlist_add(&tag_list, (uint64_t)b);
+    tag_list = linkedlist_add(tag_list, (uint64_t)b);
 
     return b->ptr;
 }

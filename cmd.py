@@ -172,7 +172,9 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
                     "-I", "./src",
-                    "./src/common/print.c",
+                    # "-DDEBUG_PARSE_INSTRUCTION",
+                    "-DDEBUG_INSTRUCTION_CYCLE",
+                    # "-DDEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK",
                     "./src/common/convert.c",
                     "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
@@ -190,7 +192,6 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
                     "-I", "./src",
                     "-shared", "-fPIC",
-                    "./src/common/print.c",
                     "./src/common/convert.c",
                     "./src/common/tagmalloc.c",
                     "./src/common/cleanup.c",
@@ -205,7 +206,7 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
                     "-I", "./src",
-                    "./src/common/print.c",
+                    # "-DDEBUG_LINK",
                     "./src/common/convert.c",
                     "./src/common/tagmalloc.c",
                     "./src/common/cleanup.c",
@@ -214,6 +215,25 @@ def build(key):
                     "./src/algorithm/linkedlist.c",
                     "./src/linker/linker.c", 
                     "-ldl", "-o", "./bin/link"
+                ],
+            ],
+        "elf" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", 
+                    "-Wno-unused-function",
+                    "-Wno-unused-but-set-variable",
+                    "-I", "./src",
+                    "-DDEBUG_PARSE_ELF",
+                    "-DDEBUG_LINK",
+                    "./src/common/convert.c",
+                    "./src/common/tagmalloc.c",
+                    "./src/common/cleanup.c",
+                    "./src/algorithm/array.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/linkedlist.c",
+                    "./src/linker/parseElf.c",
+                    "-o", "./bin/elf"
                 ],
             ],
         "mesi" : [
@@ -267,7 +287,8 @@ def build(key):
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        "isa" : ["./bin/ut_isa"],
+        "isa" : ["./bin/isa"],
+        "elf" : ["./bin/elf"],
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
@@ -281,20 +302,21 @@ def run(key):
 
 def debug(key):
     assert(os.path.isdir("./bin/"))
+    gdb = "/usr/bin/gdb"
     bin_map = {
-        "isa" : "./bin/ut_isa",
-        "link" : "./bin/link"
+        "isa" : [gdb, "./bin/isa"],
+        "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
         exit()
-    subprocess.run(["/usr/bin/gdb", bin_map[key]])
+    subprocess.run(bin_map[key])
 
 def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        "isa" : "./bin/ut_isa",
-        "link" : "./bin/link"
+        "isa" : ["./bin/ut_isa"],
+        "link" : ["./bin/link", "main", "sum", "-o", "output"]
     }
     if not key in bin_map:
         print("input the correct memory check key:", bin_map.keys())
@@ -302,9 +324,7 @@ def mem_check(key):
     subprocess.run([
         "/usr/bin/valgrind",
         "--tool=memcheck",
-        "--leak-check=full",
-        bin_map[key]
-    ])
+        "--leak-check=full"] + bin_map[key])
 
 def cache_verify():
     make_build_directory()

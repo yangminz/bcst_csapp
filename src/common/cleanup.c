@@ -30,7 +30,7 @@ void add_cleanup_event(void *func)
     }
 
     // fill in the first event
-    array_insert(&events, (uint64_t)func);
+    events = array_insert(events, (uint64_t)func);
     return;
 }
 
