@@ -103,7 +103,6 @@ int main(int argc, char **argv)
     {
         free_elf(srcs[i]);        
     }
-    free_elf(&linked);
 
     free(srcs);
 
