@@ -15,8 +15,10 @@
 #include "headers/cpu.h"
 #include "headers/memory.h"
 #include "headers/common.h"
+#include "headers/address.h"
 
+// consider this function va2pa as functional
 uint64_t va2pa(uint64_t vaddr)
 {
-    return vaddr % PHYSICAL_MEMORY_SPACE;
+    // use page table as va2pa
 }

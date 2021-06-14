@@ -15,26 +15,35 @@
 
 #include <stdint.h>
 
-/*
-    S = 2^s, s = 6
-    B = 2^b, b = 6
-    E is defined in sram.c, 8
-    For correctness verification, E can be 1, 2, 8, 1024
- */
-
 #ifndef CACHE_SIMULATION_VERIFICATION
 /*  for cache simulator verification
     use the marcos passed in
  */
 #define SRAM_CACHE_INDEX_LENGTH (6)
 #define SRAM_CACHE_OFFSET_LENGTH (6)
-#define SRAM_CACHE_TAG_LENGTH (40)
+#define SRAM_CACHE_TAG_LENGTH (4)
 #endif
 
 #define PHYSICAL_PAGE_OFFSET_LENGTH (12)
-#define PHYSICAL_PAGE_NUMBER_LENGTH (40)
-#define PHYSICAL_ADDRESS_LENGTH (52)
+#define PHYSICAL_PAGE_NUMBER_LENGTH (4)
+#define PHYSICAL_ADDRESS_LENGTH (16)
 
+#define VIRTUAL_PAGE_OFFSET_LENGTH (12)
+#define VIRTUAL_PAGE_NUMBER_LENGTH (9)  // 9 + 9 + 9 + 9 = 36
+#define VIRTUAL_ADDRESS_LENGTH (48)
+
+
+/*
++--------+--------+--------+--------+---------------+
+|  VPN3  |  VPN2  |  VPN1  |  VPN0  |               |
++--------+--------+--------+-+------+      VPO      |
+|    TLBT                    | TLBI |               |
++---------------+------------+------+---------------+
+                |        PPN        |      PPO      |
+                +-------------------+--------+------+
+                |        CT         |   CI   |  CO  |
+                +-------------------+--------+------+
+*/
 typedef union
 {
     uint64_t address_value;
@@ -49,6 +58,23 @@ typedef union
             {
                 uint64_t PPO : PHYSICAL_PAGE_OFFSET_LENGTH;
                 uint64_t PPN : PHYSICAL_PAGE_NUMBER_LENGTH;
+            };
+        };
+    };
+
+    // virtual address: 48    
+    struct
+    {
+        union
+        {
+            uint64_t vaddr_value : VIRTUAL_ADDRESS_LENGTH;
+            struct
+            {
+                uint64_t VPO : VIRTUAL_PAGE_OFFSET_LENGTH;
+                uint64_t VPN3 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t VPN2 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t VPN1 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t VPN0 : VIRTUAL_PAGE_NUMBER_LENGTH;
             };
         };
     };

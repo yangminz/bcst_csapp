@@ -262,6 +262,8 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
                     "-DDEBUG_REDBLACK",
+                    "./src/common/convert.c",
+                    "./src/algorithm/bst.c",
                     "./src/algorithm/redblack.c",
                     "-o", "./bin/rb"
                 ],
@@ -274,6 +276,17 @@ def build(key):
                     "-DDEBUG_TRIE",
                     "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
                     "-o", "./bin/trie"
+                ],
+            ],
+        "bst" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_BST",
+                    "./src/algorithm/bst.c",
+                    "./src/common/convert.c",
+                    "-o", "./bin/bst"
                 ],
             ],
     }
@@ -294,6 +307,7 @@ def run(key):
         "false_sharing" : ["./bin/false_sharing"],
         "rb" : ["./bin/rb"],
         "trie" : ["./bin/trie"],
+        "bst" : ["./bin/bst"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

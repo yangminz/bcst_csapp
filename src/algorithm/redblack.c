@@ -1,8 +1,17 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <headers/algorithm.h>
+
+// shared with BST
+rb_node_t *build_tree(char *str);
+int compare_tree(rb_node_t *a, rb_node_t *b);
+void free_tree(rb_node_t *root);
+
+rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted);
+rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced);
 
 // 4 kinds of rotations
 
@@ -202,71 +211,11 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
 
 // insert value to the tree
 // return the updated tree root node
-rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
+rb_node_t *rb_insert(rb_node_t *root, uint64_t val)
 {
-    // create
-    if (root == NULL)
-    {
-        root = malloc(sizeof(rb_node_t));
-        
-        // update properties
-        root->parent = NULL;
-        root->left = NULL;
-        root->right = NULL;
-        root->value = val;
-        root->color = COLOR_BLACK;  // root node is black
+    rb_node_t *n;
+    root = bst_insert_node(root, val, &n);
 
-        return root;
-    }
-
-    // search the right place (leaf node) to insert data
-    rb_node_t *n = root;
-
-    while (n != NULL)
-    {
-        if (val < n->value)
-        {
-            if (n->left == NULL)
-            {
-                // insert here
-                n->left = malloc(sizeof(rb_node_t));
-                n->left->parent = n;
-                n->left->left = NULL;
-                n->left->right = NULL;
-                n->left->value = val;
-                n->left->color = COLOR_RED;
-
-                n = n->left;
-                goto BOTTOM_UP_REBALANCING;
-            }
-            else
-            {
-                n = n->left;
-            }
-        }
-        else
-        {
-            if (n->right == NULL)
-            {
-                // insert here
-                n->right = malloc(sizeof(rb_node_t));
-                n->right->parent = n;
-                n->right->left = NULL;
-                n->right->right = NULL;
-                n->right->value = val;
-                n->right->color = COLOR_RED;
-
-                n = n->right;
-                goto BOTTOM_UP_REBALANCING;
-            }
-            else
-            {
-                n = n->right;
-            }
-        }
-    }
-
-    BOTTOM_UP_REBALANCING:
     // fix up the inserted red node (internal node in 2-3-4 tree)
     while (1)
     {
@@ -332,7 +281,7 @@ rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val)
 
 // insert value to the tree
 // return the updated tree root node
-rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
+rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
 {
     if (n == NULL)
     {
@@ -345,156 +294,8 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
     // and we need to do color compensation
     rb_color_t n_color = n->color;
 
-    // in case root is deleted
-    rb_node_t *p = NULL;
-    int is_n_root = 0;
-    if (n == root)
-    {
-        // no parent pointer, create a dummy one
-        p = malloc(sizeof(rb_node_t));
-        p->color = COLOR_BLACK;
-        p->left = n;
-        n->parent = p;
-        p->parent = NULL;
-        p->right = NULL;
-        is_n_root = 1;
-    }
-    else
-    {
-        p = n->parent;
-        is_n_root = 0;
-    }
-
-    // the address of the to be deleted node
-    rb_node_t **par_child = NULL;
-    if (n == p->left)
-    {
-        par_child = &(p->left);
-    }
-    else
-    {
-        par_child = &(p->right);
-    }
-
-    /****************************************************/
-    /* The following logic is the same as BST deletion  */
-    /****************************************************/
-
-    if (n->left == NULL && n->right == NULL)
-    {
-        //////////////////////////////////////////////
-        // case 1: leaf node                        //
-        //////////////////////////////////////////////
-
-        *par_child = NULL;
-        free(n);
-        
-        if (is_n_root == 1)
-        {
-            root = NULL;
-        }
-    }
-    else if (n->left == NULL && n->right != NULL)
-    {
-        //////////////////////////////////////////////
-        // case 2: one sub-tree is empty            //
-        // 2.1: left tree is empty                  //
-        //////////////////////////////////////////////
-
-        // transplant the other sub-tree to the node to be deleted
-        *par_child = n->right;
-        n->right->parent = p;
-        free(n);
-
-        if (is_n_root == 1)
-        {
-            root = n->right;
-        }
-    }
-    else if (n->left != NULL && n->right == NULL)
-    {
-        // 2.2 right tree is empty
-
-        *par_child = n->left;
-        n->left->parent = p;
-        free(n);
-
-        if (is_n_root == 1)
-        {
-            root = n->left;
-        }
-    }
-    else if (n->right->left == NULL)
-    {
-        //////////////////////////////////////////////
-        // case 3: both sub-trees are not empty     //
-        // 3.1: a simple remove will do the job     //
-        //////////////////////////////////////////////
-
-        // transplant the left sub-tree
-        n->right->left = n->left;
-        n->left->parent = n->right;
-
-        *par_child = n->right;
-        n->right->parent = p;
-
-        free(n);
-
-        if (is_n_root == 1)
-        {
-            root = n->right;
-        }
-    }
-    else if (n->right->left != NULL)
-    {
-        //////////////////////////////////////////////
-        // 3.2: float up the tight upper bound      //
-        // as root of sub-tree                      //
-        //////////////////////////////////////////////
-
-        rb_node_t *min_upper = n->right;
-        while (min_upper->left != NULL)
-        {
-            min_upper = min_upper->left;
-        }
-
-        // float up min_upper
-        min_upper->parent->left = min_upper->right;
-        if (min_upper->right != NULL)
-        {
-            min_upper->right->parent = min_upper->parent;
-        }
-
-        // transplant
-        min_upper->right = n->right;
-        n->right->parent = min_upper;
-
-        min_upper->left = n->left;
-        n->left->parent = min_upper;
-
-        min_upper->parent = p;
-        
-        *par_child = min_upper;
-        free(n);
-
-        if (is_n_root == 1)
-        {
-            root = min_upper;
-        }
-    }
-
-    // set the pointer to the address of the deleted node
-    rb_node_t *v = *par_child;
-    
-    if (is_n_root == 1)
-    {
-        free(p);
-
-        if (root != NULL)
-        {
-            root->parent = NULL;
-        }
-    }
+    rb_node_t *v;
+    root = bst_delete_node(root, n, &v);
 
     /****************************************************/
     /* recoloring and restructuring                     */
@@ -515,8 +316,18 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
         // 1. root rule - min_upper can be root
         // 2. red rule - min_upper can be a red and its child can be red
         // 3. black height rule - all sub-tree black height deduct 1
+        /* 
+            g
+           /
+          p
+         / \
+        v   s
+         */
 
+        rb_node_t *g = NULL;    // grandparent
+        rb_node_t *p = NULL;    // sibling
         rb_node_t *s = NULL;    // sibling
+
         while (1)
         {
             p = v->parent;
@@ -587,7 +398,6 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
                 // RED Sibling
                 // adjust to black sibling
 
-                rb_node_t *g = NULL;
                 int is_p_root = 0;
                 if (p->parent == NULL)
                 {
@@ -663,617 +473,95 @@ rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *n)
 // find the node owning the target value
 rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
 {
-    rb_node_t *n = root;
-    uint64_t n_value;
-
-    while (n != NULL)
-    {
-        n_value = n->value;
-
-        if (n_value == val)
-        {
-            return n;
-        }
-        else if (val < n_value)
-        {
-            n = n->left;
-        }
-        else
-        {
-            n = n->right;
-        }
-    }
-
-    return NULL;
+    return bst_find(root, val);
 }
 
+// build binary tree
+static int color_tree_dfs(rb_node_t *n, char *color, int index)
+{
+    if (n == NULL)
+    {
+        assert(color[index] == '#');
+        return index;
+    }
+
+    if (color[index] == 'R')
+    {
+        n->color = COLOR_RED;
+    }
+    else if (color[index] == 'B')
+    {
+        n->color = COLOR_BLACK;
+    }
+
+    index = color_tree_dfs(n->left, color, index + 1);
+    index = color_tree_dfs(n->right, color, index + 1);
+
+    return index;
+}
+
+rb_node_t *build_rb_tree(char *tree, char *color)
+{
+    rb_node_t *r = build_tree(tree);
+    int index = color_tree_dfs(r, color, 0);
+    assert(index == strlen(color) - 1);
+
+    return r;
+}
+
+//#define DEBUG_REDBLACK
+
 #ifdef DEBUG_REDBLACK
+void test_delete()
+{
+    printf("Testing Red-Black tree insertion ...\n");
+
+    printf("\tPass\n");
+}
+
+void test_delete_bst()
+{
+    printf("Testing Binary Search tree insertion ...\n");
+    printf("\tPass\n");
+}
 
 void test_insert()
 {
-    // From CLRS chapter 13.3 Red-Black Tree Insertion
-    rb_node_t *n1 = malloc(sizeof(rb_node_t));
-    rb_node_t *n2 = malloc(sizeof(rb_node_t));
-    rb_node_t *n5 = malloc(sizeof(rb_node_t));
-    rb_node_t *n7 = malloc(sizeof(rb_node_t));
-    rb_node_t *n8 = malloc(sizeof(rb_node_t));
-    rb_node_t *n11 = malloc(sizeof(rb_node_t));
-    rb_node_t *n14 = malloc(sizeof(rb_node_t));
-    rb_node_t *n15 = malloc(sizeof(rb_node_t));
+    printf("Testing Red-Black tree insertion ...\n");
 
-    n1->color = COLOR_BLACK;
-    n1->value = 1;
-    n1->parent = n2;
-    n1->left = NULL;
-    n1->right = NULL;
-
-    n2->color = COLOR_RED;
-    n2->value = 2;
-    n2->parent = n11;
-    n2->left = n1;
-    n2->right = n7;
-
-    n5->color = COLOR_RED;
-    n5->value = 5;
-    n5->parent = n7;
-    n5->left = NULL;
-    n5->right = NULL;
-
-    n7->color = COLOR_BLACK;
-    n7->value = 7;
-    n7->parent = n2;
-    n7->left = n5;
-    n7->right = n8;
-
-    n8->color = COLOR_RED;
-    n8->value = 8;
-    n8->parent = n7;
-    n8->left = NULL;
-    n8->right = NULL;
-
-    n11->color = COLOR_BLACK;
-    n11->value = 11;
-    n11->parent = NULL;
-    n11->left = n2;
-    n11->right = n14;
-
-    n14->color = COLOR_BLACK;
-    n14->value = 14;
-    n14->parent = n11;
-    n14->left = NULL;
-    n14->right = n15;
-
-    n15->color = COLOR_RED;
-    n15->value = 15;
-    n15->parent = n14;
-    n15->left = NULL;
-    n15->right = NULL;
+    rb_node_t *r = build_rb_tree(
+        "(11, (2, (1,#,#), (7, (5,#,#), (8,#,#))), (14,#,(15,#,#)))",
+        "BRB##BR##R##B#R##");
 
     // test insert
-    rb_node_t *r = rb_insert_node(n11, 4);
+    r = rb_insert(r, 4);
 
-    assert(r == n7);
+    // check
+    rb_node_t *ans = build_rb_tree(
+        "(7, (2, (1,#,#),(5,(4,#,#),#)), (11,(8,#,#),(14,#,(15,#,#))))",
+        "BRB##BR###RB##B#R##");
+    assert(compare_tree(r, ans) == 1);
 
-    assert(n1->parent == n2);
-    assert(n1->left == NULL);
-    assert(n1->right == NULL);
-    assert(n1->color == COLOR_BLACK);
+    free_tree(r);
+    free_tree(ans);
 
-    assert(n2->parent == n7);
-    assert(n2->left == n1);
-    assert(n2->right == n5);
-    assert(n2->color == COLOR_RED);
-
-    // insert n4 here
-    rb_node_t *n4 = n5->left;
-    assert(n4 != NULL);
-    assert(n4->parent == n5);
-    assert(n4->left == NULL);
-    assert(n4->right == NULL);
-    assert(n4->color == COLOR_RED);
-
-    assert(n5->parent == n2);
-    assert(n5->left != NULL);
-    assert(n5->right == NULL);
-    assert(n5->color == COLOR_BLACK);
-
-    assert(n7->parent == NULL);
-    assert(n7->left == n2);
-    assert(n7->right == n11);
-    assert(n7->color == COLOR_BLACK);
-
-    assert(n8->parent == n11);
-    assert(n8->left == NULL);
-    assert(n8->right == NULL);
-    assert(n8->color == COLOR_BLACK);
-
-    assert(n11->parent == n7);
-    assert(n11->left == n8);
-    assert(n11->right == n14);
-    assert(n11->color == COLOR_RED);
-
-    assert(n14->parent == n11);
-    assert(n14->left == NULL);
-    assert(n14->right == n15);
-    assert(n14->color == COLOR_BLACK);
-
-    assert(n15->parent == n14);
-    assert(n15->left == NULL);
-    assert(n15->right == NULL);
-    assert(n15->color == COLOR_RED);
-
-    printf("pass insertion test\n");
-
-    free(n1);
-    free(n2);
-    free(n4);
-    free(n5);
-    free(n7);
-    free(n8);
-    free(n11);
-    free(n14);
-    free(n15);
+    printf("\tPass\n");
 }
 
 void test_rotate()
 {
-    // malloc the nodes
-    rb_node_t *r = malloc(sizeof(rb_node_t));
-    rb_node_t *g = malloc(sizeof(rb_node_t));
-    rb_node_t *p = malloc(sizeof(rb_node_t));
-    rb_node_t *n = malloc(sizeof(rb_node_t));
-    rb_node_t *a = malloc(sizeof(rb_node_t));
-    rb_node_t *b = malloc(sizeof(rb_node_t));
-    rb_node_t *c = malloc(sizeof(rb_node_t));
-    rb_node_t *d = malloc(sizeof(rb_node_t));
+    printf("Testing Red-Black tree rotation ...\n");
 
-    //////////////////////////
-    // left rotate 1        //
-    //////////////////////////
-    g->parent = NULL;
-    g->left = a;
-    g->right = p;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = b;
-    p->right = n;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = c;
-    n->right = d;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = p;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
+    rb_node_t *r;
+    rb_node_t *ans;
     
-    d->parent = n;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
+    r = build_tree("(2,(1,#,#),(4,(3,#,#),(6,(5,#,#),(7,#,#))))");
+    rb_rotate_node(r->left->left, r->left, r);
 
-    rb_rotate_node(n, p, g);
+    ans = build_tree("(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))");
+    assert(compare_tree(r, ans) == 1);
     
-    assert(p->parent == NULL);
-    assert(p->left == g);
-    assert(p->right == n);
-
-    assert(g->parent == p);
-    assert(g->left == a);
-    assert(g->right == b);
-
-    assert(n->parent == p);
-    assert(n->left == c);
-    assert(n->right == d);
-
-    //////////////////////////
-    // left rotate 2        //
-    //////////////////////////
-    r->parent = NULL;
-    r->left = g;
-    r->right = NULL;
-    r->color = COLOR_BLACK;
-
-    g->parent = r;
-    g->left = a;
-    g->right = p;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = b;
-    p->right = n;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = c;
-    n->right = d;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = p;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-    
-    d->parent = n;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-    
-    assert(p->parent == r);
-    assert(p->left == g);
-    assert(p->right == n);
-
-    assert(g->parent == p);
-    assert(g->left == a);
-    assert(g->right == b);
-
-    assert(n->parent == p);
-    assert(n->left == c);
-    assert(n->right == d);
-
-    //////////////////////////
-    // right rotate 1       //
-    //////////////////////////
-    g->parent = NULL;
-    g->left = p;
-    g->right = d;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = n;
-    p->right = c;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = a;
-    n->right = b;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = p;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-    
-    d->parent = n;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-    
-    assert(p->parent == NULL);
-    assert(p->left == n);
-    assert(p->right == g);
-
-    assert(n->parent == p);
-    assert(n->left == a);
-    assert(n->right == b);
-
-    assert(g->parent == p);
-    assert(g->left == c);
-    assert(g->right == d);
-
-    //////////////////////////
-    // right rotate 2       //
-    //////////////////////////
-    r->parent = NULL;
-    r->left = g;
-    r->right = NULL;
-    r->color = COLOR_BLACK;
-
-    g->parent = r;
-    g->left = p;
-    g->right = d;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = n;
-    p->right = c;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = a;
-    n->right = b;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = p;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-    
-    d->parent = n;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-    
-    assert(p->parent == r);
-    assert(p->left == n);
-    assert(p->right == g);
-
-    assert(n->parent == p);
-    assert(n->left == a);
-    assert(n->right == b);
-
-    assert(g->parent == p);
-    assert(g->left == c);
-    assert(g->right == d);
-
-    //////////////////////////
-    // left right rotate 1  //
-    //////////////////////////
-    g->parent = NULL;
-    g->left = p;
-    g->right = d;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = a;
-    p->right = n;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = b;
-    n->right = c;
-    n->color = COLOR_RED;
-
-    a->parent = p;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = n;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-    
-    d->parent = g;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-
-    assert(n->parent == NULL);
-    assert(n->left == p);
-    assert(n->right == g);
-    
-    assert(p->parent == n);
-    assert(p->left == a);
-    assert(p->right == b);
-
-    assert(g->parent == n);
-    assert(g->left == c);
-    assert(g->right == d);
-
-    //////////////////////////
-    // left right rotate 2  //
-    //////////////////////////
-    r->parent = NULL;
-    r->left = g;
-    r->right = NULL;
-    r->color = COLOR_BLACK;
-
-    g->parent = r;
-    g->left = p;
-    g->right = d;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = a;
-    p->right = n;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = b;
-    n->right = c;
-    n->color = COLOR_RED;
-
-    a->parent = p;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = n;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-
-    d->parent = g;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-
-    assert(n->parent == r);
-    assert(n->left == p);
-    assert(n->right == g);
-    
-    assert(p->parent == n);
-    assert(p->left == a);
-    assert(p->right == b);
-
-    assert(g->parent == n);
-    assert(g->left == c);
-    assert(g->right == d);
-
-    //////////////////////////
-    // right left rotate 1  //
-    //////////////////////////
-    g->parent = NULL;
-    g->left = a;
-    g->right = p;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = n;
-    p->right = d;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = b;
-    n->right = c;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = n;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-
-    d->parent = p;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-
-    assert(n->parent == NULL);
-    assert(n->left == g);
-    assert(n->right == p);
-    
-    assert(g->parent == n);
-    assert(g->left == a);
-    assert(g->right == b);
-
-    assert(p->parent == n);
-    assert(p->left == c);
-    assert(p->right == d);
-
-    //////////////////////////
-    // right left rotate 2  //
-    //////////////////////////
-    r->parent = NULL;
-    r->left = g;
-    r->right = NULL;
-    r->color = COLOR_BLACK;
-
-    g->parent = r;
-    g->left = a;
-    g->right = p;
-    g->color = COLOR_BLACK;
-
-    p->parent = g;
-    p->left = n;
-    p->right = d;
-    p->color = COLOR_RED;
-
-    n->parent = p;
-    n->left = b;
-    n->right = c;
-    n->color = COLOR_RED;
-
-    a->parent = g;
-    a->left = NULL;
-    a->right = NULL;
-    a->color = COLOR_BLACK;
-
-    b->parent = n;
-    b->left = NULL;
-    b->right = NULL;
-    b->color = COLOR_BLACK;
-
-    c->parent = n;
-    c->left = NULL;
-    c->right = NULL;
-    c->color = COLOR_BLACK;
-    
-    d->parent = p;
-    d->left = NULL;
-    d->right = NULL;
-    d->color = COLOR_BLACK;
-
-    rb_rotate_node(n, p, g);
-
-    assert(n->parent == r);
-    assert(n->left == g);
-    assert(n->right == p);
-    
-    assert(g->parent == n);
-    assert(g->left == a);
-    assert(g->right == b);
-
-    assert(p->parent == n);
-    assert(p->left == c);
-    assert(p->right == d);
-
-    printf("pass rotation test\n");
-
-    // free all nodes
-    free(r);
-    free(g);
-    free(p);
-    free(n);
-    free(a);
-    free(b);
-    free(c);
-    free(d);
+    printf("\tPass\n");
 }
 
 int main()

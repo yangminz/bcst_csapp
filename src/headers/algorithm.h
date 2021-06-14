@@ -117,8 +117,16 @@ typedef struct RB_NODE_STRUCT
     uint64_t value;
 } rb_node_t;
 
-rb_node_t *rb_insert_node(rb_node_t *root, uint64_t val);
-rb_node_t *rb_delete_node(rb_node_t *root, rb_node_t *target);
-rb_node_t *rb_find_node(rb_node_t *root, uint64_t val);
+rb_node_t *rb_insert(rb_node_t *root, uint64_t val);
+rb_node_t *rb_delete(rb_node_t *root, rb_node_t *target);
+rb_node_t *rb_find(rb_node_t *root, uint64_t val);
+
+/*======================================*/
+/*      Binary Search Tree              */
+/*======================================*/
+
+rb_node_t *bst_insert(rb_node_t *root, uint64_t val);
+rb_node_t *bst_delete(rb_node_t *root, rb_node_t *target);
+rb_node_t *bst_find(rb_node_t *root, uint64_t val);
 
 #endif
