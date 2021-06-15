@@ -6,9 +6,8 @@
 #include <headers/algorithm.h>
 
 // shared with BST
-rb_node_t *build_tree(char *str);
-int compare_tree(rb_node_t *a, rb_node_t *b);
-void free_tree(rb_node_t *root);
+rb_node_t *tree_construct(char *str);
+void tree_free(rb_node_t *root);
 
 rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted);
 rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced);
@@ -500,66 +499,202 @@ static int color_tree_dfs(rb_node_t *n, char *color, int index)
     return index;
 }
 
-rb_node_t *build_rb_tree(char *tree, char *color)
+rb_node_t *rb_tree_construct(char *tree, char *color)
 {
-    rb_node_t *r = build_tree(tree);
+    rb_node_t *r = tree_construct(tree);
     int index = color_tree_dfs(r, color, 0);
     assert(index == strlen(color) - 1);
 
     return r;
 }
 
-//#define DEBUG_REDBLACK
-
 #ifdef DEBUG_REDBLACK
-void test_delete()
+
+static int compare_tree(rb_node_t *a, rb_node_t *b)
+{
+    if (a == NULL && b == NULL)
+    {
+        return 1;
+    }
+
+    if (a == NULL || b == NULL)
+    {
+        return 0;
+    }
+
+    // both not NULL
+    if (a->value == b->value && a->color == b->color)
+    {
+        return  compare_tree(a->left, b->left) && 
+                compare_tree(a->right, b->right);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+static void test_delete()
 {
     printf("Testing Red-Black tree insertion ...\n");
 
     printf("\tPass\n");
 }
 
-void test_delete_bst()
-{
-    printf("Testing Binary Search tree insertion ...\n");
-    printf("\tPass\n");
-}
-
-void test_insert()
+static void test_insert()
 {
     printf("Testing Red-Black tree insertion ...\n");
 
-    rb_node_t *r = build_rb_tree(
-        "(11, (2, (1,#,#), (7, (5,#,#), (8,#,#))), (14,#,(15,#,#)))",
-        "BRB##BR##R##B#R##");
+    rb_node_t *r = rb_tree_construct(
+        "(11,"
+            "(2,"
+                "(1,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(8,#,#)"
+                ")"
+            "),"
+            "(14,#,(15,#,#))"
+        ")",
+        "B"
+            "R"
+                "B##"
+                "B"
+                    "R##"
+                    "R##"
+            "B#R##");
 
     // test insert
     r = rb_insert(r, 4);
 
     // check
-    rb_node_t *ans = build_rb_tree(
-        "(7, (2, (1,#,#),(5,(4,#,#),#)), (11,(8,#,#),(14,#,(15,#,#))))",
-        "BRB##BR###RB##B#R##");
+    rb_node_t *ans = rb_tree_construct(
+        "(7,"
+            "(2,"
+                "(1,#,#),"
+                "(5,(4,#,#),#)"
+            "),"
+            "(11,"
+                "(8,#,#),"
+                "(14,#,(15,#,#))"
+            ")"
+        ")",
+        "B"
+            "R"
+                "B##"
+                "BR###"
+            "R"
+                "B##"
+                "B#R##");
     assert(compare_tree(r, ans) == 1);
 
-    free_tree(r);
-    free_tree(ans);
+    tree_free(r);
+    tree_free(ans);
 
     printf("\tPass\n");
 }
 
-void test_rotate()
+static void test_rotate()
 {
     printf("Testing Red-Black tree rotation ...\n");
 
     rb_node_t *r;
-    rb_node_t *ans;
-    
-    r = build_tree("(2,(1,#,#),(4,(3,#,#),(6,(5,#,#),(7,#,#))))");
-    rb_rotate_node(r->left->left, r->left, r);
+    rb_node_t *a;
+    rb_node_t *t;
 
-    ans = build_tree("(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))");
-    assert(compare_tree(r, ans) == 1);
+    char inputs[8][100] = {
+        "(6,"   // g
+            "(4,"   // p
+                "(2,"   // g
+                    "(1,#,#),(3,#,#)),(5,#,#)),(7,#,#))",
+        "(6,"   // g
+            "(2,"   // p
+                "(1,#,#),"
+                "(4,"   // n
+                    "(3,#,#),(5,#,#))),(7,#,#))",
+        "(2,"   // g
+            "(1,#,#),"
+            "(6,"   // p
+                "(4,"   // n
+                    "(3,#,#),(5,#,#)),(7,#,#)))",
+        "(2,"   // g
+            "(1,#,#),"
+            "(4,"   // p
+                "(3,#,#),"
+                "(6,"   // n
+                    "(5,#,#),(7,#,#))))",
+        "(0,#,"
+            "(6,"   // g
+                "(4,"   // p
+                    "(2,"   // g
+                        "(1,#,#),(3,#,#)),(5,#,#)),(7,#,#)))",
+        "(0,#,"
+            "(6,"   // g
+                "(2,"   // p
+                    "(1,#,#),"
+                    "(4,"   // n
+                        "(3,#,#),(5,#,#))),(7,#,#)))",
+        "(0,#,"
+            "(2,"   // g
+                "(1,#,#),"
+                "(6,"   // p
+                    "(4,"   // n
+                        "(3,#,#),(5,#,#)),(7,#,#))))",
+        "(0,#,"
+            "(2,"   // g
+                "(1,#,#),"
+                "(4,"   // p
+                    "(3,#,#),"
+                    "(6,"   // n
+                        "(5,#,#),(7,#,#)))))",
+    };
+
+    char balanced[100] = "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))";
+
+    rb_node_t *g = NULL;
+    rb_node_t* p = NULL;
+    rb_node_t* n = NULL;
+
+    for (int i = 0; i < 8; ++ i)
+    {
+        r = tree_construct(inputs[i]);
+
+        if ((0x1 & (i >> 2)) == 0)
+        {
+            // test grandparent root
+            g = r;
+        }
+        else
+        {
+            // test grandparent not root
+            g = r->right;
+        }
+
+        if ((0x1 & (i >> 1)) == 0)
+        {
+            p = g->left;
+        }
+        else
+        {
+            p = g->right;
+        }
+
+        if ((0x1 & i) == 0)
+        {
+            n = p->left;
+        }
+        else
+        {
+            n = p->right;
+        }
+
+        t = rb_rotate_node(n, p, g);
+        a = tree_construct(balanced);
+        assert(compare_tree(t, a) == 1);
+
+        tree_free(a);
+        tree_free(r);
+    }
     
     printf("\tPass\n");
 }

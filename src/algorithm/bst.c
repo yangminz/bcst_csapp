@@ -159,7 +159,7 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         // 2.1: left tree is empty                  //
         //////////////////////////////////////////////
 
-        // transplant the other sub-tree to the node to be deleted
+        // traplant the other sub-tree to the node to be deleted
         *par_child = n->right;
         n->right->parent = p;
         free(n);
@@ -189,7 +189,7 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         // 3.1: a simple remove will do the job     //
         //////////////////////////////////////////////
 
-        // transplant the left sub-tree
+        // traplant the left sub-tree
         n->right->left = n->left;
         n->left->parent = n->right;
 
@@ -223,7 +223,7 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
             min_upper->right->parent = min_upper->parent;
         }
 
-        // transplant
+        // traplant
         min_upper->right = n->right;
         n->right->parent = min_upper;
 
@@ -286,20 +286,20 @@ rb_node_t *bst_find(rb_node_t *root, uint64_t val)
     return NULL;
 }
 
-void free_tree(rb_node_t *root)
+void tree_free(rb_node_t *root)
 {
     if (root == NULL)
     {
         return;
     }
 
-    free_tree(root->left);
-    free_tree(root->right);
+    tree_free(root->left);
+    tree_free(root->right);
 
     free(root);
 }
 
-rb_node_t *build_tree(char *str)
+rb_node_t *tree_construct(char *str)
 {
     // (root node, left tree, right tree)
     // for NULL node, #
@@ -341,11 +341,14 @@ rb_node_t *build_tree(char *str)
             if (top == 0)
             {
                 // pop root
+                assert(stack[0]->left != &todo && stack[0]->right != &todo);
                 return stack[0];
             }
 
             rb_node_t *p = stack[top - 1];
             rb_node_t *t = stack[top];
+            assert(t->left != &todo && t->right != &todo);
+
             top --;
 
             // else, pop this node
@@ -408,7 +411,10 @@ rb_node_t *build_tree(char *str)
     return NULL;
 }
 
-int compare_tree(rb_node_t *a, rb_node_t *b)
+
+#ifdef DEBUG_BST
+
+static int compare_tree(rb_node_t *a, rb_node_t *b)
 {
     if (a == NULL && b == NULL)
     {
@@ -421,7 +427,7 @@ int compare_tree(rb_node_t *a, rb_node_t *b)
     }
 
     // both not NULL
-    if (a->value == b->value && a->color == b->color)
+    if (a->value == b->value)
     {
         return  compare_tree(a->left, b->left) && 
                 compare_tree(a->right, b->right);
@@ -432,11 +438,7 @@ int compare_tree(rb_node_t *a, rb_node_t *b)
     }
 }
 
-// #define DEBUG_BST
-
-#ifdef DEBUG_BST
-
-void test_build()
+static void test_build()
 {
     printf("Testing build tree from string ...\n");
 
@@ -446,22 +448,43 @@ void test_build()
 
     memset(s, 0, sizeof(char) * 1000);
     strcpy(s, "#");
-    r = build_tree(s);
+    r = tree_construct(s);
     assert(r == NULL);
-    free_tree(r);
+    tree_free(r);
 
     memset(s, 0, sizeof(char) * 1000);
     strcpy(s, "(12, #, #)");
-    r = build_tree(s);
+    r = tree_construct(s);
     assert(r->parent == NULL);
     assert(r->left == NULL);
     assert(r->right == NULL);
     assert(r->value == 12);
-    free_tree(r);
+    tree_free(r);
 
     memset(s, 0, sizeof(char) * 1000);
-    strcpy(s, "(6,(3,(2,(1,#,#),#),(4,#,(5,#,#))),(7,#,(8,#,#)))");
-    r = build_tree(s);
+    strcpy(s, 
+        "("
+            "6,"
+            "("
+                "3,"
+                "("
+                    "2,"
+                    "(1,#,#),"
+                    "#"
+                "),"
+                "("
+                    "4,"
+                    "#,"
+                    "(5,#,#)"
+                ")"
+            "),"
+            "("
+                "7,"
+                "#,"
+                "(8,#,#)"
+            ")"
+        ")");
+    r = tree_construct(s);
 
     rb_node_t *n1 = r->left->left->left;
     rb_node_t *n2 = r->left->left;
@@ -512,69 +535,205 @@ void test_build()
     assert(n8->left == NULL);
     assert(n8->right == NULL);
 
-    free_tree(r);
+    tree_free(r);
 
     printf("\tPass\n");
 }
 
-void test_delete()
+static void test_delete()
 {
     printf("Testing Binary Search tree insertion ...\n");
 
-    rb_node_t *r = build_tree("(8,(2,(1,#,#),(5,(4,(3,#,#),#),(6,#,(7,#,#)))),(13,(10,(9,#,#),(11,#,(12,#,#))),(15,(14,#,#),(18,(17,(16,#,#),#),(19,#,#)))))");
-    rb_node_t *ans;
+    rb_node_t *r = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,(1,#,#),(3,#,#)),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    rb_node_t *a;
 
-    // case 1: leaf node
-    bst_delete(r, r->left->left);
-    ans = build_tree("(8,(2,(5,(4,(3,#,#),#),(6,#,(7,#,#)))),(13,(10,(9,#,#),(11,#,(12,#,#))),(15,(14,#,#),(18,(17,(16,#,#),#),(19,#,#)))))");
-    assert(compare_tree(r, ans) == 1);
-    free_tree(ans);
+    // case 1: leaf node - parent's left child
+    r = bst_delete(r, r->left->left->left);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,(3,#,#)),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
 
-    // case 2: right NULL
-    bst_delete(r, r->left->right->left);
-    ans = build_tree("(8,(2,(5,(3,#,#),(6,#,(7,#,#)))),(13,(10,(9,#,#),(11,#,(12,#,#))),(15,(14,#,#),(18,(17,(16,#,#),#),(19,#,#)))))");
-    assert(compare_tree(r, ans) == 1);
-    free_tree(ans);
+    // case 2: leaf node - parent's right child
+    r = bst_delete(r, r->left->left->right);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
 
-    // case 3: left NULL
-    bst_delete(r, r->left->right->right);
-    ans = build_tree("(8,(2,(5,(3,#,#),(7,#,#))),(13,(10,(9,#,#),(11,#,(12,#,#))),(15,(14,#,#),(18,(17,(16,#,#),#),(19,#,#)))))");
-    assert(compare_tree(r, ans) == 1);
-    free_tree(ans);
+    // case 3: right NULL
+    r = bst_delete(r, r->left->right->left);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
 
-    // case 4: right child's left NULL
-    bst_delete(r, r->right->left);
-    ans = build_tree("(8,(2,(5,(3,#,#),(7,#,#))),(13,(11,(9,#,#),(12,#,#)),(15,(14,#,#),(18,(17,(16,#,#),#),(19,#,#)))))");
-    assert(compare_tree(r, ans) == 1);
-    free_tree(ans);
+    // case 4: left NULL
+    r = bst_delete(r, r->left->right->right);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
 
-    // case 5: right child's left not NULL
-    bst_delete(r, r->right->left);
-    ans = build_tree("(8,(2,(5,(3,#,#),(7,#,#))),(13,(11,(9,#,#),(12,#,#)),(16,(14,#,#),(18,(17,#,#),(19,#,#)))))");
-    assert(compare_tree(r, ans) == 1);
-    free_tree(ans);
+    // case 5: right child's left NULL
+    r = bst_delete(r, r->right->left);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
 
-    free_tree(r);
+    // case 6: right child's left not NULL
+    r = bst_delete(r, r->right->right);
+    a = tree_construct(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
+                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
+            ")"
+        ")");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+
+    // case 7: delete root
+    r = bst_delete(r, r);
+    a = tree_construct(
+        "(11,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,#,(15,(14,#,#),(16,#,#))),"
+                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
+            ")"
+        ")");
+    int equal = compare_tree(r, a);
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+
+    tree_free(r);
+
+    // case 8: delete a NULL tree
+    r = NULL;
+    r = bst_delete(r, r);
+    assert(r == NULL);
 
     printf("\tPass\n");
 }
 
-void test_insert()
+static void test_insert()
 {
     printf("Testing Binary Search tree insertion ...\n");
 
-    rb_node_t *r = build_tree("(11, (2, (1,#,#), (7, (5,#,#), (8,#,#))), (14,#,(15,#,#)))");
+    rb_node_t *r = tree_construct(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
 
     // test insert
     r = bst_insert(r, 4);
 
     // check
-    rb_node_t *ans = build_tree("(11, (2, (1,#,#), (7, (5,(4,#,#),#), (8,#,#))), (14,#,(15,#,#)))");
-    assert(compare_tree(r, ans) == 1);
+    rb_node_t *a = tree_construct(
+        "(11,"
+            "(2,(1,#,#),(7,(5,(4,#,#),#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
+    assert(compare_tree(r, a) == 1);
 
     // free
-    free_tree(r);
-    free_tree(ans);
+    tree_free(r);
+    tree_free(a);
 
     printf("\tPass\n");
 }
