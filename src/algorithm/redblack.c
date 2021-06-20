@@ -17,15 +17,15 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced);
 // return root node
 static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
 {
-    assert(n != NULL && p != NULL && g != NULL);
+    assert(n != NULL_TREE_NODE_PTR && p != NULL_TREE_NODE_PTR && g != NULL_TREE_NODE_PTR);
     assert(n->parent == p && p->parent == g);
 
-    rb_node_t *r = NULL;
+    rb_node_t *r = NULL_TREE_NODE_PTR;
 
     int is_g_root = 0;
-    rb_node_t *g_par = NULL;
+    rb_node_t *g_par = NULL_TREE_NODE_PTR;
 
-    if (g->parent == NULL)
+    if (g->parent == NULL_TREE_NODE_PTR)
     {
         // g is root
         // create a dummy root for g
@@ -42,7 +42,7 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
     }
 
     // the address of g in its parent
-    rb_node_t **g_in_par = NULL;
+    rb_node_t **g_in_par = NULL_TREE_NODE_PTR;
     if (g == g_par->left)
     {
         g_in_par = &(g_par->left);
@@ -74,7 +74,7 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
         p->parent = g_par;
 
         g->right = p->left;
-        if (g->right != NULL)
+        if (g->right != NULL_TREE_NODE_PTR)
         {
             g->right->parent = g;
         }
@@ -106,7 +106,7 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
         p->parent = g_par;
 
         g->left = p->right;
-        if (g->left != NULL)
+        if (g->left != NULL_TREE_NODE_PTR)
         {
             g->left->parent = g;
         }
@@ -138,13 +138,13 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
         n->parent = g_par;
 
         p->right = n->left;
-        if (p->right != NULL)
+        if (p->right != NULL_TREE_NODE_PTR)
         {
             p->right->parent = p;
         }
 
         g->left = n->right;
-        if (g->left != NULL)
+        if (g->left != NULL_TREE_NODE_PTR)
         {
             g->left->parent = g;
         }
@@ -178,13 +178,13 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
         n->parent = g_par;
 
         p->left = n->right;
-        if (p->left != NULL)
+        if (p->left != NULL_TREE_NODE_PTR)
         {
             p->left->parent = p;
         }
 
         g->right = n->left;
-        if (g->right != NULL)
+        if (g->right != NULL_TREE_NODE_PTR)
         {
             g->right->parent = g;
         }
@@ -201,7 +201,7 @@ static rb_node_t * rb_rotate_node(rb_node_t *n, rb_node_t *p, rb_node_t *g)
     {
         // g_par is a dummy node, we need to free it
         // and we notice that g_par's child may not be g any more
-        g_par->left->parent = NULL;
+        g_par->left->parent = NULL_TREE_NODE_PTR;
         free(g_par);
     }
 
@@ -229,10 +229,10 @@ rb_node_t *rb_insert(rb_node_t *root, uint64_t val)
         {
             // parent is having red edge, so there must be a grandparent
             rb_node_t *g = p->parent;
-            assert(g != NULL);
+            assert(g != NULL_TREE_NODE_PTR);
 
-            if (g->left != NULL && g->left->color == COLOR_RED &&
-                g->right != NULL && g->right->color == COLOR_RED)
+            if (g->left != NULL_TREE_NODE_PTR && g->left->color == COLOR_RED &&
+                g->right != NULL_TREE_NODE_PTR && g->right->color == COLOR_RED)
             {
                 // CASE 1: g is have 2 childs and both are red
                 // only continue in this case: Promotion
@@ -249,7 +249,7 @@ rb_node_t *rb_insert(rb_node_t *root, uint64_t val)
                 rb_node_t *rotate_root = rb_rotate_node(n, p, g);
 
                 // recoloring
-                if (rotate_root != NULL)
+                if (rotate_root != NULL_TREE_NODE_PTR)
                 {
                     if (rotate_root == p)
                     {
@@ -264,7 +264,7 @@ rb_node_t *rb_insert(rb_node_t *root, uint64_t val)
                         g->color = COLOR_RED;
                     }
 
-                    if (rotate_root->parent == NULL)
+                    if (rotate_root->parent == NULL_TREE_NODE_PTR)
                     {
                         return rotate_root;
                     }
@@ -282,9 +282,9 @@ rb_node_t *rb_insert(rb_node_t *root, uint64_t val)
 // return the updated tree root node
 rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
 {
-    if (n == NULL)
+    if (n == NULL_TREE_NODE_PTR)
     {
-        return NULL;
+        return NULL_TREE_NODE_PTR;
     }
 
     // record the color of the to-be-deleted node
@@ -293,6 +293,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
     // and we need to do color compensation
     rb_color_t n_color = n->color;
 
+    // This node v is the red-black tree related node from BST
     rb_node_t *v;
     root = bst_delete_node(root, n, &v);
 
@@ -323,9 +324,9 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
         v   s
          */
 
-        rb_node_t *g = NULL;    // grandparent
-        rb_node_t *p = NULL;    // sibling
-        rb_node_t *s = NULL;    // sibling
+        rb_node_t *g = NULL_TREE_NODE_PTR;    // grandparent
+        rb_node_t *p = NULL_TREE_NODE_PTR;    // sibling
+        rb_node_t *s = NULL_TREE_NODE_PTR;    // sibling
 
         while (1)
         {
@@ -339,13 +340,13 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 s = p->left;
             }
 
-            if (s != NULL && s->color == COLOR_BLACK)
+            if (s != NULL_TREE_NODE_PTR && s->color == COLOR_BLACK)
             {
                 // BLACK Silbing
 
                 // At least one of the childs is red - restructuring
                 
-                if (s->left != NULL && s->left->color == COLOR_RED)
+                if (s->left != NULL_TREE_NODE_PTR && s->left->color == COLOR_RED)
                 {
                     // Restructuring Case 1
                     // sibling's left child is red
@@ -356,7 +357,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                     return root;
                 }
 
-                if (s->right != NULL && s->right->color == COLOR_RED)
+                if (s->right != NULL_TREE_NODE_PTR && s->right->color == COLOR_RED)
                 {
                     // Restructuring Case 2
                     // sibling's right child is red
@@ -368,7 +369,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 }
 
                 // Both childs are black - Recoloring
-                if (s->left != NULL && s->left->color == COLOR_BLACK && s->right != NULL && s->right->color == COLOR_BLACK)
+                if (s->left != NULL_TREE_NODE_PTR && s->left->color == COLOR_BLACK && s->right != NULL_TREE_NODE_PTR && s->right->color == COLOR_BLACK)
                 {
                     if (p->color == COLOR_RED)
                     {
@@ -398,7 +399,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 // adjust to black sibling
 
                 int is_p_root = 0;
-                if (p->parent == NULL)
+                if (p->parent == NULL_TREE_NODE_PTR)
                 {
                     g = malloc(sizeof(rb_node_t));
                     g->color = COLOR_BLACK;
@@ -412,7 +413,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                     is_p_root = 0;
                 }
 
-                rb_node_t ** p_addr = NULL;
+                rb_node_t ** p_addr = NULL_TREE_NODE_PTR;
                 if (p == g->left)
                 {
                     p_addr = &g->left;
@@ -426,7 +427,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 {
                     // case 1: sibling is right
                     p->right = s->right;
-                    if (p->right != NULL)
+                    if (p->right != NULL_TREE_NODE_PTR)
                     {
                         p->right->parent = p;
                     }
@@ -441,7 +442,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 {
                     // case 2: sibling is left
                     p->left = s->left;
-                    if (p->left != NULL)
+                    if (p->left != NULL_TREE_NODE_PTR)
                     {
                         p->left->parent = p;
                     }
@@ -456,7 +457,7 @@ rb_node_t *rb_delete(rb_node_t *root, rb_node_t *n)
                 if (is_p_root == 1)
                 {
                     free(g);
-                    s->parent = NULL;
+                    s->parent = NULL_TREE_NODE_PTR;
                 }
 
                 // finish the adjustment
@@ -478,7 +479,7 @@ rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
 // build binary tree
 static int color_tree_dfs(rb_node_t *n, char *color, int index)
 {
-    if (n == NULL)
+    if (n == NULL_TREE_NODE_PTR)
     {
         assert(color[index] == '#');
         return index;
@@ -512,17 +513,17 @@ rb_node_t *rb_tree_construct(char *tree, char *color)
 
 static int compare_tree(rb_node_t *a, rb_node_t *b)
 {
-    if (a == NULL && b == NULL)
+    if (a == NULL_TREE_NODE_PTR && b == NULL_TREE_NODE_PTR)
     {
         return 1;
     }
 
-    if (a == NULL || b == NULL)
+    if (a == NULL_TREE_NODE_PTR || b == NULL_TREE_NODE_PTR)
     {
         return 0;
     }
 
-    // both not NULL
+    // both not NULL_TREE_NODE_PTR
     if (a->value == b->value && a->color == b->color)
     {
         return  compare_tree(a->left, b->left) && 
@@ -537,6 +538,254 @@ static int compare_tree(rb_node_t *a, rb_node_t *b)
 static void test_delete()
 {
     printf("Testing Red-Black tree insertion ...\n");
+
+    rb_node_t *r;
+    rb_node_t *a;
+
+    // delete red node
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(2,#,#),(9,#,#)),"
+            "(38,(25,#,#),(40,(38,#,#),#))"
+        ")",
+        "BRB##B##RB##BR###");
+    r = rb_delete(r, r->right);
+    a = rb_tree_construct(
+        "(10,"
+            "(5,(2,#,#),(9,#,#)),"
+            "(30,(25,#,#),(40,#,#))"
+        ")",
+        "BRB##B##RB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // delete black node - simple
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(2,#,#),(9,#,#)),"
+            "(38,(25,#,#),(40,(35,#,(38,#,#)),(50,#,#)))"
+        ")",
+        "BBB##B##BB##RB#R##B##");
+    r = rb_delete(r, r->right);
+    a = rb_tree_construct(
+        "(10,"
+            "(5,(2,#,#),(9,#,#)),"
+            "(35,(25,#,#),(40,(38,#,#),(50,#,#)))"
+        ")",
+        "BBB##B##BB##RB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // delete a double black node
+    // double black = 15
+    //  1. sibling black = 30
+    //  2. both sibling's childs black = (NULL_TREE_NODE_PTR, NULL_TREE_NODE_PTR)
+    // double black gives black to parent
+    // parent red, then black
+    // sibling red
+    r = rb_tree_construct(
+        "(10,"
+            "(5,#,#),"
+            "(20,(15,#,#),(30,#,#))"
+        ")",
+        "BB##RB##B##");
+    r = rb_delete(r, r->right->left);
+    a = rb_tree_construct(
+        "(10,"
+            "(5,#,#),"
+            "(20,#,(30,#,#))"
+        ")",
+        "BB##B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // delete a double black node
+    // double black = 15
+    //  1. sibling black = 30
+    //  2. both sibling's childs black = (NULL_TREE_NODE_PTR, NULL_TREE_NODE_PTR)
+    // double black gives black to parent
+    // parent black, then parent double black, continue to parent, untill root
+    // silbing red
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(1,#,#),(7,#,#)),"
+            "(20,(15,#,#),(30,#,#))"
+        ")",
+        "BBB##B##BB##B##");
+    r = rb_delete(r, r->right->left);
+    a = rb_tree_construct(
+        "(10,"
+            "(5,#,#),"
+            "(20,#,(30,#,#))"
+        ")",
+        "BB##B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // delete a double black node
+    // double black = 15
+    //  1. sibling **RED** = 30
+    //  2. both sibling's childs black = (NULL_TREE_NODE_PTR, NULL_TREE_NODE_PTR)
+    // double black gives black to parent then to sibling
+    // parent black, sibling red ==> parent red, sibling black
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(1,#,#),(7,#,#)),"
+            "(20,(15,#,#),(30,(25,#,#),(40,#,#)))"
+        ")",
+        "BBB##B##BB##RB##B##");
+    r = rb_delete(r, r->right->left);
+    a = rb_tree_construct(
+        "(10,"
+            "(5,(1,#,#),(7,#,#)),"
+            "(30,(20,#,(25,#,#)),(40,#,#))"
+        ")",
+        "BBB##B##BB#R##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // delete
+    // sibling black, far child red, near child black
+    // sibling black, far child black, near child red
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(1,#,#),(7,#,#)),"
+            "(30,(25,(20,#,#),(28,#,#)),(40,#,#))"
+        ")",
+        "BBB##B##BRB##B##B##");
+    r = rb_delete(r, r->left->left);
+    a = rb_tree_construct(
+        "(25,"
+            "(10,(5,#,(7,#,#)),(20,#,#)),"
+            "(30,(28,#,#),(40,#,#))"
+        ")",
+        "BBB#R##B##BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // A COMPLETE TEST CASE
+
+    // silbing red
+    r = rb_tree_construct(
+        "(50,"
+            "(20,(15,#,#),(35,#,#)),"
+            "(65,"
+                "(55,#,#),"
+                "(70,(68,#,#),(80,#,(90,#,#)))"
+            ")"
+        ")",
+        "BBB##B##BB##RB##B#R##");
+    
+    // delete 55 - sibling's 2 black
+    r = rb_delete(r, r->right->left);
+    a = rb_tree_construct(
+        "(50,"
+            "(20,(15,#,#),(35,#,#)),"
+            "(70,"
+                "(65,#,(68,#,#)),"
+                "(80,#,(90,#,#))"
+            ")"
+        ")",
+        "BBB##B##B#R##B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 30 - root double black
+    assert(r->left->value == 30);
+    r = rb_delete(r, r->left);
+    a = rb_tree_construct(
+        "(50,"
+            "(35,(15,#,#),#),"
+            "(70,"
+                "(65,#,(68,#,#)),"
+                "(80,#,(90,#,#))"
+            ")"
+        ")",
+        "BBR###RB#R##B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 90 - red node
+    assert(r->right->right->right->value == 90);
+    r = rb_delete(r, r->right->right->right);
+    a = rb_tree_construct(
+        "(50,"
+            "(35,(15,#,#),#),"
+            "(70,"
+                "(65,#,(68,#,#)),"
+                "(80,#,#)"
+            ")"
+        ")",
+        "BBR###RB#R##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 80 - sibling black, near child red, far child black
+    assert(r->right->right->value == 80);
+    r = rb_delete(r, r->right->right);
+    a = rb_tree_construct(
+        "(50,"
+            "(35,(15,#,#),#),"
+            "(68,"
+                "(65,#,#),"
+                "(70,#,#)"
+            ")"
+        ")",
+        "BBR###RB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 50 - root, and having 1B 1R childs, no parent nor sibling
+    assert(r->value == 50);
+    r = rb_delete(r, r);
+    a = rb_tree_construct(
+        "(65,"
+            "(35,(15,#,#),#),"
+            "(68,#,(70,#,#))"
+            ")"
+        ")",
+        "BBR###B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 35 - having red child
+    assert(r->left->right->value == 35);
+    r = rb_delete(r, r->left->right);
+    a = rb_tree_construct(
+        "(35,"
+            "(15,#,#),"
+            "(68,#,(70,#,#))"
+            ")"
+        ")",
+        "BB##B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 15 - far child red sibling black
+    assert(r->left->right->value == 35);
+    r = rb_delete(r, r->left->right);
+    a = rb_tree_construct(
+        "(68,(65,#,#),(70,#,#))",
+        "BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+    
+    // delete 65 - both s-childs black
+    assert(r->left->right->value == 35);
+    r = rb_delete(r, r->left->right);
+    a = rb_tree_construct(
+        "(68,#,(70,#,#))",
+        "B#R##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(a);
+
+    tree_free(r);
 
     printf("\tPass\n");
 }
@@ -651,9 +900,9 @@ static void test_rotate()
 
     char balanced[100] = "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))";
 
-    rb_node_t *g = NULL;
-    rb_node_t* p = NULL;
-    rb_node_t* n = NULL;
+    rb_node_t *g = NULL_TREE_NODE_PTR;
+    rb_node_t* p = NULL_TREE_NODE_PTR;
+    rb_node_t* n = NULL_TREE_NODE_PTR;
 
     for (int i = 0; i < 8; ++ i)
     {

@@ -107,8 +107,16 @@ typedef struct RB_NODE_STRUCT
 {
     // pointers
     struct RB_NODE_STRUCT *parent;
-    struct RB_NODE_STRUCT *left;
-    struct RB_NODE_STRUCT *right;
+
+    union
+    {
+        struct RB_NODE_STRUCT *childs[2];
+        struct
+        {
+            struct RB_NODE_STRUCT *left;        // childs[0]
+            struct RB_NODE_STRUCT *right;       // childs[1]
+        };
+    };
 
     // edge color to parent
     rb_color_t color;
@@ -116,6 +124,9 @@ typedef struct RB_NODE_STRUCT
     // tree node value
     uint64_t value;
 } rb_node_t;
+
+// definition is in bst.c
+rb_node_t *NULL_TREE_NODE_PTR;
 
 rb_node_t *rb_insert(rb_node_t *root, uint64_t val);
 rb_node_t *rb_delete(rb_node_t *root, rb_node_t *target);

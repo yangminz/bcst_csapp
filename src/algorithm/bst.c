@@ -6,53 +6,64 @@
 #include <headers/algorithm.h>
 #include <headers/common.h>
 
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted);
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced);
+// sentinel to indicate NULL
+// its color IS BLACK!!! (for red-black tree to use)
+static rb_node_t NULL_TREE_NODE = {
+    .color = COLOR_BLACK,
+    .value = 0,
+    .left = NULL,
+    .right = NULL,
+    .parent = NULL
+};
+rb_node_t *NULL_TREE_NODE_PTR = &NULL_TREE_NODE;
+
+rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack);
+rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack);
 
 // insert value to the tree
 // return the updated tree root node
 rb_node_t *bst_insert(rb_node_t *root, uint64_t val)
 {
-    rb_node_t *inserted;
-    return bst_insert_node(root, val, &inserted);
+    rb_node_t *redblack;
+    return bst_insert_node(root, val, &redblack);
 }
 
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
+rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack)
 {
     // create
-    if (root == NULL)
+    if (root == NULL_TREE_NODE_PTR)
     {
         root = malloc(sizeof(rb_node_t));
         
         // update properties
-        root->parent = NULL;
-        root->left = NULL;
-        root->right = NULL;
+        root->parent = NULL_TREE_NODE_PTR;
+        root->left = NULL_TREE_NODE_PTR;
+        root->right = NULL_TREE_NODE_PTR;
         root->value = val;
         root->color = COLOR_BLACK;
 
-        *inserted = root;
+        *redblack = root;
         return root;
     }
 
     // search the right place (leaf node) to insert data
     rb_node_t *n = root;
 
-    while (n != NULL)
+    while (n != NULL_TREE_NODE_PTR)
     {
         if (val < n->value)
         {
-            if (n->left == NULL)
+            if (n->left == NULL_TREE_NODE_PTR)
             {
                 // insert here
                 n->left = malloc(sizeof(rb_node_t));
                 n->left->parent = n;
-                n->left->left = NULL;
-                n->left->right = NULL;
+                n->left->left = NULL_TREE_NODE_PTR;
+                n->left->right = NULL_TREE_NODE_PTR;
                 n->left->value = val;
                 n->left->color = COLOR_RED;
                 
-                *inserted = n->left;
+                *redblack = n->left;
                 return root;
             }
             else
@@ -62,17 +73,17 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
         }
         else if (val > n->value)
         {
-            if (n->right == NULL)
+            if (n->right == NULL_TREE_NODE_PTR)
             {
                 // insert here
                 n->right = malloc(sizeof(rb_node_t));
                 n->right->parent = n;
-                n->right->left = NULL;
-                n->right->right = NULL;
+                n->right->left = NULL_TREE_NODE_PTR;
+                n->right->right = NULL_TREE_NODE_PTR;
                 n->right->value = val;
                 n->right->color = COLOR_RED;
 
-                *inserted = n->right;
+                *redblack = n->right;
                 return root;
             }
             else
@@ -83,32 +94,32 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
         else
         {
             // equals
-            printf("bst insertion: existing value {%lx} being tried to inserted.\n", val);
+            printf("bst insertion: existing value {%lx} being tried to redblack.\n", val);
             exit(0);
         }
     }
 
-    *inserted = NULL;
+    *redblack = NULL_TREE_NODE_PTR;
     return root;
 }
 
 rb_node_t *bst_delete(rb_node_t *root, rb_node_t *n)
 {
-    rb_node_t *replaced;
-    return bst_delete_node(root, n, &replaced);
+    rb_node_t **redblack;
+    return bst_delete_node(root, n, &redblack);
 }
 
 // delete the node
 // return the updated tree root node
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
+rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 {
-    if (n == NULL)
+    if (n == NULL_TREE_NODE_PTR)
     {
-        return NULL;
+        return NULL_TREE_NODE_PTR;
     }
 
     // in case root is deleted
-    rb_node_t *p = NULL;
+    rb_node_t *p = NULL_TREE_NODE_PTR;
     int is_n_root = 0;
     if (n == root)
     {
@@ -117,8 +128,8 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         p->color = COLOR_BLACK;
         p->left = n;
         n->parent = p;
-        p->parent = NULL;
-        p->right = NULL;
+        p->parent = NULL_TREE_NODE_PTR;
+        p->right = NULL_TREE_NODE_PTR;
         is_n_root = 1;
     }
     else
@@ -127,69 +138,48 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         is_n_root = 0;
     }
 
-    // the address of the to be deleted node
-    rb_node_t **par_child = NULL;
-    if (n == p->left)
-    {
-        par_child = &(p->left);
-    }
-    else
-    {
-        par_child = &(p->right);
-    }
-
-    if (n->left == NULL && n->right == NULL)
+    if (n->left == NULL_TREE_NODE_PTR && n->right == NULL_TREE_NODE_PTR)
     {
         //////////////////////////////////////////////
         // case 1: leaf node                        //
         //////////////////////////////////////////////
-
-        *par_child = NULL;
         free(n);
         
+        // for red-black tree, the current node is NULL
+        *redblack = NULL_TREE_NODE_PTR;
+
         if (is_n_root == 1)
         {
-            root = NULL;
+            // tree is empty now
+            root = NULL_TREE_NODE_PTR;
         }
     }
-    else if (n->left == NULL && n->right != NULL)
+    else if (n->left != NULL_TREE_NODE_PTR || n->right != NULL_TREE_NODE_PTR)
     {
         //////////////////////////////////////////////
         // case 2: one sub-tree is empty            //
-        // 2.1: left tree is empty                  //
         //////////////////////////////////////////////
 
-        // traplant the other sub-tree to the node to be deleted
-        *par_child = n->right;
-        n->right->parent = p;
+        // transplant the not-empty sub-tree to the node to be deleted
+        // 0 - left; 1 - right
+        int child_index = n->left == NULL_TREE_NODE_PTR ? 1 : 0;
+
+        n->childs[child_index]->parent = p;
         free(n);
 
         if (is_n_root == 1)
         {
-            root = n->right;
+            root = n->childs[child_index];
         }
     }
-    else if (n->left != NULL && n->right == NULL)
-    {
-        // 2.2 right tree is empty
-
-        *par_child = n->left;
-        n->left->parent = p;
-        free(n);
-
-        if (is_n_root == 1)
-        {
-            root = n->left;
-        }
-    }
-    else if (n->right->left == NULL)
+    else if (n->right->left == NULL_TREE_NODE_PTR)
     {
         //////////////////////////////////////////////
         // case 3: both sub-trees are not empty     //
         // 3.1: a simple remove will do the job     //
         //////////////////////////////////////////////
 
-        // traplant the left sub-tree
+        // transplant the left sub-tree
         n->right->left = n->left;
         n->left->parent = n->right;
 
@@ -203,7 +193,7 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
             root = n->right;
         }
     }
-    else if (n->right->left != NULL)
+    else if (n->right->left != NULL_TREE_NODE_PTR)
     {
         //////////////////////////////////////////////
         // 3.2: float up the tight upper bound      //
@@ -211,19 +201,19 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         //////////////////////////////////////////////
 
         rb_node_t *min_upper = n->right;
-        while (min_upper->left != NULL)
+        while (min_upper->left != NULL_TREE_NODE_PTR)
         {
             min_upper = min_upper->left;
         }
 
         // float up min_upper
         min_upper->parent->left = min_upper->right;
-        if (min_upper->right != NULL)
+        if (min_upper->right != NULL_TREE_NODE_PTR)
         {
             min_upper->right->parent = min_upper->parent;
         }
 
-        // traplant
+        // transplant
         min_upper->right = n->right;
         n->right->parent = min_upper;
 
@@ -240,22 +230,19 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
             root = min_upper;
         }
     }
-
-    // set the pointer to the address of the deleted node
-    rb_node_t *v = *par_child;
     
     if (is_n_root == 1)
     {
         free(p);
 
-        if (root != NULL)
+        if (root != NULL_TREE_NODE_PTR)
         {
-            root->parent = NULL;
+            root->parent = NULL_TREE_NODE_PTR;
         }
     }
 
     // which node takes the place of the deleted node in parent
-    *replaced = *par_child;
+    *redblack = *par_child;
     return root;
 }
 
@@ -265,7 +252,7 @@ rb_node_t *bst_find(rb_node_t *root, uint64_t val)
     rb_node_t *n = root;
     uint64_t n_value;
 
-    while (n != NULL)
+    while (n != NULL_TREE_NODE_PTR)
     {
         n_value = n->value;
 
@@ -283,12 +270,12 @@ rb_node_t *bst_find(rb_node_t *root, uint64_t val)
         }
     }
 
-    return NULL;
+    return NULL_TREE_NODE_PTR;
 }
 
 void tree_free(rb_node_t *root)
 {
-    if (root == NULL)
+    if (root == NULL_TREE_NODE_PTR)
     {
         return;
     }
@@ -302,7 +289,7 @@ void tree_free(rb_node_t *root)
 rb_node_t *tree_construct(char *str)
 {
     // (root node, left tree, right tree)
-    // for NULL node, #
+    // for NULL_TREE_NODE_PTR node, #
 
     // sentinel to mark the unprocessed sub-tree
     rb_node_t todo;
@@ -319,7 +306,7 @@ rb_node_t *tree_construct(char *str)
             // push the node as being processed
             top ++;
             stack[top] = malloc(sizeof(rb_node_t));
-            stack[top]->parent = NULL;
+            stack[top]->parent = NULL_TREE_NODE_PTR;
             stack[top]->left = &todo;
             stack[top]->right = &todo;
 
@@ -367,7 +354,7 @@ rb_node_t *tree_construct(char *str)
                 continue;
             }
 
-            printf("node %p:%lx is not having any unprocessed sub-tree\n  while %p:%lx is inserted into it.\n",
+            printf("node %p:%lx is not having any unprocessed sub-tree\n  while %p:%lx is redblack into it.\n",
                 p, p->value, t, t->value);
             exit(0);
         }
@@ -376,27 +363,27 @@ rb_node_t *tree_construct(char *str)
             if (top < 0)
             {
                 assert(strlen(str) == 1);
-                return NULL;
+                return NULL_TREE_NODE_PTR;
             }
 
-            // push NULL node
-            // pop NULL node
+            // push NULL_TREE_NODE_PTR node
+            // pop NULL_TREE_NODE_PTR node
             if (stack[top]->left == &todo)
             {
                 // must check parent's left node first
-                stack[top]->left = NULL;
+                stack[top]->left = NULL_TREE_NODE_PTR;
                 i ++;
                 continue;
             }
             else if (stack[top]->right == &todo)
             {
                 // then check parent's right node
-                stack[top]->right = NULL;
+                stack[top]->right = NULL_TREE_NODE_PTR;
                 i ++;
                 continue;
             }
 
-            printf("node %p:(%lx) is not having any unprocessed sub-tree\n  while NULL is inserted into it.\n",
+            printf("node %p:(%lx) is not having any unprocessed sub-tree\n  while NULL_TREE_NODE_PTR is redblack into it.\n",
                 stack[top], stack[top]->value);
             exit(0);
         }
@@ -408,7 +395,7 @@ rb_node_t *tree_construct(char *str)
         }
     }
 
-    return NULL;
+    return NULL_TREE_NODE_PTR;
 }
 
 
@@ -416,17 +403,17 @@ rb_node_t *tree_construct(char *str)
 
 static int compare_tree(rb_node_t *a, rb_node_t *b)
 {
-    if (a == NULL && b == NULL)
+    if (a == NULL_TREE_NODE_PTR && b == NULL_TREE_NODE_PTR)
     {
         return 1;
     }
 
-    if (a == NULL || b == NULL)
+    if (a == NULL_TREE_NODE_PTR || b == NULL_TREE_NODE_PTR)
     {
         return 0;
     }
 
-    // both not NULL
+    // both not NULL_TREE_NODE_PTR
     if (a->value == b->value)
     {
         return  compare_tree(a->left, b->left) && 
@@ -449,15 +436,15 @@ static void test_build()
     memset(s, 0, sizeof(char) * 1000);
     strcpy(s, "#");
     r = tree_construct(s);
-    assert(r == NULL);
+    assert(r == NULL_TREE_NODE_PTR);
     tree_free(r);
 
     memset(s, 0, sizeof(char) * 1000);
     strcpy(s, "(12, #, #)");
     r = tree_construct(s);
-    assert(r->parent == NULL);
-    assert(r->left == NULL);
-    assert(r->right == NULL);
+    assert(r->parent == NULL_TREE_NODE_PTR);
+    assert(r->left == NULL_TREE_NODE_PTR);
+    assert(r->right == NULL_TREE_NODE_PTR);
     assert(r->value == 12);
     tree_free(r);
 
@@ -497,13 +484,13 @@ static void test_build()
 
     assert(n1->value == 1);
     assert(n1->parent == n2);
-    assert(n1->left == NULL);
-    assert(n1->right == NULL);
+    assert(n1->left == NULL_TREE_NODE_PTR);
+    assert(n1->right == NULL_TREE_NODE_PTR);
 
     assert(n2->value == 2);
     assert(n2->parent == n3);
     assert(n2->left == n1);
-    assert(n2->right == NULL);
+    assert(n2->right == NULL_TREE_NODE_PTR);
 
     assert(n3->value == 3);
     assert(n3->parent == n6);
@@ -512,28 +499,28 @@ static void test_build()
 
     assert(n4->value == 4);
     assert(n4->parent == n3);
-    assert(n4->left == NULL);
+    assert(n4->left == NULL_TREE_NODE_PTR);
     assert(n4->right == n5);
 
     assert(n5->value == 5);
     assert(n5->parent == n4);
-    assert(n5->left == NULL);
-    assert(n5->right == NULL);
+    assert(n5->left == NULL_TREE_NODE_PTR);
+    assert(n5->right == NULL_TREE_NODE_PTR);
 
     assert(n6->value == 6);
-    assert(n6->parent == NULL);
+    assert(n6->parent == NULL_TREE_NODE_PTR);
     assert(n6->left == n3);
     assert(n6->right == n7);
 
     assert(n7->value == 7);
     assert(n7->parent == n6);
-    assert(n7->left == NULL);
+    assert(n7->left == NULL_TREE_NODE_PTR);
     assert(n7->right == n8);
 
     assert(n8->value == 8);
     assert(n8->parent == n7);
-    assert(n8->left == NULL);
-    assert(n8->right == NULL);
+    assert(n8->left == NULL_TREE_NODE_PTR);
+    assert(n8->right == NULL_TREE_NODE_PTR);
 
     tree_free(r);
 
@@ -601,7 +588,7 @@ static void test_delete()
     assert(compare_tree(r, a) == 1);
     tree_free(a);
 
-    // case 3: right NULL
+    // case 3: right NULL_TREE_NODE_PTR
     r = bst_delete(r, r->left->right->left);
     a = tree_construct(
         "(10,"
@@ -621,7 +608,7 @@ static void test_delete()
     assert(compare_tree(r, a) == 1);
     tree_free(a);
 
-    // case 4: left NULL
+    // case 4: left NULL_TREE_NODE_PTR
     r = bst_delete(r, r->left->right->right);
     a = tree_construct(
         "(10,"
@@ -641,7 +628,7 @@ static void test_delete()
     assert(compare_tree(r, a) == 1);
     tree_free(a);
 
-    // case 5: right child's left NULL
+    // case 5: right child's left NULL_TREE_NODE_PTR
     r = bst_delete(r, r->right->left);
     a = tree_construct(
         "(10,"
@@ -661,7 +648,7 @@ static void test_delete()
     assert(compare_tree(r, a) == 1);
     tree_free(a);
 
-    // case 6: right child's left not NULL
+    // case 6: right child's left not NULL_TREE_NODE_PTR
     r = bst_delete(r, r->right->right);
     a = tree_construct(
         "(10,"
@@ -702,10 +689,10 @@ static void test_delete()
 
     tree_free(r);
 
-    // case 8: delete a NULL tree
-    r = NULL;
+    // case 8: delete a NULL_TREE_NODE_PTR tree
+    r = NULL_TREE_NODE_PTR;
     r = bst_delete(r, r);
-    assert(r == NULL);
+    assert(r == NULL_TREE_NODE_PTR);
 
     printf("\tPass\n");
 }
