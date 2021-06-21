@@ -1122,7 +1122,7 @@ static void TestParsingInstruction()
         assert(instruction_equal(&std_inst[i], &inst_parsed) == 1);
     }
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 static void TestParsingOperand()
@@ -1243,7 +1243,7 @@ static void TestParsingOperand()
         assert(operand_equal(&std_ods[i], &od_parsed) == 1);
     }
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 int main()
@@ -1371,7 +1371,7 @@ static void TestAddFunctionCallAndComputation()
     assert(cpu_read64bits_dram(va2pa(0x7ffffffee0f8)) == 0x000000000000abcd);
     assert(cpu_read64bits_dram(va2pa(0x7ffffffee0f0)) == 0x0000000000000000); // rsp
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 static void TestSumRecursiveCondition()
@@ -1449,7 +1449,7 @@ static void TestSumRecursiveCondition()
     assert(cpu_read64bits_dram(va2pa(0x7ffffffee228)) == 0x0000000000000006);
     assert(cpu_read64bits_dram(va2pa(0x7ffffffee220)) == 0x00007ffffffee310); // rsp
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 int main()

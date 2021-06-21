@@ -225,7 +225,7 @@ static void test_insert()
 
     trie_free(root);
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 int main()

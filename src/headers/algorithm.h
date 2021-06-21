@@ -125,11 +125,8 @@ typedef struct RB_NODE_STRUCT
     uint64_t value;
 } rb_node_t;
 
-// definition is in bst.c
-rb_node_t *NULL_TREE_NODE_PTR;
-
 rb_node_t *rb_insert(rb_node_t *root, uint64_t val);
-rb_node_t *rb_delete(rb_node_t *root, rb_node_t *target);
+rb_node_t *rb_delete(rb_node_t *root, uint64_t val);
 rb_node_t *rb_find(rb_node_t *root, uint64_t val);
 
 /*======================================*/
@@ -137,7 +134,7 @@ rb_node_t *rb_find(rb_node_t *root, uint64_t val);
 /*======================================*/
 
 rb_node_t *bst_insert(rb_node_t *root, uint64_t val);
-rb_node_t *bst_delete(rb_node_t *root, rb_node_t *target);
+rb_node_t *bst_delete(rb_node_t *root, uint64_t val);
 rb_node_t *bst_find(rb_node_t *root, uint64_t val);
 
 #endif
