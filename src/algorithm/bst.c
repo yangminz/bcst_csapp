@@ -6,18 +6,18 @@
 #include <headers/algorithm.h>
 #include <headers/common.h>
 
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted);
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced);
+rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack);
+rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack);
 
 // insert value to the tree
 // return the updated tree root node
 rb_node_t *bst_insert(rb_node_t *root, uint64_t val)
 {
-    rb_node_t *inserted;
-    return bst_insert_node(root, val, &inserted);
+    rb_node_t *redblack;
+    return bst_insert_node(root, val, &redblack);
 }
 
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
+rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack)
 {
     // create
     if (root == NULL)
@@ -31,7 +31,7 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
         root->value = val;
         root->color = COLOR_BLACK;
 
-        *inserted = root;
+        *redblack = root;
         return root;
     }
 
@@ -52,7 +52,7 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
                 n->left->value = val;
                 n->left->color = COLOR_RED;
                 
-                *inserted = n->left;
+                *redblack = n->left;
                 return root;
             }
             else
@@ -72,7 +72,7 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
                 n->right->value = val;
                 n->right->color = COLOR_RED;
 
-                *inserted = n->right;
+                *redblack = n->right;
                 return root;
             }
             else
@@ -83,25 +83,30 @@ rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted)
         else
         {
             // equals
-            printf("bst insertion: existing value {%lx} being tried to inserted.\n", val);
+            printf("bst insertion: existing value {%lx} being tried to redblack.\n", val);
             exit(0);
         }
     }
 
-    *inserted = NULL;
+    *redblack = NULL;
     return root;
 }
 
-rb_node_t *bst_delete(rb_node_t *root, rb_node_t *n)
+rb_node_t *bst_delete(rb_node_t *root, uint64_t val)
 {
-    rb_node_t *replaced;
-    return bst_delete_node(root, n, &replaced);
+    rb_node_t *redblack;
+    rb_node_t *n = bst_find(root, val);
+    return bst_delete_node(root, n, &redblack);
 }
 
 // delete the node
 // return the updated tree root node
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
+// this delete will try to fix the RBT with recoloring
+// and only double black NULL nodes need further fixing
+// record the parent node of this double black node
+rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 {
+    *redblack = NULL;
     if (n == NULL)
     {
         return NULL;
@@ -127,60 +132,77 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         is_n_root = 0;
     }
 
-    // the address of the to be deleted node
-    rb_node_t **par_child = NULL;
-    if (n == p->left)
-    {
-        par_child = &(p->left);
-    }
-    else
-    {
-        par_child = &(p->right);
-    }
+    int p_n_index = (n == n->parent->right);
 
     if (n->left == NULL && n->right == NULL)
     {
         //////////////////////////////////////////////
         // case 1: leaf node                        //
         //////////////////////////////////////////////
-
-        *par_child = NULL;
-        free(n);
+        n->parent->childs[p_n_index] = NULL;
         
         if (is_n_root == 1)
         {
+            // tree is empty now, no steps
             root = NULL;
         }
+        else if (n->color == COLOR_BLACK)
+        {
+            // for RB, we record the parent node of double black
+            *redblack = p;
+        }
+
+        // when this leaf node is black, DOUBLE BLACK for NULL
+        free(n);
     }
-    else if (n->left == NULL && n->right != NULL)
+    else if (n->left == NULL || n->right == NULL)
     {
         //////////////////////////////////////////////
         // case 2: one sub-tree is empty            //
-        // 2.1: left tree is empty                  //
         //////////////////////////////////////////////
 
-        // traplant the other sub-tree to the node to be deleted
-        *par_child = n->right;
-        n->right->parent = p;
-        free(n);
+        // transplant the not-empty sub-tree to the node to be deleted
+        // 0 - left; 1 - right
+        rb_node_t *c = n->childs[n->left == NULL];
 
-        if (is_n_root == 1)
+        /*  With one child is NULL, there are only 2 possibilities:
+            CASE 1 - this node is red, then its black height is 0
+                T0 --> # | (R, #, #)
+                impossible
+            CASE 2 - this node is black, then its black height is 1
+                T1 --> (B, #, T0) | (B, T0, #)
+
+                (B, #, (R, #, #))
+                (B, (R, #, #), #)
+                pass the black to the child, then done:
+                (B, #, #)
+         */
+#ifdef DEBUG_REDBLACK
+        assert(n->color == COLOR_BLACK);
+        assert(c->color == COLOR_RED);
+        assert(c->left == NULL);
+        assert(c->right == NULL);
+#endif
+        
+        // we do not manipulate the pointers here so we can remain the colors of rbt
+        n->value = c->value;
+        n->left = c->left;
+        n->right = c->right;
+        n->color = COLOR_BLACK; // should be still black
+
+        // this happens in BST only
+        // for RBT, they are all NULL
+        if (n->left != NULL)
         {
-            root = n->right;
+            n->left->parent = n;
         }
-    }
-    else if (n->left != NULL && n->right == NULL)
-    {
-        // 2.2 right tree is empty
 
-        *par_child = n->left;
-        n->left->parent = p;
-        free(n);
-
-        if (is_n_root == 1)
+        if (n->right != NULL)
         {
-            root = n->left;
+            n->right->parent = n;
         }
+        
+        free(c);
     }
     else if (n->right->left == NULL)
     {
@@ -189,19 +211,58 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         // 3.1: a simple remove will do the job     //
         //////////////////////////////////////////////
 
-        // traplant the left sub-tree
-        n->right->left = n->left;
-        n->left->parent = n->right;
+        // transplant the left sub-tree
+        rb_node_t *successor = n->right;
 
-        *par_child = n->right;
-        n->right->parent = p;
+        /*  successor is at most height 1: (successor, #, T0)
+            CASE 1 - successor red
+                (R, #, T0) --> (R, #, #), just delete it
+            CASE 2 - successor black
+                (B, #, T0) --> 
+                    (B, #, #)   NULL double black
+                    (B, #, (R, #, #))
+                        With successor (B, #, (R, #, #)), the node to be deleted n can be
 
-        free(n);
-
-        if (is_n_root == 1)
+                        CASE 1 - n red
+                            T1 = (R, T1, (B, #, (R, #, #)))
+                            after deletion, (B, T1, (R, #, #))
+                            recoloring, (R, T1, (B, #, #))
+                        CASE 2 - n black
+                            T2 = (B, T1, (B, #, (R, #, #)))
+                            after deletion, (DB, T1, (R, #, #))
+                            recoloring, (B, T1, (B, #, #))
+         */
+#ifdef DEBUG_REDBLACK
+        if (successor->color == COLOR_RED)
         {
-            root = n->right;
+            assert(successor->right == NULL);
         }
+        else if (successor->right != NULL)
+        {
+            assert(successor->right->color == COLOR_RED);
+            assert(successor->right->left == NULL);
+            assert(successor->right->right == NULL);
+        }
+#endif
+        if (successor->color == COLOR_BLACK && successor->right == NULL)
+        {
+            // successor (B, #, #)
+            *redblack = n;
+        }
+        
+        n->value = successor->value;
+
+        n->right = successor->right;
+        if (n->right != NULL)
+        {
+            n->right->parent = n;
+            // for red-black tree
+            // (B, #, (R, #, #)) --> (R, #, #) --> (B, #, #)
+            assert(n->right->color == COLOR_RED);
+            n->right->color = COLOR_BLACK;
+        }
+
+        free(successor);
     }
     else if (n->right->left != NULL)
     {
@@ -210,39 +271,46 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         // as root of sub-tree                      //
         //////////////////////////////////////////////
 
-        rb_node_t *min_upper = n->right;
-        while (min_upper->left != NULL)
+        rb_node_t *successor = n->right;
+        while (successor->left != NULL)
         {
-            min_upper = min_upper->left;
+            successor = successor->left;
         }
 
-        // float up min_upper
-        min_upper->parent->left = min_upper->right;
-        if (min_upper->right != NULL)
-        {
-            min_upper->right->parent = min_upper->parent;
-        }
-
-        // traplant
-        min_upper->right = n->right;
-        n->right->parent = min_upper;
-
-        min_upper->left = n->left;
-        n->left->parent = min_upper;
-
-        min_upper->parent = p;
+        // float up successor
+        n->value = successor->value;
         
-        *par_child = min_upper;
-        free(n);
+        /*  Same analysis, for (Successor, #, T0)
+                (R, #, T0) -->
+                    (R, #, #), just delete it
 
-        if (is_n_root == 1)
+                (B, #, T0) -->
+                    (B, #, #), NULL becomes double black
+                    (B, #, (R, #, #)), consider the parent:
+                        (R, (B, #, (R, #, #)), T1)
+                            free successor: (R, (R, #, #), T1); recoloring: (R, (B, #, #), T1)
+                        (B, (B, #, (R, #, #)), T1)
+                            free successor: (B, (R, #, #), T1); recoloring: (B, (B, #, #), T1)
+         */
+
+        successor->parent->left = successor->right;
+        if (successor->right != NULL)
         {
-            root = min_upper;
+            successor->right->parent = successor->parent;
+            // for RBT, only (B, #, (R, #, #))
+            // a simple recoloring will fix
+            successor->right->color = COLOR_BLACK;
         }
-    }
+        else if (successor->color == COLOR_BLACK)
+        {
+            // for RBT, only (B, #, #)
+            // and successor should not be root
+            *redblack = successor->parent;
+        }
 
-    // set the pointer to the address of the deleted node
-    rb_node_t *v = *par_child;
+        // when this successor is black, DOUBLE BLACK for successor
+        free(successor);
+    }
     
     if (is_n_root == 1)
     {
@@ -254,8 +322,6 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **replaced)
         }
     }
 
-    // which node takes the place of the deleted node in parent
-    *replaced = *par_child;
     return root;
 }
 
@@ -367,7 +433,7 @@ rb_node_t *tree_construct(char *str)
                 continue;
             }
 
-            printf("node %p:%lx is not having any unprocessed sub-tree\n  while %p:%lx is inserted into it.\n",
+            printf("node %p:%lx is not having any unprocessed sub-tree\n  while %p:%lx is redblack into it.\n",
                 p, p->value, t, t->value);
             exit(0);
         }
@@ -396,7 +462,7 @@ rb_node_t *tree_construct(char *str)
                 continue;
             }
 
-            printf("node %p:(%lx) is not having any unprocessed sub-tree\n  while NULL is inserted into it.\n",
+            printf("node %p:(%lx) is not having any unprocessed sub-tree\n  while NULL is redblack into it.\n",
                 stack[top], stack[top]->value);
             exit(0);
         }
@@ -411,6 +477,34 @@ rb_node_t *tree_construct(char *str)
     return NULL;
 }
 
+static void tree_print_dfs(rb_node_t *root)
+{
+    if (root == NULL)
+    {
+        printf("#");
+        return;
+    }
+
+    if (root->color == COLOR_RED)
+    {
+        printf("(\033[31m%lu\033[0m,", root->value);
+    }
+    else
+    {
+        printf("(%lu,", root->value);
+    }
+
+    tree_print_dfs(root->left);
+    printf(",");
+    tree_print_dfs(root->right);
+    printf(")");
+}
+
+void tree_print(rb_node_t *root)
+{
+    tree_print_dfs(root);
+    printf("\n");
+}
 
 #ifdef DEBUG_BST
 
@@ -537,12 +631,12 @@ static void test_build()
 
     tree_free(r);
 
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 static void test_delete()
 {
-    printf("Testing Binary Search tree insertion ...\n");
+    printf("Testing Binary Search tree deletion ...\n");
 
     rb_node_t *r = tree_construct(
         "(10,"
@@ -562,7 +656,7 @@ static void test_delete()
     rb_node_t *a;
 
     // case 1: leaf node - parent's left child
-    r = bst_delete(r, r->left->left->left);
+    r = bst_delete(r, 1);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -582,7 +676,7 @@ static void test_delete()
     tree_free(a);
 
     // case 2: leaf node - parent's right child
-    r = bst_delete(r, r->left->left->right);
+    r = bst_delete(r, 3);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -602,7 +696,7 @@ static void test_delete()
     tree_free(a);
 
     // case 3: right NULL
-    r = bst_delete(r, r->left->right->left);
+    r = bst_delete(r, 6);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -622,7 +716,7 @@ static void test_delete()
     tree_free(a);
 
     // case 4: left NULL
-    r = bst_delete(r, r->left->right->right);
+    r = bst_delete(r, 8);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -642,7 +736,7 @@ static void test_delete()
     tree_free(a);
 
     // case 5: right child's left NULL
-    r = bst_delete(r, r->right->left);
+    r = bst_delete(r, 12);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -662,7 +756,7 @@ static void test_delete()
     tree_free(a);
 
     // case 6: right child's left not NULL
-    r = bst_delete(r, r->right->right);
+    r = bst_delete(r, 19);
     a = tree_construct(
         "(10,"
             "(4,"
@@ -681,7 +775,7 @@ static void test_delete()
     tree_free(a);
 
     // case 7: delete root
-    r = bst_delete(r, r);
+    r = bst_delete(r, 10);
     a = tree_construct(
         "(11,"
             "(4,"
@@ -697,17 +791,13 @@ static void test_delete()
             ")"
         ")");
     int equal = compare_tree(r, a);
+
     assert(compare_tree(r, a) == 1);
     tree_free(a);
 
     tree_free(r);
 
-    // case 8: delete a NULL tree
-    r = NULL;
-    r = bst_delete(r, r);
-    assert(r == NULL);
-
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 static void test_insert()
@@ -734,8 +824,7 @@ static void test_insert()
     // free
     tree_free(r);
     tree_free(a);
-
-    printf("\tPass\n");
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 int main()
