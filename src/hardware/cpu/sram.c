@@ -73,7 +73,7 @@ uint8_t sram_cache_read(uint64_t paddr_value)
         .paddr_value = paddr_value,
     };
 
-    sram_cacheset_t *set = &cache.sets[paddr.CI];
+    sram_cacheset_t *set = &cache.sets[paddr.ci];
 
     // update LRU time
     sram_cacheline_t *victim = NULL;
@@ -106,7 +106,7 @@ uint8_t sram_cache_read(uint64_t paddr_value)
     {
         sram_cacheline_t *line = &(set->lines[i]);
 
-        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.CT)
+        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.ct)
         {
 #ifdef CACHE_SIMULATION_VERIFICATION
             sprintf(trace_buf, "hit");
@@ -118,7 +118,7 @@ uint8_t sram_cache_read(uint64_t paddr_value)
             line->time = 0;
 
             // find the byte
-            return line->block[paddr.CO];
+            return line->block[paddr.co];
         }
     }
 
@@ -142,9 +142,9 @@ uint8_t sram_cache_read(uint64_t paddr_value)
         invalid->time = 0;
 
         // update tag
-        invalid->tag = paddr.CT;
+        invalid->tag = paddr.ct;
 
-        return invalid->block[paddr.CO];
+        return invalid->block[paddr.co];
     }
 
     // no free cache line, use LRU policy
@@ -182,9 +182,9 @@ uint8_t sram_cache_read(uint64_t paddr_value)
     victim->time = 0;
 
     // update tag
-    victim->tag = paddr.CT;
+    victim->tag = paddr.ct;
 
-    return victim->block[paddr.CO];
+    return victim->block[paddr.co];
 }
 
 void sram_cache_write(uint64_t paddr_value, uint8_t data)
@@ -193,7 +193,7 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
         .paddr_value = paddr_value,
     };
 
-    sram_cacheset_t *set = &(cache.sets[paddr.CI]);
+    sram_cacheset_t *set = &(cache.sets[paddr.ci]);
 
     // update LRU time
     sram_cacheline_t *victim = NULL;
@@ -225,7 +225,7 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
     {
         sram_cacheline_t *line = &(set->lines[i]);
 
-        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.CT)
+        if (line->state != CACHE_LINE_INVALID && line->tag == paddr.ct)
         {
 #ifdef CACHE_SIMULATION_VERIFICATION
             // cache hit
@@ -242,7 +242,7 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
             line->time = 0;
 
             // find the byte
-            line->block[paddr.CO] = data;
+            line->block[paddr.co] = data;
 
             // update state
             line->state = CACHE_LINE_DIRTY;
@@ -276,10 +276,10 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
         invalid->time = 0;
 
         // update tag
-        invalid->tag = paddr.CT;
+        invalid->tag = paddr.ct;
 
         // write data
-        invalid->block[paddr.CO] = data;
+        invalid->block[paddr.co] = data;
 
         return;
     }
@@ -322,9 +322,9 @@ void sram_cache_write(uint64_t paddr_value, uint8_t data)
     victim->time = 0;
 
     // update tag
-    victim->tag = paddr.CT;
+    victim->tag = paddr.ct;
 
-    victim->block[paddr.CO] = data;
+    victim->block[paddr.co] = data;
 }
 
 #ifdef CACHE_SIMULATION_VERIFICATION

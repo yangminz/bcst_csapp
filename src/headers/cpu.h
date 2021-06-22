@@ -252,6 +252,18 @@ typedef union
 } cpu_pc_t;
 cpu_pc_t cpu_pc;
 
+// control registers
+typedef struct
+{
+    uint64_t cr0;
+    uint64_t cr1;
+    uint64_t cr2;
+    uint64_t cr3;   // should be a 40-bit PPN for PGD in DRAM
+                    // but we are using 48-bit virutal address on simulator's heap
+                    // (by malloc())
+} cpu_cr_t;
+cpu_cr_t cpu_controls;
+
 // move to common.h to be shared by linker
 // #define MAX_INSTRUCTION_CHAR 64
 #define NUM_INSTRTYPE 14

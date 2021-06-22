@@ -56,8 +56,8 @@ typedef union
             uint64_t paddr_value : PHYSICAL_ADDRESS_LENGTH;
             struct
             {
-                uint64_t PPO : PHYSICAL_PAGE_OFFSET_LENGTH;
-                uint64_t PPN : PHYSICAL_PAGE_NUMBER_LENGTH;
+                uint64_t ppo : PHYSICAL_PAGE_OFFSET_LENGTH;
+                uint64_t ppn : PHYSICAL_PAGE_NUMBER_LENGTH;
             };
         };
     };
@@ -70,11 +70,11 @@ typedef union
             uint64_t vaddr_value : VIRTUAL_ADDRESS_LENGTH;
             struct
             {
-                uint64_t VPO : VIRTUAL_PAGE_OFFSET_LENGTH;
-                uint64_t VPN3 : VIRTUAL_PAGE_NUMBER_LENGTH;
-                uint64_t VPN2 : VIRTUAL_PAGE_NUMBER_LENGTH;
-                uint64_t VPN1 : VIRTUAL_PAGE_NUMBER_LENGTH;
-                uint64_t VPN0 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t vpo  : VIRTUAL_PAGE_OFFSET_LENGTH;
+                uint64_t vpn4 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t vpn3 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t vpn2 : VIRTUAL_PAGE_NUMBER_LENGTH;
+                uint64_t vpn1 : VIRTUAL_PAGE_NUMBER_LENGTH;
             };
         };
     };
@@ -82,9 +82,9 @@ typedef union
     // sram cache: 52
     struct
     {
-        uint64_t CO : SRAM_CACHE_OFFSET_LENGTH;
-        uint64_t CI : SRAM_CACHE_INDEX_LENGTH;
-        uint64_t CT : SRAM_CACHE_TAG_LENGTH;
+        uint64_t co : SRAM_CACHE_OFFSET_LENGTH;
+        uint64_t ci : SRAM_CACHE_INDEX_LENGTH;
+        uint64_t ct : SRAM_CACHE_TAG_LENGTH;
     };
 } address_t;
 
