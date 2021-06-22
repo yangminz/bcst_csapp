@@ -473,7 +473,7 @@ rb_node_t *rb_delete(rb_node_t *root, uint64_t val)
 }
 
 // find the node owning the target value
-rb_node_t *rb_find_node(rb_node_t *root, uint64_t val)
+rb_node_t *rb_find(rb_node_t *root, uint64_t val)
 {
     return bst_find(root, val);
 }
@@ -551,7 +551,7 @@ static void test_delete()
             "(38,(25,#,#),(40,(38,#,#),#))"
         ")",
         "BRB##B##RB##BR###");
-    r = rb_delete(r, r->right);
+    r = rb_delete(r, 38);
     a = rb_tree_construct(
         "(10,"
             "(5,(2,#,#),(9,#,#)),"
@@ -569,7 +569,7 @@ static void test_delete()
             "(38,(25,#,#),(40,(35,#,(38,#,#)),(50,#,#)))"
         ")",
         "BBB##B##BB##RB#R##B##");
-    r = rb_delete(r, r->right);
+    r = rb_delete(r, 38);
     a = rb_tree_construct(
         "(10,"
             "(5,(2,#,#),(9,#,#)),"
@@ -593,7 +593,7 @@ static void test_delete()
             "(20,(15,#,#),(30,#,#))"
         ")",
         "BB##RB##B##");
-    r = rb_delete(r, r->right->left);
+    r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(10,"
             "(5,#,#),"
@@ -617,7 +617,7 @@ static void test_delete()
             "(20,(15,#,#),(30,#,#))"
         ")",
         "BBB##B##BB##B##");
-    r = rb_delete(r, r->right->left);
+    r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(10,"
             "(5,#,#),"
@@ -640,7 +640,7 @@ static void test_delete()
             "(20,(15,#,#),(30,(25,#,#),(40,#,#)))"
         ")",
         "BBB##B##BB##RB##B##");
-    r = rb_delete(r, r->right->left);
+    r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(10,"
             "(5,(1,#,#),(7,#,#)),"
@@ -660,7 +660,7 @@ static void test_delete()
             "(30,(25,(20,#,#),(28,#,#)),(40,#,#))"
         ")",
         "BBB##B##BRB##B##B##");
-    r = rb_delete(r, r->left->left);
+    r = rb_delete(r, 1);
     a = rb_tree_construct(
         "(25,"
             "(10,(5,#,(7,#,#)),(20,#,#)),"
@@ -685,7 +685,7 @@ static void test_delete()
         "BBB##B##BB##RB##B#R##");
     
     // delete 55 - sibling's 2 black
-    r = rb_delete(r, r->right->left);
+    r = rb_delete(r, 55);
     a = rb_tree_construct(
         "(50,"
             "(20,(15,#,#),(35,#,#)),"
@@ -700,7 +700,7 @@ static void test_delete()
     
     // delete 30 - root double black
     assert(r->left->value == 30);
-    r = rb_delete(r, r->left);
+    r = rb_delete(r, 30);
     a = rb_tree_construct(
         "(50,"
             "(35,(15,#,#),#),"
@@ -715,7 +715,7 @@ static void test_delete()
     
     // delete 90 - red node
     assert(r->right->right->right->value == 90);
-    r = rb_delete(r, r->right->right->right);
+    r = rb_delete(r, 90);
     a = rb_tree_construct(
         "(50,"
             "(35,(15,#,#),#),"
@@ -730,7 +730,7 @@ static void test_delete()
     
     // delete 80 - sibling black, near child red, far child black
     assert(r->right->right->value == 80);
-    r = rb_delete(r, r->right->right);
+    r = rb_delete(r, 80);
     a = rb_tree_construct(
         "(50,"
             "(35,(15,#,#),#),"
@@ -745,7 +745,7 @@ static void test_delete()
     
     // delete 50 - root, and having 1B 1R childs, no parent nor sibling
     assert(r->value == 50);
-    r = rb_delete(r, r);
+    r = rb_delete(r, 50);
     a = rb_tree_construct(
         "(65,"
             "(35,(15,#,#),#),"
@@ -757,8 +757,8 @@ static void test_delete()
     tree_free(a);
     
     // delete 35 - having red child
-    assert(r->left->right->value == 35);
-    r = rb_delete(r, r->left->right);
+    assert(r->left->value == 35);
+    r = rb_delete(r, 35);
     a = rb_tree_construct(
         "(35,"
             "(15,#,#),"
@@ -770,8 +770,8 @@ static void test_delete()
     tree_free(a);
     
     // delete 15 - far child red sibling black
-    assert(r->left->right->value == 35);
-    r = rb_delete(r, r->left->right);
+    assert(r->left->value == 35);
+    r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(68,(65,#,#),(70,#,#))",
         "BB##B##");
@@ -779,8 +779,8 @@ static void test_delete()
     tree_free(a);
     
     // delete 65 - both s-childs black
-    assert(r->left->right->value == 35);
-    r = rb_delete(r, r->left->right);
+    assert(r->left->value == 65);
+    r = rb_delete(r, 65);
     a = rb_tree_construct(
         "(68,#,(70,#,#))",
         "B#R##");

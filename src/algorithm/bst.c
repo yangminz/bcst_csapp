@@ -136,11 +136,10 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         // case 1: leaf node                        //
         //////////////////////////////////////////////
         n->parent->childs[p_n_index] = NULL;
+
+        // when this leaf node is black, DOUBLE BLACK for NULL
         free(n);
         
-        // for red-black tree, the current node is NULL
-        *redblack = NULL;
-
         if (is_n_root == 1)
         {
             // tree is empty now
@@ -156,12 +155,34 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         // transplant the not-empty sub-tree to the node to be deleted
         // 0 - left; 1 - right
         rb_node_t *c = n->childs[n->left == NULL];
+
+        /*  With one child is NULL, there are only 2 possibilities:
+            CASE 1 - this node is red, then its black height is 0
+                T0 --> # | (R, #, #)
+                impossible
+            CASE 2 - this node is black, then its black height is 1
+                T1 --> (B, #, T0) | (B, T0, #)
+
+                (B, #, (R, #, #))
+                (B, (R, #, #), #)
+                pass the black to the child, then done:
+                (B, #, #)
+         */
+#ifdef DEBUG_REDBLACK
+        assert(n->color == COLOR_BLACK);
+        assert(c->color == COLOR_RED);
+        assert(c->left == NULL);
+        assert(c->right == NULL);
+#endif
         
         // we do not manipulate the pointers here so we can remain the colors of rbt
         n->value = c->value;
         n->left = c->left;
         n->right = c->right;
+        n->color = COLOR_BLACK; // should be still black
 
+        // this happens in BST only
+        // for RBT, they are all NULL
         if (n->left != NULL)
         {
             n->left->parent = n;
@@ -183,6 +204,31 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 
         // transplant the left sub-tree
         rb_node_t *successor = n->right;
+
+        /*  successor is at most height 1
+            CASE 1 - successor red
+                (R, #, T0) and T0 != #, impossible
+            CASE 2 - successor black
+            (B, #, T0) and T0 != #
+                The only possibility is that (B, #, (R, #, #))
+
+            With successor (B, #, (R, #, #)), the node to be deleted n can be
+
+            CASE 1 - n red
+                T1 = (R, T1, (B, #, (R, #, #)))
+                after deletion, (B, T1, (R, #, #))
+                recoloring, (R, T1, (B, #, #))
+            CASE 2 - n black
+                T2 = (B, T1, (B, #, (R, #, #)))
+                after deletion, (DB, T1, (R, #, #))
+                recoloring, (B, T1, (B, #, #))
+         */
+#ifdef DEBUG_REDBLACK
+        assert(successor->color == COLOR_BLACK);
+        assert(successor->right->color == COLOR_RED);
+        assert(successor->right->left == NULL);
+        assert(successor->right->right == NULL);
+#endif
         
         n->value = successor->value;
 
@@ -190,8 +236,10 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         if (n->right != NULL)
         {
             n->right->parent = n;
+            // for red-black tree
+            n->right->color = COLOR_BLACK;
         }
-        
+
         free(successor);
     }
     else if (n->right->left != NULL)
@@ -216,6 +264,7 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
             successor->right->parent = successor->parent;
         }
 
+        // when this successor is black, DOUBLE BLACK for successor
         free(successor);
     }
     
