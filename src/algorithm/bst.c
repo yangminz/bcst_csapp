@@ -216,28 +216,39 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 
         /*  successor is at most height 1: (successor, #, T0)
             CASE 1 - successor red
-                (R, #, T0) and T0 != #, impossible
+                (R, #, T0) --> (R, #, #), just delete it
             CASE 2 - successor black
-                (B, #, T0) and T0 != #
-                The only possibility is that (B, #, (R, #, #))
+                (B, #, T0) --> 
+                    (B, #, #)   NULL double black
+                    (B, #, (R, #, #))
+                        With successor (B, #, (R, #, #)), the node to be deleted n can be
 
-            With successor (B, #, (R, #, #)), the node to be deleted n can be
-
-            CASE 1 - n red
-                T1 = (R, T1, (B, #, (R, #, #)))
-                after deletion, (B, T1, (R, #, #))
-                recoloring, (R, T1, (B, #, #))
-            CASE 2 - n black
-                T2 = (B, T1, (B, #, (R, #, #)))
-                after deletion, (DB, T1, (R, #, #))
-                recoloring, (B, T1, (B, #, #))
+                        CASE 1 - n red
+                            T1 = (R, T1, (B, #, (R, #, #)))
+                            after deletion, (B, T1, (R, #, #))
+                            recoloring, (R, T1, (B, #, #))
+                        CASE 2 - n black
+                            T2 = (B, T1, (B, #, (R, #, #)))
+                            after deletion, (DB, T1, (R, #, #))
+                            recoloring, (B, T1, (B, #, #))
          */
 #ifdef DEBUG_REDBLACK
-        assert(successor->color == COLOR_BLACK);
-        assert(successor->right->color == COLOR_RED);
-        assert(successor->right->left == NULL);
-        assert(successor->right->right == NULL);
+        if (successor->color == COLOR_RED)
+        {
+            assert(successor->right == NULL);
+        }
+        else if (successor->right != NULL)
+        {
+            assert(successor->right->color == COLOR_RED);
+            assert(successor->right->left == NULL);
+            assert(successor->right->right == NULL);
+        }
 #endif
+        if (successor->color == COLOR_BLACK && successor->right == NULL)
+        {
+            // successor (B, #, #)
+            *redblack = n;
+        }
         
         n->value = successor->value;
 
@@ -246,6 +257,8 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         {
             n->right->parent = n;
             // for red-black tree
+            // (B, #, (R, #, #)) --> (R, #, #) --> (B, #, #)
+            assert(n->right->color == COLOR_RED);
             n->right->color = COLOR_BLACK;
         }
 

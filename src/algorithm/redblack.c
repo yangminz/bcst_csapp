@@ -7,6 +7,7 @@
 
 // shared with BST
 rb_node_t *tree_construct(char *str);
+void tree_print(rb_node_t *root);
 void tree_free(rb_node_t *root);
 
 rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **inserted);
@@ -329,7 +330,14 @@ rb_node_t *rb_delete(rb_node_t *root, uint64_t val)
             if (s->color == COLOR_RED)
             {
                 // sibling red, adjust it as black
-                rb_rotate_node(s->childs[sb_index], s, p);
+                rb_node_t *subroot = rb_rotate_node(s->childs[sb_index], s, p);
+                if (root == p)
+                {
+                    // this rotation will update the root
+                    root = subroot;
+                    root->color = COLOR_BLACK;
+                }
+
                 s->color = COLOR_BLACK;
                 p->color = COLOR_RED;
 
@@ -352,6 +360,12 @@ rb_node_t *rb_delete(rb_node_t *root, uint64_t val)
                 rb_node_t *subroot = rb_rotate_node(n, s, p);
                 p->color = COLOR_BLACK;
 
+                if (root == p)
+                {
+                    // this rotation will update the root
+                    root = subroot;
+                    root->color = COLOR_BLACK;
+                }
                 return root;
             }
 
@@ -362,6 +376,12 @@ rb_node_t *rb_delete(rb_node_t *root, uint64_t val)
                 rb_node_t *subroot = rb_rotate_node(f, s, p);
                 f->color = p->color;
 
+                if (root == p)
+                {
+                    // this rotation will update the root
+                    root = subroot;
+                    root->color = COLOR_BLACK;
+                }
                 return root;
             }
 
@@ -383,7 +403,8 @@ rb_node_t *rb_delete(rb_node_t *root, uint64_t val)
                 }
                 else
                 {
-                    p = p->parent;
+                    db = p;
+                    p = db->parent;
                     continue;
                 }
             }
@@ -459,16 +480,230 @@ static int compare_tree(rb_node_t *a, rb_node_t *b)
 
 static void test_delete()
 {
-    printf("Testing Red-Black tree insertion ...\n");
+    printf("Testing Red-Black tree deletion ...\n");
 
     rb_node_t *r;
     rb_node_t *a;
+
+    // no double black
+    // bst case 2 - single child
+    r = rb_tree_construct(
+        "(10,"
+            "(5,#,(9,#,#)),"
+            "(15,#,#)"
+        ")",
+        "BB#R##B##");
+    r = rb_delete(r, 5);
+    a = rb_tree_construct(
+        "(10,"
+            "(9,#,#),"
+            "(15,#,#)"
+        ")",
+        "BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 2 - single child
+    r = rb_tree_construct(
+        "(10,"
+            "(5,(9,#,#),#),"
+            "(15,#,#)"
+        ")",
+        "BBR###B##");
+    r = rb_delete(r, 5);
+    a = rb_tree_construct(
+        "(10,"
+            "(9,#,#),"
+            "(15,#,#)"
+        ")",
+        "BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.1 - 2 childs
+    // x->right->left == NULL
+    // (R, T1, (B, #, (R, #, #)))
+    r = rb_tree_construct(
+        "(10,"
+            "(5,"   // delete - red
+                "(2,#,#),"    // T1
+                "(6,#,(7,#,#))"  // successor
+            "),"
+            "(15,#,#)"  // T1
+        ")",
+        "BRB##B#R##B##");
+    r = rb_delete(r, 5);
+    a = rb_tree_construct(
+        "(10,"
+            "(6,"   // T1
+                "(2,#,#),"    // T1
+                "(7,#,#)"
+            "),"
+            "(15,#,#)"  // T1
+        ")",
+        "BRB##B##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.1 - 2 childs
+    // x->right->left == NULL
+    // (B, T1, (B, #, (R, #, #)))
+    r = rb_tree_construct(
+        "(10,"
+            "(5,"   // delete - black
+                "(2,#,#),"    // T1
+                "(6,#,(7,#,#))"  // successor
+            "),"
+            "(15,(12,#,#),(16,#,#))"  // T2
+        ")",
+        "BBB##B#R##BB##B##");
+    r = rb_delete(r, 5);
+    a = rb_tree_construct(
+        "(10,"
+            "(6,"   // T2
+                "(2,#,#),"    // T1
+                "(7,#,#)"
+            "),"
+            "(15,(12,#,#),(16,#,#))"  // T2
+        ")",
+        "BBB##B##BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.1 - 2 childs
+    // (B, T0, (R, #, #))
+    r = rb_tree_construct(
+        "(10,"
+            "(5,"   // delete - black
+                "(2,#,#),"    // T0
+                "(7,#,#)"  // successor
+            "),"
+            "(15,#,#)"  // T1
+        ")",
+        "BBR##R##B##");
+    r = rb_delete(r, 5);
+    a = rb_tree_construct(
+        "(10,"
+            "(7,"   // delete - black
+                "(2,#,#),"    // T0
+                "#"
+            "),"
+            "(15,#,#)"  // T1
+        ")",
+        "BBR###B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.2 - 2 childs
+    // successor (R, #, #)
+    r = rb_tree_construct(
+        "(4,"
+            "(2,(1,#,#),(3,#,#)),"
+            "(6,"   // delete
+                "(5,#,#),"
+                "(10,"
+                    "(8,(7,#,#),(9,#,#)),"  // 7 successor
+                    "(11,#,#)"
+                "),"
+            ")"
+        ")",
+        "BBB##B##BB##RBR##R##B##");
+    r = rb_delete(r, 6);
+    a = rb_tree_construct(
+        "(4,"
+            "(2,(1,#,#),(3,#,#)),"
+            "(7,"   // delete
+                "(5,#,#),"
+                "(10,"
+                    "(8,#,(9,#,#)),"  // 7 successor
+                    "(11,#,#)"
+                "),"
+            ")"
+        ")",
+        "BBB##B##BB##RB#R##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.2 - 2 childs
+    // successor (B, #, (R, #, #)), parent red
+    r = rb_tree_construct(
+        "(8,"
+            "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#))),"  // T3
+            "(12,"   // delete
+                "(10,(9,#,#),(11,#,#)),"
+                "(17,"
+                    "(15,(13,#,(14,#,#)),(16,#,#)),"  // 13 successor
+                    "(19,(18,#,#),(20,#,#))"
+                "),"
+            ")"
+        ")",
+        "BBBB##B##BB##B##BBB##B##BRB#R##B##RB##B##");
+    r = rb_delete(r, 12);
+    a = rb_tree_construct(
+        "(8,"
+            "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#))),"  // T3
+            "(13,"   // successor
+                "(10,(9,#,#),(11,#,#)),"
+                "(17,"
+                    "(15,(14,#,#),(16,#,#)),"  // recoloring
+                    "(19,(18,#,#),(20,#,#))"
+                "),"
+            ")"
+        ")",
+        "BBBB##B##BB##B##BBB##B##BRB##B##RB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
+
+    // no double black
+    // bst case 3.2 - 2 childs
+    // successor (B, #, (R, #, #)), parent black
+    r = rb_tree_construct(
+        "(8,"
+            "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#))),"  // T3
+            "(12,"   // delete
+                "(10,(9,#,#),(11,#,#)),"
+                "(17,"
+                    "(15,(13,#,(14,#,#)),(16,#,#)),"  // 13 successor
+                    "(19,(18,#,#),(20,#,#))"
+                "),"
+            ")"
+        ")",
+        "BBBB##B##BB##B##BBB##B##RBB#R##B##BB##B##");
+    r = rb_delete(r, 12);
+    a = rb_tree_construct(
+        "(8,"
+            "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#))),"  // T3
+            "(13,"   // successor
+                "(10,(9,#,#),(11,#,#)),"
+                "(17,"
+                    "(15,(14,#,#),(16,#,#)),"  // recoloring
+                    "(19,(18,#,#),(20,#,#))"
+                "),"
+            ")"
+        ")",
+        "BBBB##B##BB##B##BBB##B##RBB##B##BB##B##");
+    assert(compare_tree(r, a) == 1);
+    tree_free(r);
+    tree_free(a);
 
     // delete red node
     r = rb_tree_construct(
         "(10,"
             "(5,(2,#,#),(9,#,#)),"
-            "(38,(25,#,#),(40,(38,#,#),#))"
+            "(30,(25,#,#),(40,(38,#,#),#))"
         ")",
         "BRB##B##RB##BR###");
     r = rb_delete(r, 38);
@@ -486,10 +721,10 @@ static void test_delete()
     r = rb_tree_construct(
         "(10,"
             "(5,(2,#,#),(9,#,#)),"
-            "(38,(25,#,#),(40,(35,#,(38,#,#)),(50,#,#)))"
+            "(30,(25,#,#),(40,(35,#,(38,#,#)),(50,#,#)))"
         ")",
         "BBB##B##BB##RB#R##B##");
-    r = rb_delete(r, 38);
+    r = rb_delete(r, 30);
     a = rb_tree_construct(
         "(10,"
             "(5,(2,#,#),(9,#,#)),"
@@ -540,10 +775,10 @@ static void test_delete()
     r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(10,"
-            "(5,#,#),"
+            "(5,(1,#,#),(7,#,#)),"
             "(20,#,(30,#,#))"
         ")",
-        "BB##B#R##");
+        "BRB##B##B#R##");
     assert(compare_tree(r, a) == 1);
     tree_free(r);
     tree_free(a);
@@ -603,7 +838,7 @@ static void test_delete()
             ")"
         ")",
         "BBB##B##BB##RB##B#R##");
-    
+
     // delete 55 - sibling's 2 black
     r = rb_delete(r, 55);
     a = rb_tree_construct(
@@ -614,13 +849,13 @@ static void test_delete()
                 "(80,#,(90,#,#))"
             ")"
         ")",
-        "BBB##B##B#R##B#R##");
+        "BBB##B##BB#R##B#R##");
     assert(compare_tree(r, a) == 1);
     tree_free(a);
-    
-    // delete 30 - root double black
-    assert(r->left->value == 30);
-    r = rb_delete(r, 30);
+
+    // delete 20 - root double black
+    assert(r->left->value == 20);
+    r = rb_delete(r, 20);
     a = rb_tree_construct(
         "(50,"
             "(35,(15,#,#),#),"
@@ -680,7 +915,7 @@ static void test_delete()
     assert(r->left->value == 35);
     r = rb_delete(r, 35);
     a = rb_tree_construct(
-        "(35,"
+        "(65,"
             "(15,#,#),"
             "(68,#,(70,#,#))"
             ")"
@@ -690,7 +925,7 @@ static void test_delete()
     tree_free(a);
     
     // delete 15 - far child red sibling black
-    assert(r->left->value == 35);
+    assert(r->left->value == 15);
     r = rb_delete(r, 15);
     a = rb_tree_construct(
         "(68,(65,#,#),(70,#,#))",
