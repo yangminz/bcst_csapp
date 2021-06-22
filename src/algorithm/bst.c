@@ -101,8 +101,12 @@ rb_node_t *bst_delete(rb_node_t *root, uint64_t val)
 
 // delete the node
 // return the updated tree root node
+// this delete will try to fix the RBT with recoloring
+// and only double black NULL nodes need further fixing
+// record the parent node of this double black node
 rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 {
+    *redblack = NULL;
     if (n == NULL)
     {
         return NULL;
@@ -136,15 +140,20 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         // case 1: leaf node                        //
         //////////////////////////////////////////////
         n->parent->childs[p_n_index] = NULL;
-
-        // when this leaf node is black, DOUBLE BLACK for NULL
-        free(n);
         
         if (is_n_root == 1)
         {
-            // tree is empty now
+            // tree is empty now, no steps
             root = NULL;
         }
+        else if (n->color == COLOR_BLACK)
+        {
+            // for RB, we record the parent node of double black
+            *redblack = p;
+        }
+
+        // when this leaf node is black, DOUBLE BLACK for NULL
+        free(n);
     }
     else if (n->left == NULL || n->right == NULL)
     {
@@ -205,11 +214,11 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
         // transplant the left sub-tree
         rb_node_t *successor = n->right;
 
-        /*  successor is at most height 1
+        /*  successor is at most height 1: (successor, #, T0)
             CASE 1 - successor red
                 (R, #, T0) and T0 != #, impossible
             CASE 2 - successor black
-            (B, #, T0) and T0 != #
+                (B, #, T0) and T0 != #
                 The only possibility is that (B, #, (R, #, #))
 
             With successor (B, #, (R, #, #)), the node to be deleted n can be
@@ -257,11 +266,33 @@ rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
 
         // float up successor
         n->value = successor->value;
+        
+        /*  Same analysis, for (Successor, #, T0)
+                (R, #, T0) -->
+                    (R, #, #), just delete it
+
+                (B, #, T0) -->
+                    (B, #, #), NULL becomes double black
+                    (B, #, (R, #, #)), consider the parent:
+                        (R, (B, #, (R, #, #)), T1)
+                            free successor: (R, (R, #, #), T1); recoloring: (R, (B, #, #), T1)
+                        (B, (B, #, (R, #, #)), T1)
+                            free successor: (B, (R, #, #), T1); recoloring: (B, (B, #, #), T1)
+         */
 
         successor->parent->left = successor->right;
         if (successor->right != NULL)
         {
             successor->right->parent = successor->parent;
+            // for RBT, only (B, #, (R, #, #))
+            // a simple recoloring will fix
+            successor->right->color = COLOR_BLACK;
+        }
+        else if (successor->color == COLOR_BLACK)
+        {
+            // for RBT, only (B, #, #)
+            // and successor should not be root
+            *redblack = successor->parent;
         }
 
         // when this successor is black, DOUBLE BLACK for successor
