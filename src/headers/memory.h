@@ -23,8 +23,10 @@
 // in this simulator, there are 4 + 6 + 6 = 16 bit physical adderss
 // then the physical space is (1 << 16) = 65536
 // total 16 physical memory
-#define PHYSICAL_MEMORY_SPACE   65536
-#define MAX_INDEX_PHYSICAL_PAGE 15
+#define PHYSICAL_MEMORY_SPACE   (65536)
+#define MAX_INDEX_PHYSICAL_PAGE (15)
+
+#define PAGE_TABLE_ENTRY_NUM    (512)
 
 // physical memory
 // 16 physical memory pages
