@@ -18,6 +18,7 @@
 #include "headers/address.h"
 
 static uint64_t page_walk(uint64_t vaddr_value);
+static void page_fault_handler(pte4_t *pte, address_t vaddr);
 
 // consider this function va2pa as functional
 uint64_t va2pa(uint64_t vaddr)
@@ -73,6 +74,12 @@ static uint64_t page_walk(uint64_t vaddr_value)
 #ifdef DBUEG_PAGE_WALK
                     printf("page walk level 4: pt[%lx].present == 0\n\tmalloc new page table for it\n", vaddr.vpn1);
 #endif
+                    // search paddr from main memory and disk
+                    // TODO: raise exception 14 (page fault) here
+                    // switch privilege from user mode (ring 3) to kernel mode (ring 0)
+                    page_fault_handler(&pt[vaddr.vpn4], vaddr);
+
+                    /*
                     pte4_t *pt = malloc(page_table_size);
                     memset(pt, 0, page_table_size);
 
@@ -83,6 +90,7 @@ static uint64_t page_walk(uint64_t vaddr_value)
                     // TODO: page fault here
                     // map the physical page and the virtual page
                     exit(0);
+                    */
                 }
             }
             else
@@ -138,4 +146,42 @@ static uint64_t page_walk(uint64_t vaddr_value)
         // map the physical page and the virtual page
         exit(0);
     }
+}
+
+static void page_fault_handler(pte4_t *pte, address_t vaddr)
+{
+    // select one victim physical page to swap to disk
+
+    // this is the selected ppn for vaddr
+    int ppn = -1;
+
+    // 1. try to request one free physical page from DRAM
+    // kernel's responsibility
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (page_map[i].pte4->present == 0)
+        {
+            printf("PageFault: use free ppn %d\n", i);
+
+            // found i as free ppn
+            ppn = i;
+
+            page_map[ppn].allocated = 1;    // allocate for vaddr
+            page_map[ppn].dirty = 0;    // allocated as clean
+            page_map[ppn].time = 0;    // most recently used physical page
+            page_map[ppn].pte4 = pte;
+
+            pte->present = 1;
+            pte->ppn = ppn;
+            pte->dirty = 0;
+
+            return;
+        }
+    }
+
+    // 2. no free physical page: select one clean page (LRU) and overwrite
+    // in this case, there is no DRAM - DISK transaction
+
+    // 3. no free nor clean physical page: select one LRU victim
+    // write back (swap out) the DIRTY victim to disk
 }

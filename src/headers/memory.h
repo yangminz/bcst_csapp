@@ -25,6 +25,7 @@
 // total 16 physical memory
 #define PHYSICAL_MEMORY_SPACE   (65536)
 #define MAX_INDEX_PHYSICAL_PAGE (15)
+#define MAX_NUM_PHYSICAL_PAGE (16)    // 1 + MAX_INDEX_PHYSICAL_PAGE
 
 #define PAGE_TABLE_ENTRY_NUM    (512)
 
@@ -77,7 +78,7 @@ typedef union
 
     struct
     {
-        uint64_t present            : 1;
+        uint64_t present            : 1;    // present = 1
         uint64_t readonly           : 1;
         uint64_t usermode           : 1;
         uint64_t writethough        : 1;
@@ -94,10 +95,24 @@ typedef union
 
     struct
     {
-        uint64_t _present           : 1;
+        uint64_t _present           : 1;    // present = 0
         uint64_t swap_id            : 63;   // disk address
     };
 } pte4_t;   // PT
+
+// physical page descriptor
+typedef struct
+{
+    int allocated;
+    int dirty;
+    int time;   // LRU cache
+
+    pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
+} pd_t;
+
+// for each pagable (swappable) physical page
+// create one reversed mapping
+pd_t page_map[MAX_NUM_PHYSICAL_PAGE]; 
 
 /*======================================*/
 /*      memory R/W                      */
