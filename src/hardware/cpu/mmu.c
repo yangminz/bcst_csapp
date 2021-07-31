@@ -20,6 +20,9 @@
 static uint64_t page_walk(uint64_t vaddr_value);
 static void page_fault_handler(pte4_t *pte, address_t vaddr);
 
+int swap_in(uint64_t daddr, uint64_t ppn);
+int swap_out(uint64_t daddr, uint64_t ppn);
+
 // consider this function va2pa as functional
 uint64_t va2pa(uint64_t vaddr)
 {
@@ -151,9 +154,12 @@ static uint64_t page_walk(uint64_t vaddr_value)
 static void page_fault_handler(pte4_t *pte, address_t vaddr)
 {
     // select one victim physical page to swap to disk
+    assert(pte->present == 0);
 
     // this is the selected ppn for vaddr
     int ppn = -1;
+    pte4_t *victim = NULL;
+    uint64_t daddr = 0xffffffffffffffff;
 
     // 1. try to request one free physical page from DRAM
     // kernel's responsibility
@@ -181,7 +187,86 @@ static void page_fault_handler(pte4_t *pte, address_t vaddr)
 
     // 2. no free physical page: select one clean page (LRU) and overwrite
     // in this case, there is no DRAM - DISK transaction
+    int lru_ppn = -1;
+    int lru_time = -1;
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (page_map[i].dirty == 0 && 
+            lru_time < page_map[i].time)
+        {
+            lru_time = page_map[i].time;
+            lru_ppn = i;
+        }
+    }
+    
+    if (-1 != lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE)
+    {
+        ppn = lru_ppn;
+
+        // reversed mapping
+        victim = page_map[ppn].pte4;
+
+        victim->pte_value = 0;
+        victim->present = 0;
+        victim->daddr = page_map[ppn].daddr;
+
+        // load page from disk to physical memory first
+        daddr = pte->daddr;
+        swap_in(pte->daddr, ppn);
+
+        pte->pte_value = 0;
+        pte->present = 1;
+        pte->ppn = ppn;
+        pte->dirty = 0;
+
+        page_map[ppn].allocated = 1;
+        page_map[ppn].time = 0;
+        page_map[ppn].dirty = 0;
+        page_map[ppn].pte4 = pte;
+        page_map[ppn].daddr = daddr;
+
+        return;
+    }
 
     // 3. no free nor clean physical page: select one LRU victim
     // write back (swap out) the DIRTY victim to disk
+    lru_ppn = -1;
+    lru_time = -1;
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (lru_time < page_map[i].time)
+        {
+            lru_time = page_map[i].time;
+            lru_ppn = i;
+        }
+    }
+
+    assert(0 <= lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE);
+
+    ppn = lru_ppn;
+
+    // reversed mapping
+    victim = page_map[ppn].pte4;
+
+    // write back
+    swap_out(page_map[ppn].daddr, ppn);
+
+    victim->pte_value = 0;
+    victim->present = 0;
+    victim->daddr = page_map[ppn].daddr;
+
+    // load page from disk to physical memory first
+    daddr = pte->daddr;
+    swap_in(daddr, ppn);
+
+    pte->pte_value = 0;
+    pte->present = 1;
+    pte->ppn = ppn;
+    pte->dirty = 0;
+
+    page_map[ppn].allocated = 1;
+    page_map[ppn].time = 0;
+    page_map[ppn].dirty = 0;
+    page_map[ppn].pte4 = pte;
+    page_map[ppn].daddr = daddr;
 }

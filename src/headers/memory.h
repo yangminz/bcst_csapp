@@ -67,7 +67,7 @@ typedef union
     struct
     {
         uint64_t _present           : 1;
-        uint64_t swap_id            : 63;   // disk address
+        uint64_t daddr            : 63;   // disk address
     };
 } pte123_t; // PGD, PUD, PMD
 
@@ -96,7 +96,7 @@ typedef union
     struct
     {
         uint64_t _present           : 1;    // present = 0
-        uint64_t swap_id            : 63;   // disk address
+        uint64_t daddr            : 63;   // disk address
     };
 } pte4_t;   // PT
 
@@ -107,7 +107,11 @@ typedef struct
     int dirty;
     int time;   // LRU cache
 
+    // real world: mapping to anon_vma or address_space
+    // we simply the situation here
+    // TODO: if multiple processes are using this page? E.g. Shared library
     pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
+    uint64_t daddr;   // binding the revesed mapping with mapping to disk
 } pd_t;
 
 // for each pagable (swappable) physical page
