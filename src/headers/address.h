@@ -32,10 +32,13 @@
 #define VIRTUAL_PAGE_NUMBER_LENGTH (9)  // 9 + 9 + 9 + 9 = 36
 #define VIRTUAL_ADDRESS_LENGTH (48)
 
+#define TLB_CACHE_OFFSET_LENGTH (12)
+#define TLB_CACHE_INDEX_LENGTH (4)
+#define TLB_CACHE_TAG_LENGTH (32)
 
 /*
 +--------+--------+--------+--------+---------------+
-|  VPN3  |  VPN2  |  VPN1  |  VPN0  |               |
+|  VPN1  |  VPN2  |  VPN3  |  VPN4  |               |
 +--------+--------+--------+-+------+      VPO      |
 |    TLBT                    | TLBI |               |
 +---------------+------------+------+---------------+
@@ -62,6 +65,14 @@ typedef union
         };
     };
 
+    // sram cache: 52
+    struct
+    {
+        uint64_t co : SRAM_CACHE_OFFSET_LENGTH;
+        uint64_t ci : SRAM_CACHE_INDEX_LENGTH;
+        uint64_t ct : SRAM_CACHE_TAG_LENGTH;
+    };
+
     // virtual address: 48    
     struct
     {
@@ -79,12 +90,12 @@ typedef union
         };
     };
 
-    // sram cache: 52
+    // TLB cache: 48
     struct
     {
-        uint64_t co : SRAM_CACHE_OFFSET_LENGTH;
-        uint64_t ci : SRAM_CACHE_INDEX_LENGTH;
-        uint64_t ct : SRAM_CACHE_TAG_LENGTH;
+        uint64_t tlbo : TLB_CACHE_OFFSET_LENGTH;   // virtual page offset
+        uint64_t tlbi : TLB_CACHE_INDEX_LENGTH;    // TLB set index
+        uint64_t tlbt : TLB_CACHE_TAG_LENGTH;      // TLB line tag
     };
 } address_t;
 
