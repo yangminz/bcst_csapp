@@ -289,6 +289,16 @@ def build(key):
                     "-o", "./bin/bst"
                 ],
             ],
+        "malloc" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_MALLOC",
+                    "./src/mains/mem_alloc.c",
+                    "-o", "./bin/malloc"
+                ],
+            ],
     }
 
     if not key in gcc_map:
@@ -308,6 +318,7 @@ def run(key):
         "rb" : ["./bin/rb"],
         "trie" : ["./bin/trie"],
         "bst" : ["./bin/bst"],
+        "malloc" : ["./bin/malloc"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
