@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <signal.h>
 #include "headers/algorithm.h"
 
 int heap_init();
@@ -58,6 +59,22 @@ static uint64_t get_footer_addr(uint64_t vaddr);
 
 static uint64_t get_nextheader(uint64_t vaddr);
 static uint64_t get_prevheader(uint64_t vaddr);
+
+static void print_heap();
+
+
+#ifdef DEBUG_MALLOC
+#define MAX_LINE_MESSAGE (5)
+char debug_message[1000];
+
+void on_sigabrt(int signum)
+{
+    // like a try-catch for the asserts
+    printf("%s\n", debug_message);
+    print_heap();
+}
+
+#endif
 
 // Round up to next multiple of n:
 // if (x == k * n)
@@ -332,6 +349,7 @@ static uint64_t get_prevheader(uint64_t vaddr)
     uint64_t prev_header_vaddr = header_vaddr - prev_blocksize;
     assert(get_firstblock() <= prev_header_vaddr &&
         prev_header_vaddr <= get_lastblock());
+    assert(*(uint32_t *)&heap[prev_header_vaddr] == *(uint32_t *)&heap[prev_footer_vaddr]);
     
     return prev_header_vaddr;
 }
@@ -350,57 +368,36 @@ static uint32_t get_prevfree(uint64_t header_vaddr)
     return *(uint32_t *)&heap[header_vaddr + 4];
 }
 
-static int check_block(uint64_t header_vaddr)
+static void check_heap_blocks()
 {
-    // rule 1: block[0] ==> A/F
-    // rule 2: block[-1] ==> A/F
-    // rule 3: block[i] == A ==> block[i-1] == A/F && block[i+1] == A/F
-    // rule 4: block[i] == F ==> block[i-1] == A && block[i+1] == A
-    // these 4 rules ensures that
-    // adjacent free blocks are always merged together
-    // henceforth external fragmentation are minimized
+    int linear_free_counter = 0;
+    uint64_t p = get_firstblock();
+    while(p != 0 && p <= get_lastblock())
+    {
+        assert(p % 8 == 4);
+        assert(get_firstblock() <= p && p <= get_lastblock());
 
-    assert(header_vaddr % 8 == 4);
-    
-    if (get_allocated(header_vaddr) == 1)
-    {
-        // applies rule 3
-        return 1;
-    }
+        assert(*(uint32_t *)&heap[p] == *(uint32_t *)&heap[get_footer_addr(p)]);
 
-    uint32_t prev_allocated = 1;
-    uint32_t next_allocated = 1;
-    
-    if (header_vaddr == heap_start_vaddr)
-    {
-        // the first block. there is no prev block
-        // applies rule 1
-        prev_allocated = 1;
-    }
-    else
-    {
-        prev_allocated = get_allocated(get_prevheader(header_vaddr));
-    }
+        // rule 1: block[0] ==> A/F
+        // rule 2: block[-1] ==> A/F
+        // rule 3: block[i] == A ==> block[i-1] == A/F && block[i+1] == A/F
+        // rule 4: block[i] == F ==> block[i-1] == A && block[i+1] == A
+        // these 4 rules ensures that
+        // adjacent free blocks are always merged together
+        // henceforth external fragmentation are minimized
+        if (get_allocated(p) == 0)
+        {
+            linear_free_counter += 1;
+        }
+        else
+        {
+            linear_free_counter = 0;
+        }
+        assert(linear_free_counter <= 1);
 
-    if (is_lastblock(header_vaddr) == 1)
-    {
-        // the last block. there is no next block
-        // applies rule 2
-        next_allocated = 1;
+        p = get_nextheader(p);
     }
-    else
-    {
-        next_allocated = get_allocated(get_nextheader(header_vaddr));
-    }
-
-    // applies rule 4
-    // current block is free
-    if (prev_allocated == 1 && next_allocated == 1)
-    {
-        return 1;
-    }
-
-    return 0;
 }
 
 int heap_init()
@@ -440,6 +437,11 @@ int heap_init()
     uint64_t first_footer = get_footer_addr(first_header);
     set_blocksize(first_footer, 4096 - 4 - 8 - 4);
     set_allocated(first_footer, 0);
+
+#ifdef DEBUG_MALLOC
+    // like a try-catch
+    signal(SIGABRT, &on_sigabrt);
+#endif
 
     return 0;
 }
@@ -486,6 +488,9 @@ static uint64_t try_alloc(uint64_t block_vaddr, uint32_t request_blocksize)
             // no need to split this block
             // set_blocksize(b, request_blocksize);
             set_allocated(b, 1);
+            uint64_t b_footer = get_footer_addr(b);
+            set_allocated(b_footer, 1);
+
             return get_payload_addr(b);
         }
     }
@@ -497,6 +502,10 @@ static uint64_t try_alloc(uint64_t block_vaddr, uint32_t request_blocksize)
 // return - the virtual address of payload
 uint64_t mem_alloc(uint32_t size)
 {
+#ifdef DEBUG_MALLOC
+    sprintf(debug_message, "mem_malloc(%u)", size);
+#endif
+
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
     uint64_t payload_vaddr = 0;    
@@ -583,6 +592,15 @@ uint64_t mem_alloc(uint32_t size)
 
 void mem_free(uint64_t payload_vaddr)
 {
+#ifdef DEBUG_MALLOC
+    sprintf(debug_message, "mem_free(%lu)", payload_vaddr);
+#endif
+
+    if (payload_vaddr == 0)
+    {
+        return;
+    }
+
     assert(get_firstblock() < payload_vaddr && payload_vaddr < get_epilogue());
     assert((payload_vaddr & 0x7) == 0x0);
 
@@ -631,7 +649,7 @@ void mem_free(uint64_t payload_vaddr)
         set_blocksize(prev, req_blocksize + prev_blocksize);
 
         set_allocated(req_footer, 0);
-        set_blocksize(req_footer, req_blocksize + next_blocksize);
+        set_blocksize(req_footer, req_blocksize + prev_blocksize);
     }
     else if (next_allocated == 0 && prev_allocated == 0)
     {
@@ -858,11 +876,12 @@ static void test_get_next_prev()
         assert(h == collection_headeraddr[i]);
         assert(get_blocksize(h) == collection_blocksize[i]);
         assert(get_allocated(h) == collection_allocated[i]);
-        assert(check_block(h) == 1);
         
         h = get_nextheader(h);
         i += 1;
     }
+
+    check_heap_blocks();
 
     // check get_prev
     h = get_lastblock();
@@ -886,41 +905,38 @@ static void test_implicit_list()
     printf("Testing implicit list malloc & free ...\n");
 
     heap_init();
+    check_heap_blocks();
 
     srand(123456);
     
     // collection for the pointers
     linkedlist_t *ptrs = linkedlist_construct();
 
-    for (int i = 0; i < 10; ++ i)
+    for (int i = 0; i < 100000; ++ i)
     {
         uint32_t size = rand() % 1024 + 1;  // a non zero value
 
         if ((rand() & 0x1) == 0)
         {
             // malloc
-            printf("\t[%d]\tmalloc(%u)", i, size);
             uint64_t p = mem_alloc(size);
-            ptrs = linkedlist_add(ptrs, p);
-            printf("\t%lu\n", p);
+
+            if (p != 0)
+            {
+                ptrs = linkedlist_add(ptrs, p);
+            }
         }
         else if (ptrs->count != 0)
         {
             // free
             // randomly select one to free
-            linkedlist_node_t *t = linkedlist_get(ptrs, rand() % ptrs->count);
-            printf("\t[%d]\tfree(%lu)\n", i, t->value);
+            int random_index = rand() % ptrs->count;
+            linkedlist_node_t *t = linkedlist_index(ptrs, random_index);
             mem_free(t->value);
             linkedlist_delete(ptrs, t);
         }
 
-        print_heap();
-        printf("(");
-        for (int k = 0; k < ptrs->count; ++ k)
-        {
-            printf("%lu, ", linkedlist_next(ptrs)->value);
-        }
-        printf("\b\b)\n");
+        check_heap_blocks();
     }
 
     printf("\033[32;1m\tPass\033[0m\n");
