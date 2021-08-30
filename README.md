@@ -4,6 +4,18 @@
 
 This repository is a part of BCST project. BCST project contains the source code and videos produced by yangminz. The videos are published publicly on the bilibili by [yaaangmin](https://space.bilibili.com/4564101). The source code are published on github [yangminz](https://github.com/yangminz). Any repository and video under BCST project is exclusively owned by yangminz and shall not be used for commercial and profitting purpose without yangminz's permission.
 
+**Build**
+
+```bash
+[python3 | py3 | <nothing>] ./cmd.py build [project name]
+```
+
+**Run**
+
+```bash
+[python3 | py3 | <nothing>] ./cmd.py run [project name]
+```
+
 **计算机系统 - Computer System A Programmer's Perspective (CSAPP)**
 
 Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机系统》（CSAPP）视频时所用到的代码，还包括一本设计手册，设计手册还在慢慢更新。代码、手册以及视频都是为了给大家介绍CSAPP这本书，帮助大家阅读和理解最基础的计算机系统知识。特别是本科低年级的同学（大一大二），准备转专业的同学，以及跨专业考研的同学，通常会掌握一些基本的编程语言，但是可能对计算机系统本身并不足够了解。我的视频、代码以及手册就是希望帮助大家学习，尽量通过代码实现CSAPP上的知识点，然后再通过视频讲解，将基础的计算机系统知识连贯起来。

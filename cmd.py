@@ -295,6 +295,7 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
                     "-DDEBUG_MALLOC",
+                    "./src/algorithm/linkedlist.c",
                     "./src/mains/mem_alloc.c",
                     "-o", "./bin/malloc"
                 ],
@@ -331,6 +332,7 @@ def debug(key):
     bin_map = {
         "isa" : [gdb, "./bin/isa"],
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
+        "malloc" : [gdb, "./bin/malloc"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
