@@ -62,7 +62,6 @@ static uint64_t get_prevheader(uint64_t vaddr);
 
 static void print_heap();
 
-
 #ifdef DEBUG_MALLOC
 #define MAX_LINE_MESSAGE (5)
 char debug_message[1000];
@@ -73,7 +72,6 @@ void on_sigabrt(int signum)
     printf("%s\n", debug_message);
     print_heap();
 }
-
 #endif
 
 // Round up to next multiple of n:
@@ -368,7 +366,11 @@ static uint32_t get_prevfree(uint64_t header_vaddr)
     return *(uint32_t *)&heap[header_vaddr + 4];
 }
 
-static void check_heap_blocks()
+/* ------------------------------------- */
+/*  Correctness Checking                 */
+/* ------------------------------------- */
+
+static void check_heap_correctness()
 {
     int linear_free_counter = 0;
     uint64_t p = get_firstblock();
@@ -399,6 +401,10 @@ static void check_heap_blocks()
         p = get_nextheader(p);
     }
 }
+
+/* ------------------------------------- */
+/*  Exposed Interface                    */
+/* ------------------------------------- */
 
 int heap_init()
 {
@@ -519,6 +525,9 @@ uint64_t mem_alloc(uint32_t size)
 
         if (payload_vaddr != 0)
         {
+#ifdef DEBUG_MALLOC
+            check_heap_correctness();
+#endif
             return payload_vaddr;
         }
         else
@@ -576,13 +585,16 @@ uint64_t mem_alloc(uint32_t size)
 
         if (payload_vaddr != 0)
         {
+#ifdef DEBUG_MALLOC
+            check_heap_correctness();
+#endif
             return payload_vaddr;
         }
-        
         // else, continue to request page from OS
     }
     
 #ifdef DEBUG_MALLOC
+    check_heap_correctness();
     printf("OS cannot allocate physical page for heap!\n");
 #endif
 
@@ -630,6 +642,9 @@ void mem_free(uint64_t payload_vaddr)
         // ==> *AFA*
         set_allocated(req, 0);
         set_allocated(req_footer, 0);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
     }
     else if (next_allocated == 0 && prev_allocated == 1)
     {
@@ -640,6 +655,9 @@ void mem_free(uint64_t payload_vaddr)
 
         set_allocated(next_footer, 0);
         set_blocksize(next_footer, req_blocksize + next_blocksize);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
     }
     else if (next_allocated == 1 && prev_allocated == 0)
     {
@@ -650,6 +668,9 @@ void mem_free(uint64_t payload_vaddr)
 
         set_allocated(req_footer, 0);
         set_blocksize(req_footer, req_blocksize + prev_blocksize);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
     }
     else if (next_allocated == 0 && prev_allocated == 0)
     {
@@ -660,6 +681,9 @@ void mem_free(uint64_t payload_vaddr)
 
         set_allocated(next_footer, 0);
         set_blocksize(next_footer, req_blocksize + prev_blocksize + next_blocksize);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
     }
     else
     {
@@ -881,7 +905,7 @@ static void test_get_next_prev()
         i += 1;
     }
 
-    check_heap_blocks();
+    check_heap_correctness();
 
     // check get_prev
     h = get_lastblock();
@@ -905,7 +929,7 @@ static void test_implicit_list()
     printf("Testing implicit list malloc & free ...\n");
 
     heap_init();
-    check_heap_blocks();
+    check_heap_correctness();
 
     srand(123456);
     
@@ -935,9 +959,22 @@ static void test_implicit_list()
             mem_free(t->value);
             linkedlist_delete(ptrs, t);
         }
-
-        check_heap_blocks();
     }
+
+    int num_still_allocated = ptrs->count;
+    for (int i = 0; i < num_still_allocated; ++ i)
+    {
+        linkedlist_node_t *t = linkedlist_next(ptrs);
+        mem_free(t->value);
+        int x = linkedlist_delete(ptrs, t);
+    }
+    assert(ptrs->count == 0);
+    linkedlist_free(ptrs);
+
+    // finally there should be only one free block
+    assert(is_lastblock(get_firstblock()) == 1);
+    assert(get_allocated(get_firstblock()) == 0);
+    check_heap_correctness();
 
     printf("\033[32;1m\tPass\033[0m\n");
 }
