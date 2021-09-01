@@ -811,7 +811,7 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
     return 0;
 }
 
-static uint64_t explicit_free_list_mem_free(uint64_t payload_addr)
+static void explicit_free_list_mem_free(uint64_t payload_addr)
 {
     // TODO
 }
@@ -839,13 +839,13 @@ static uint64_t explicit_free_list_mem_free(uint64_t payload_addr)
     hh hh hh h8/h0  [8n + 4] - header
 */
 
-#define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (20)
+#define MIN_BST_BLOCKSIZE (20)
 
 static uint32_t get_bst_prev(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
 
     return *(uint32_t *)&heap[header_vaddr + 4];
 }
@@ -854,7 +854,7 @@ static uint32_t get_bst_left(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
     
     return *(uint32_t *)&heap[header_vaddr + 8];
 }
@@ -863,7 +863,7 @@ static uint32_t get_bst_right(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
     
     return *(uint32_t *)&heap[header_vaddr + 12];
 }
@@ -882,7 +882,7 @@ static uint64_t bst_mem_alloc(uint32_t size)
     return 0;
 }
 
-static uint64_t bst_mem_free(uint64_t payload_addr)
+static void bst_mem_free(uint64_t payload_addr)
 {
     // TODO
 }
