@@ -1,6 +1,6 @@
 /* BCST - Introduction to Computer Systems
  * Author:      yangminz@outlook.com
- * Github:      https://github.com/yangminz/bcst_csapp
+ * Github:      https://github.com/yangminz/bcst_csaxx
  * Bilibili:    https://space.bilibili.com/4564101
  * Zhihu:       https://www.zhihu.com/people/zhao-yang-min
  * This project (code repository and videos) is exclusively owned by yangminz 
@@ -18,6 +18,14 @@
 int heap_init();
 uint64_t mem_alloc(uint32_t size);
 void mem_free(uint64_t vaddr);
+
+static int implicit_free_list_heap_init();
+static uint64_t implicit_free_list_mem_alloc(uint32_t size);
+static void implicit_free_list_mem_free(uint64_t payload_vaddr);
+
+static int bst_heap_init();
+static uint64_t bst_mem_alloc(uint32_t size);
+static void bst_mem_free(uint64_t payload_vaddr);
 
 // to allocate one physical page for heap
 void os_syscall_brk(uint64_t start_vaddr)
@@ -84,7 +92,7 @@ static uint64_t round_up(uint64_t x, uint64_t n)
     return n * ((x + n - 1) / n);
 }
 
-// applicapable for both header & footer
+// axxlicapable for both header & footer
 static uint32_t get_blocksize(uint64_t header_vaddr)
 {
     if (header_vaddr == 0)
@@ -99,7 +107,7 @@ static uint32_t get_blocksize(uint64_t header_vaddr)
     return (header_value & 0xFFFFFFF8);
 }
 
-// applicapable for both header & footer
+// axxlicapable for both header & footer
 static void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
 {
     if (header_vaddr == 0)
@@ -118,7 +126,7 @@ static void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
     *(uint32_t *)&heap[header_vaddr] |= blocksize;
 }
 
-// applicapable for both header & footer
+// axxlicapable for both header & footer
 static uint32_t get_allocated(uint64_t header_vaddr)
 {
     if (header_vaddr == 0)
@@ -134,7 +142,7 @@ static uint32_t get_allocated(uint64_t header_vaddr)
     return (header_value & 0x1);    
 }
 
-// applicapable for both header & footer
+// axxlicapable for both header & footer
 static void set_allocated(uint64_t header_vaddr, uint32_t allocated)
 {
     if (header_vaddr == 0)
@@ -353,20 +361,6 @@ static uint64_t get_prevheader(uint64_t vaddr)
 }
 
 /* ------------------------------------- */
-/*  Explicit Free List                   */
-/* ------------------------------------- */
-
-static uint32_t get_nextfree(uint64_t header_vaddr)
-{
-    return *(uint32_t *)&heap[header_vaddr + 8];
-}
-
-static uint32_t get_prevfree(uint64_t header_vaddr)
-{
-    return *(uint32_t *)&heap[header_vaddr + 4];
-}
-
-/* ------------------------------------- */
 /*  Correctness Checking                 */
 /* ------------------------------------- */
 
@@ -403,10 +397,76 @@ static void check_heap_correctness()
 }
 
 /* ------------------------------------- */
+/*  Debugging                            */
+/* ------------------------------------- */
+
+static void print_heap()
+{
+    printf("============\nheap blocks:\n");
+    uint64_t h = get_firstblock();
+    int i = 0;
+    while (h != 0 && h < get_epilogue())
+    {
+        uint32_t a = get_allocated(h);
+        uint32_t s = get_blocksize(h);
+        uint64_t f = get_footer_addr(h);
+
+        printf("[H:%lu,F:%lu,S:%u,A:%u]  ", h, f, s, a);
+        h = get_nextheader(h);
+
+        i += 1;
+        if (i % 5 == 0)
+        {
+            printf("\b\n");
+        }
+    }
+    printf("\b\b\n============\n");
+}
+
+/* ------------------------------------- */
 /*  Exposed Interface                    */
 /* ------------------------------------- */
 
 int heap_init()
+{
+    return implicit_free_list_heap_init();
+}
+
+uint64_t mem_alloc(uint32_t size)
+{
+    return implicit_free_list_mem_alloc(size);
+}
+
+void mem_free(uint64_t payload_vaddr)
+{
+    implicit_free_list_mem_free(payload_vaddr);
+}
+
+
+/* ------------------------------------- */
+/*  Implicit Free List                   */
+/* ------------------------------------- */
+
+/*  Allocated block:
+
+    ff ff ff f9/f1  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20] - padding
+    xx xx ?? ??     [8n + 16] - payload & padding
+    xx xx xx xx     [8n + 12] - payload
+    xx xx xx xx     [8n + 8] - payload
+    hh hh hh h9/h1  [8n + 4] - header
+
+    Free block:
+
+    ff ff ff f8/f0  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20]
+    ?? ?? ?? ??     [8n + 16]
+    ?? ?? ?? ??     [8n + 12]
+    ?? ?? ?? ??     [8n + 8]
+    hh hh hh h8/h0  [8n + 4] - header
+*/
+
+static int implicit_free_list_heap_init()
 {
     // reset all to 0
     for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
@@ -506,7 +566,7 @@ static uint64_t try_alloc(uint64_t block_vaddr, uint32_t request_blocksize)
 
 // size - requested payload size
 // return - the virtual address of payload
-uint64_t mem_alloc(uint32_t size)
+static uint64_t implicit_free_list_mem_alloc(uint32_t size)
 {
 #ifdef DEBUG_MALLOC
     sprintf(debug_message, "mem_malloc(%u)", size);
@@ -602,7 +662,7 @@ uint64_t mem_alloc(uint32_t size)
     return 0;
 }
 
-void mem_free(uint64_t payload_vaddr)
+static void implicit_free_list_mem_free(uint64_t payload_vaddr)
 {
 #ifdef DEBUG_MALLOC
     sprintf(debug_message, "mem_free(%lu)", payload_vaddr);
@@ -694,7 +754,144 @@ void mem_free(uint64_t payload_vaddr)
     }
 }
 
+/* ------------------------------------- */
+/*  Explicit Free List                   */
+/* ------------------------------------- */
+
+/*  Allocated block:
+
+    ff ff ff f9/f1  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20] - padding
+    xx xx ?? ??     [8n + 16] - payload & padding
+    xx xx xx xx     [8n + 12] - payload
+    xx xx xx xx     [8n + 8] - payload
+    hh hh hh h9/h1  [8n + 4] - header
+
+    Free block:
+
+    ff ff ff f8/f0  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20]
+    ?? ?? ?? ??     [8n + 16]
+    nn nn nn nn     [8n + 12] - next free block address
+    pp pp pp pp     [8n + 8] - previous free block address
+    hh hh hh h8/h0  [8n + 4] - header
+*/
+
+#define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
+
+static uint32_t get_prevfree(uint64_t header_vaddr)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+
+    return *(uint32_t *)&heap[header_vaddr + 4];
+}
+
+static uint32_t get_nextfree(uint64_t header_vaddr)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+
+    return *(uint32_t *)&heap[header_vaddr + 8];
+}
+
+static uint64_t explicit_free_list_head = 0;
+
+static int explicit_free_list_heap_init()
+{
+    // TODO
+    return 0;
+}
+
+static uint64_t explicit_free_list_mem_alloc(uint32_t size)
+{
+    // TODO
+    return 0;
+}
+
+static uint64_t explicit_free_list_mem_free(uint64_t payload_addr)
+{
+    // TODO
+}
+
+/* ------------------------------------- */
+/*  Tree-Managed Free Blocks             */
+/* ------------------------------------- */
+
+/*  Allocated block:
+
+    ff ff ff f9/f1  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20] - padding
+    xx xx ?? ??     [8n + 16] - payload & padding
+    xx xx xx xx     [8n + 12] - payload
+    xx xx xx xx     [8n + 8] - payload
+    hh hh hh h9/h1  [8n + 4] - header
+
+    Free block:
+
+    ff ff ff f8/f0  [8n + 24] - footer
+    ?? ?? ?? ??     [8n + 20]
+    rr rr rr rr     [8n + 16] - right child bst node address
+    ll ll ll ll     [8n + 12] - left child bst node address
+    pp pp pp pp     [8n + 8] - previous bst node address
+    hh hh hh h8/h0  [8n + 4] - header
+*/
+
+#define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (20)
+
+static uint32_t get_bst_prev(uint64_t header_vaddr)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+
+    return *(uint32_t *)&heap[header_vaddr + 4];
+}
+
+static uint32_t get_bst_left(uint64_t header_vaddr)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    
+    return *(uint32_t *)&heap[header_vaddr + 8];
+}
+
+static uint32_t get_bst_right(uint64_t header_vaddr)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    
+    return *(uint32_t *)&heap[header_vaddr + 12];
+}
+
+static uint64_t bst_root_node = 0;
+
+static int bst_heap_init()
+{
+    // TODO
+    return 0;
+}
+
+static uint64_t bst_mem_alloc(uint32_t size)
+{
+    // TODO
+    return 0;
+}
+
+static uint64_t bst_mem_free(uint64_t payload_addr)
+{
+    // TODO
+}
+
 // #ifdef DEBUG_MALLOC
+
+/* ------------------------------------- */
+/*  Unit tests                           */
+/* ------------------------------------- */
 
 static void test_roundup()
 {
@@ -816,29 +1013,6 @@ static void test_get_header_payload_addr()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
-static void print_heap()
-{
-    printf("============\nheap blocks:\n");
-    uint64_t h = get_firstblock();
-    int i = 0;
-    while (h != 0 && h < get_epilogue())
-    {
-        uint32_t a = get_allocated(h);
-        uint32_t s = get_blocksize(h);
-        uint64_t f = get_footer_addr(h);
-
-        printf("[H:%lu,F:%lu,S:%u,A:%u]  ", h, f, s, a);
-        h = get_nextheader(h);
-
-        i += 1;
-        if (i % 5 == 0)
-        {
-            printf("\b\n");
-        }
-    }
-    printf("\b\b\n============\n");
-}
-
 static void test_get_next_prev()
 {
     printf("Testing linked list traversal ...\n");
@@ -924,7 +1098,7 @@ static void test_get_next_prev()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
-static void test_implicit_list()
+static void test_malloc_free()
 {
     printf("Testing implicit list malloc & free ...\n");
 
@@ -938,11 +1112,10 @@ static void test_implicit_list()
 
     for (int i = 0; i < 100000; ++ i)
     {
-        uint32_t size = rand() % 1024 + 1;  // a non zero value
-
         if ((rand() & 0x1) == 0)
         {
             // malloc
+            uint32_t size = rand() % 1024 + 1;  // a non zero value
             uint64_t p = mem_alloc(size);
 
             if (p != 0)
@@ -987,7 +1160,7 @@ int main()
     test_get_header_payload_addr();
     test_get_next_prev();
     
-    test_implicit_list();
+    test_malloc_free();
 
     return 0;
 }
