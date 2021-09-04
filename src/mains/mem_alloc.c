@@ -27,9 +27,9 @@ static int explicit_free_list_heap_init();
 static uint64_t explicit_free_list_mem_alloc(uint32_t size);
 static void explicit_free_list_mem_free(uint64_t payload_vaddr);
 
-static int bst_heap_init();
-static uint64_t bst_mem_alloc(uint32_t size);
-static void bst_mem_free(uint64_t payload_vaddr);
+static int binary_tree_heap_init();
+static uint64_t binary_tree_mem_alloc(uint32_t size);
+static void binary_tree_mem_free(uint64_t payload_vaddr);
 
 // to allocate one physical page for heap
 static uint32_t extend_heap(uint32_t size);
@@ -456,7 +456,7 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
         }
         else if (b_blocksize - request_blocksize < min_blocksize)
         {
-            // TODO: potential optimization: reduce the padding size
+            // TODO: potential optimization: reduce the fragmentation
             // no need to split this block
             // set_blocksize(b, request_blocksize);
             set_allocated(b, 1);
@@ -470,7 +470,7 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
     return 0;
 }
 
-static uint64_t brk_when_almost_full(uint32_t size, uint32_t min_blocksize)
+static uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize)
 {
     // get the size to be added
     uint64_t old_last = get_lastblock();
@@ -615,17 +615,47 @@ static void print_heap()
 
 int heap_init()
 {
+#ifdef IMPLICIT_FREE_LIST
     return implicit_free_list_heap_init();
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_free_list_heap_init();
+#endif
+
+#ifdef FREE_BINARY_TREE
+    return binary_tree_heap_init();
+#endif
 }
 
 uint64_t mem_alloc(uint32_t size)
 {
+#ifdef IMPLICIT_FREE_LIST
     return implicit_free_list_mem_alloc(size);
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_free_list_mem_alloc(size);
+#endif
+
+#ifdef FREE_BINARY_TREE
+    return binary_tree_mem_alloc(size);
+#endif
 }
 
 void mem_free(uint64_t payload_vaddr)
 {
+#ifdef IMPLICIT_FREE_LIST
     implicit_free_list_mem_free(payload_vaddr);
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    explicit_free_list_mem_free(payload_vaddr);
+#endif
+
+#ifdef FREE_BINARY_TREE
+    binary_tree_mem_free(payload_vaddr);
+#endif
 }
 
 
@@ -739,7 +769,7 @@ static uint64_t implicit_free_list_mem_alloc(uint32_t size)
 
     // when no enough free block for current heap
     // request a new free physical & virtual page from OS
-    return brk_when_almost_full(request_blocksize, MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
+    return try_extend_heap_to_alloc(request_blocksize, MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
 }
 
 static void implicit_free_list_mem_free(uint64_t payload_vaddr)
@@ -1040,12 +1070,12 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
         explicit_free_list_delete(old_last);
     }
 
-    payload_vaddr = brk_when_almost_full(request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    payload_vaddr = try_extend_heap_to_alloc(request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
 
     uint64_t new_last = get_lastblock();
     if (get_allocated(new_last) == 0)
     {
-        explicit_free_list_delete(new_last);
+        explicit_free_list_insert(new_last);
     }
 
     return payload_vaddr;
@@ -1079,50 +1109,50 @@ static void explicit_free_list_mem_free(uint64_t payload_addr)
     hh hh hh h8/h0  [8n + 4] - header
 */
 
-#define MIN_BST_BLOCKSIZE (20)
+#define MIN_binary_tree_BLOCKSIZE (20)
 
-static uint32_t get_bst_prev(uint64_t header_vaddr)
+static uint32_t get_binary_tree_prev(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
 
     return *(uint32_t *)&heap[header_vaddr + 4];
 }
 
-static uint32_t get_bst_left(uint64_t header_vaddr)
+static uint32_t get_binary_tree_left(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
     
     return *(uint32_t *)&heap[header_vaddr + 8];
 }
 
-static uint32_t get_bst_right(uint64_t header_vaddr)
+static uint32_t get_binary_tree_right(uint64_t header_vaddr)
 {
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_BST_BLOCKSIZE);
+    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
     
     return *(uint32_t *)&heap[header_vaddr + 12];
 }
 
-static uint64_t bst_root_node = 0;
+static uint64_t binary_tree_root_node = 0;
 
-static int bst_heap_init()
+static int binary_tree_heap_init()
 {
     // TODO
     return 0;
 }
 
-static uint64_t bst_mem_alloc(uint32_t size)
+static uint64_t binary_tree_mem_alloc(uint32_t size)
 {
     // TODO
     return 0;
 }
 
-static void bst_mem_free(uint64_t payload_addr)
+static void binary_tree_mem_free(uint64_t payload_addr)
 {
     // TODO
 }
