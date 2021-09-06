@@ -77,6 +77,7 @@ static uint64_t get_prevheader(uint64_t vaddr);
 static void check_heap_correctness();
 
 static void print_heap();
+static void explicit_list_print();
 
 #ifdef DEBUG_MALLOC
 #define MAX_LINE_MESSAGE (5)
@@ -87,6 +88,10 @@ void on_sigabrt(int signum)
     // like a try-catch for the asserts
     printf("%s\n", debug_message);
     print_heap();
+#ifdef EXPLICIT_FREE_LIST
+    explicit_list_print();
+#endif
+    exit(0);
 }
 #endif
 
@@ -392,6 +397,11 @@ static uint64_t get_prevheader(uint64_t vaddr)
 
 static uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, uint32_t offset)
 {
+    if (header_vaddr == 0)
+    {
+        return 0;
+    }
+
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
     assert(get_blocksize(header_vaddr) >= min_blocksize);
@@ -404,6 +414,11 @@ static uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocks
 
 static void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset)
 {
+    if (header_vaddr == 0)
+    {
+        return;
+    }
+    
     assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
     assert(header_vaddr % 8 == 4);
     assert(get_blocksize(header_vaddr) >= min_blocksize);
@@ -763,10 +778,6 @@ static int implicit_list_heap_init()
 // return - the virtual address of payload
 static uint64_t implicit_list_mem_alloc(uint32_t size)
 {
-#ifdef DEBUG_MALLOC
-    sprintf(debug_message, "mem_malloc(%u)", size);
-#endif
-
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
     uint64_t payload_vaddr = 0;    
@@ -803,10 +814,6 @@ static uint64_t implicit_list_mem_alloc(uint32_t size)
 
 static void implicit_list_mem_free(uint64_t payload_vaddr)
 {
-#ifdef DEBUG_MALLOC
-    sprintf(debug_message, "mem_free(%lu)", payload_vaddr);
-#endif
-
     if (payload_vaddr == 0)
     {
         return;
@@ -996,6 +1003,54 @@ static void explicit_list_delete(uint64_t *head_vaddr, uint32_t *counter_ptr, ui
     (*counter_ptr) -= 1;
 }
 
+static void explicit_list_print()
+{
+    uint64_t p = explicit_list_head;
+    printf("explicit free list <{%lu},{%u}>:\n", explicit_list_head, explicit_list_counter);
+    for (int i = 0; i < explicit_list_counter; ++ i)
+    {
+        printf("<%lu:%u/%u> ", p, get_blocksize(p), get_allocated(p));
+        p = get_nextfree(p);
+    }
+    printf("\n");
+}
+
+static void check_explicit_list_correctness()
+{
+    uint32_t free_counter = 0;
+    uint64_t p = get_firstblock();
+    while (p != 0 && p <= get_lastblock())
+    {
+        if (get_allocated(p) == 0)
+        {
+            free_counter += 1;
+
+            assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+            assert(get_allocated(get_nextfree(p)) == 0);
+            assert(get_allocated(get_prevfree(p)) == 0);
+        }
+
+        p = get_nextheader(p);
+    }
+    assert(free_counter == explicit_list_counter);
+
+    p = explicit_list_head;
+    uint64_t n = explicit_list_head;
+    for (int i = 0; i < explicit_list_counter; ++ i)
+    {
+        assert(get_allocated(p) == 0);
+        assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+
+        assert(get_allocated(n) == 0);
+        assert(get_blocksize(n) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+
+        p = get_prevfree(p);
+        n = get_nextfree(n);
+    }
+    assert(p == explicit_list_head);
+    assert(n == explicit_list_head);
+}
+
 static int explicit_list_heap_init()
 {
     if (implicit_list_heap_init() == 0)
@@ -1007,6 +1062,8 @@ static int explicit_list_heap_init()
     set_prevfree(first_block, first_block);
     set_nextfree(first_block, first_block);
 
+    explicit_list_head = 0;
+    explicit_list_counter = 0;
     explicit_list_insert(&explicit_list_head, &explicit_list_counter, first_block);
 
     return 1;
@@ -1014,10 +1071,6 @@ static int explicit_list_heap_init()
 
 static uint64_t explicit_list_mem_alloc(uint32_t size)
 {
-#ifdef DEBUG_MALLOC
-    sprintf(debug_message, "mem_malloc(%u)", size);
-#endif
-
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
     uint64_t payload_vaddr = 0;
@@ -1030,6 +1083,8 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
 
     // not thread safe
     uint32_t counter_copy = explicit_list_counter;
+    // T(explicit) <= 1/2 * T(implicit)
+    // much more fast when the heap is nearly full
     for (int i = 0; i < counter_copy; ++ i)
     {
         uint32_t b_old_blocksize = get_blocksize(b);
@@ -1052,6 +1107,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
 
 #ifdef DEBUG_MALLOC
             check_heap_correctness();
+            check_explicit_list_correctness();
 #endif
             return payload_vaddr;
         }
@@ -1078,12 +1134,102 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
         explicit_list_insert(&explicit_list_head, &explicit_list_counter, new_last);
     }
 
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_explicit_list_correctness();
+#endif
+
     return payload_vaddr;
 }
 
-static void explicit_list_mem_free(uint64_t payload_addr)
+static void explicit_list_mem_free(uint64_t payload_vaddr)
 {
-    // TODO
+    if (payload_vaddr == 0)
+    {
+        return;
+    }
+
+    assert(get_firstblock() < payload_vaddr && payload_vaddr < get_epilogue());
+    assert((payload_vaddr & 0x7) == 0x0);
+
+    // request can be first or last block
+    uint64_t req = get_header(payload_vaddr);
+    uint64_t req_footer = get_footer(req); // for last block, it's 0
+
+    uint32_t req_allocated = get_allocated(req);
+    uint32_t req_blocksize = get_blocksize(req);
+    assert(req_allocated == 1); // otherwise it's free twice
+
+    // block starting address of next & prev blocks
+    uint64_t next = get_nextheader(req);    // for req last block, it's 0
+    uint64_t prev = get_prevheader(req);    // for req first block, it's 0
+
+    uint32_t next_allocated = get_allocated(next);  // for req last, 1
+    uint32_t prev_allocated = get_allocated(prev);  // for req first, 1
+
+    if (next_allocated == 1 && prev_allocated == 1)
+    {
+        // case 1: *A(A->F)A*
+        // ==> *AFA*
+        set_allocated(req, 0);
+        set_allocated(req_footer, 0);
+
+        explicit_list_insert(&explicit_list_head, &explicit_list_counter, req);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_explicit_list_correctness();
+#endif
+    }
+    else if (next_allocated == 0 && prev_allocated == 1)
+    {
+        // case 2: *A(A->F)FA
+        // ==> *AFFA ==> *A[FF]A merge current and next
+        explicit_list_delete(&explicit_list_head, &explicit_list_counter, next);
+
+        uint64_t one_free  = merge_blocks_as_free(req, next);
+        
+        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_explicit_list_correctness();
+#endif
+    }
+    else if (next_allocated == 1 && prev_allocated == 0)
+    {
+        // case 3: AF(A->F)A*
+        // ==> AFFA* ==> A[FF]A* merge current and prev
+        explicit_list_delete(&explicit_list_head, &explicit_list_counter, prev);
+
+        uint64_t one_free  = merge_blocks_as_free(prev, req);
+        
+        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_explicit_list_correctness();
+#endif
+    }
+    else if (next_allocated == 0 && prev_allocated == 0)
+    {
+        // case 4: AF(A->F)FA
+        // ==> AFFFA ==> A[FFF]A merge current and prev and next
+        explicit_list_delete(&explicit_list_head, &explicit_list_counter, prev);
+        explicit_list_delete(&explicit_list_head, &explicit_list_counter, next);
+
+        uint64_t one_free = merge_blocks_as_free(merge_blocks_as_free(prev, req), next);
+        
+        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_explicit_list_correctness();
+#endif
+    }
+    else
+    {
+#ifdef DEBUG_MALLOC
+        printf("exception for free\n");
+        exit(0);
+#endif
+    }
 }
 
 /* ------------------------------------- */
@@ -1404,6 +1550,9 @@ static void test_malloc_free()
         {
             // malloc
             uint32_t size = rand() % 1024 + 1;  // a non zero value
+#ifdef DEBUG_MALLOC
+            sprintf(debug_message, "[%d] mem_malloc(%u)", i, size);
+#endif
             uint64_t p = mem_alloc(size);
 
             if (p != 0)
@@ -1417,6 +1566,9 @@ static void test_malloc_free()
             // randomly select one to free
             int random_index = rand() % ptrs->count;
             linkedlist_node_t *t = linkedlist_index(ptrs, random_index);
+#ifdef DEBUG_MALLOC
+            sprintf(debug_message, "[%d] mem_free(%lu)", i, t->value);
+#endif
             mem_free(t->value);
             linkedlist_delete(ptrs, t);
         }
