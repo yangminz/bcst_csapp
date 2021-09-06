@@ -297,9 +297,10 @@ def build(key):
                     "-DDEBUG_MALLOC",
                     # "-DIMPLICIT_FREE_LIST",
                     "-DEXPLICIT_FREE_LIST",
-                    # "-DFREE_BINARY_TREE",
+                    # "-DREDBLACK_TREE",
                     "./src/algorithm/linkedlist.c",
-                    "./src/mains/mem_alloc.c",
+                    "./src/malloc/implicit_list.c", "./src/malloc/explicit_list.c", "./src/malloc/redblack_tree.c",
+                    "./src/malloc/mem_alloc.c",
                     "-o", "./bin/malloc"
                 ],
             ],
