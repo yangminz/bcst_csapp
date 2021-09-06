@@ -19,13 +19,13 @@ int heap_init();
 uint64_t mem_alloc(uint32_t size);
 void mem_free(uint64_t vaddr);
 
-static int implicit_free_list_heap_init();
-static uint64_t implicit_free_list_mem_alloc(uint32_t size);
-static void implicit_free_list_mem_free(uint64_t payload_vaddr);
+static int implicit_list_heap_init();
+static uint64_t implicit_list_mem_alloc(uint32_t size);
+static void implicit_list_mem_free(uint64_t payload_vaddr);
 
-static int explicit_free_list_heap_init();
-static uint64_t explicit_free_list_mem_alloc(uint32_t size);
-static void explicit_free_list_mem_free(uint64_t payload_vaddr);
+static int explicit_list_heap_init();
+static uint64_t explicit_list_mem_alloc(uint32_t size);
+static void explicit_list_mem_free(uint64_t payload_vaddr);
 
 static int binary_tree_heap_init();
 static uint64_t binary_tree_mem_alloc(uint32_t size);
@@ -390,6 +390,35 @@ static uint64_t get_prevheader(uint64_t vaddr)
     return prev_header_vaddr;
 }
 
+static uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, uint32_t offset)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= min_blocksize);
+
+    assert(offset % 4 == 0);
+
+    uint32_t vaddr_32 = *(uint32_t *)&heap[header_vaddr + offset];
+    return (uint64_t)vaddr_32;
+}
+
+static void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset)
+{
+    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
+    assert(header_vaddr % 8 == 4);
+    assert(get_blocksize(header_vaddr) >= min_blocksize);
+
+    assert(get_firstblock() <= block_ptr && block_ptr <= get_lastblock());
+    assert(block_ptr % 8 == 4);
+    assert(get_blocksize(block_ptr) >= min_blocksize);
+
+    assert(offset % 4 == 0);
+
+    // actually a 32-bit pointer
+    assert((block_ptr >> 32) == 0);
+    *(uint32_t *)&heap[header_vaddr + offset] = (uint32_t)(block_ptr & 0xFFFFFFFF);
+}
+
 static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
 {
     assert(low % 8 == 4);
@@ -616,11 +645,11 @@ static void print_heap()
 int heap_init()
 {
 #ifdef IMPLICIT_FREE_LIST
-    return implicit_free_list_heap_init();
+    return implicit_list_heap_init();
 #endif
 
 #ifdef EXPLICIT_FREE_LIST
-    return explicit_free_list_heap_init();
+    return explicit_list_heap_init();
 #endif
 
 #ifdef FREE_BINARY_TREE
@@ -631,11 +660,11 @@ int heap_init()
 uint64_t mem_alloc(uint32_t size)
 {
 #ifdef IMPLICIT_FREE_LIST
-    return implicit_free_list_mem_alloc(size);
+    return implicit_list_mem_alloc(size);
 #endif
 
 #ifdef EXPLICIT_FREE_LIST
-    return explicit_free_list_mem_alloc(size);
+    return explicit_list_mem_alloc(size);
 #endif
 
 #ifdef FREE_BINARY_TREE
@@ -646,11 +675,11 @@ uint64_t mem_alloc(uint32_t size)
 void mem_free(uint64_t payload_vaddr)
 {
 #ifdef IMPLICIT_FREE_LIST
-    implicit_free_list_mem_free(payload_vaddr);
+    implicit_list_mem_free(payload_vaddr);
 #endif
 
 #ifdef EXPLICIT_FREE_LIST
-    explicit_free_list_mem_free(payload_vaddr);
+    explicit_list_mem_free(payload_vaddr);
 #endif
 
 #ifdef FREE_BINARY_TREE
@@ -684,7 +713,7 @@ void mem_free(uint64_t payload_vaddr)
 
 #define MIN_IMPLICIT_FREE_LIST_BLOCKSIZE (8)
 
-static int implicit_free_list_heap_init()
+static int implicit_list_heap_init()
 {
     // reset all to 0
     for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
@@ -732,7 +761,7 @@ static int implicit_free_list_heap_init()
 
 // size - requested payload size
 // return - the virtual address of payload
-static uint64_t implicit_free_list_mem_alloc(uint32_t size)
+static uint64_t implicit_list_mem_alloc(uint32_t size)
 {
 #ifdef DEBUG_MALLOC
     sprintf(debug_message, "mem_malloc(%u)", size);
@@ -772,7 +801,7 @@ static uint64_t implicit_free_list_mem_alloc(uint32_t size)
     return try_extend_heap_to_alloc(request_blocksize, MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
 }
 
-static void implicit_free_list_mem_free(uint64_t payload_vaddr)
+static void implicit_list_mem_free(uint64_t payload_vaddr)
 {
 #ifdef DEBUG_MALLOC
     sprintf(debug_message, "mem_free(%lu)", payload_vaddr);
@@ -872,79 +901,51 @@ static void implicit_free_list_mem_free(uint64_t payload_vaddr)
 */
 #define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
 
-static uint64_t explicit_free_list_head = 0;
-static uint32_t explicit_free_list_counter = 0;
+static uint64_t explicit_list_head = 0;
+static uint32_t explicit_list_counter = 0;
 
 static uint64_t get_prevfree(uint64_t header_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    uint32_t vaddr_32 = *(uint32_t *)&heap[header_vaddr + 4];
-    return (uint64_t)vaddr_32;
+    return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
 }
 
 static uint64_t get_nextfree(uint64_t header_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    uint32_t vaddr_32 = *(uint32_t *)&heap[header_vaddr + 8];
-    return (uint64_t)vaddr_32;
+    return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
 }
 
 static void set_prevfree(uint64_t header_vaddr, uint64_t prev_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    assert(get_firstblock() <= prev_vaddr && prev_vaddr <= get_lastblock());
-    assert(prev_vaddr % 8 == 4);
-    assert(get_blocksize(prev_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    assert((prev_vaddr >> 32) == 0);
-    *(uint32_t *)&heap[header_vaddr + 4] = (uint32_t)(prev_vaddr & 0xFFFFFFFF);
+    set_field32_block_ptr(header_vaddr, prev_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
 }
 
 static void set_nextfree(uint64_t header_vaddr, uint64_t next_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    assert(get_firstblock() <= next_vaddr && next_vaddr <= get_lastblock());
-    assert(next_vaddr % 8 == 4);
-    assert(get_blocksize(next_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    assert((next_vaddr >> 32) == 0);
-    *(uint32_t *)&heap[header_vaddr + 8] = (uint32_t)(next_vaddr & 0xFFFFFFFF);
+    set_field32_block_ptr(header_vaddr, next_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
 }
 
-static void explicit_free_list_insert(uint64_t block)
+static void explicit_list_insert(uint64_t *head_vaddr, uint32_t *counter_ptr, uint64_t block)
 {
     assert(get_firstblock() <= block && block <= get_lastblock());
     assert(block % 8 == 4);
     assert(get_blocksize(block) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
 
-    if (explicit_free_list_head == 0 || explicit_free_list_counter == 0)
+    if ((*head_vaddr) == 0 || (*counter_ptr) == 0)
     {
-        assert(explicit_free_list_head == 0);
-        assert(explicit_free_list_counter == 0);
+        assert((*head_vaddr) == 0);
+        assert((*counter_ptr) == 0);
 
         set_prevfree(block, block);
         set_nextfree(block, block);
 
-        explicit_free_list_head = block;
-        explicit_free_list_counter = 1;
+        (*head_vaddr) = block;
+        (*counter_ptr) = 1;
 
         return;
     }
 
     // list is not empty
-    uint64_t head = explicit_free_list_head;
+    uint64_t head = (*head_vaddr);
     uint64_t tail = get_prevfree(head);
 
     set_nextfree(block, head);
@@ -952,30 +953,30 @@ static void explicit_free_list_insert(uint64_t block)
     set_nextfree(tail, block);
     set_prevfree(block, tail);
 
-    explicit_free_list_head = block;
-    explicit_free_list_counter += 1;
+    (*head_vaddr) = block;
+    (*counter_ptr) += 1;
 }
 
-static void explicit_free_list_delete(uint64_t block)
+static void explicit_list_delete(uint64_t *head_vaddr, uint32_t *counter_ptr, uint64_t block)
 {
     assert(get_firstblock() <= block && block <= get_lastblock());
     assert(block % 8 == 4);
     assert(get_blocksize(block) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
 
-    if (explicit_free_list_head == 0 || explicit_free_list_counter == 0)
+    if ((*head_vaddr) == 0 || (*counter_ptr) == 0)
     {
-        assert(explicit_free_list_head == 0);
-        assert(explicit_free_list_counter == 0);
+        assert(explicit_list_head == 0);
+        assert((*counter_ptr) == 0);
         return;
     }
 
-    if (explicit_free_list_counter == 1)
+    if ((*counter_ptr) == 1)
     {
-        assert(get_prevfree(explicit_free_list_head) == explicit_free_list_head);
-        assert(get_nextfree(explicit_free_list_head) == explicit_free_list_head);
+        assert(get_prevfree((*head_vaddr)) == (*head_vaddr));
+        assert(get_nextfree((*head_vaddr)) == (*head_vaddr));
 
-        explicit_free_list_head = 0;
-        explicit_free_list_counter = 0;
+        (*head_vaddr) = 0;
+        (*counter_ptr) = 0;
 
         return;
     }
@@ -984,20 +985,20 @@ static void explicit_free_list_delete(uint64_t block)
     uint64_t prev = get_prevfree(block);
     uint64_t next = get_nextfree(block);
 
-    if (block == explicit_free_list_head)
+    if (block == (*head_vaddr))
     {
-        explicit_free_list_head = next;
+        (*head_vaddr) = next;
     }
     
     set_nextfree(prev, next);
     set_prevfree(next, prev);
 
-    explicit_free_list_counter -= 1;
+    (*counter_ptr) -= 1;
 }
 
-static int explicit_free_list_heap_init()
+static int explicit_list_heap_init()
 {
-    if (implicit_free_list_heap_init() == 0)
+    if (implicit_list_heap_init() == 0)
     {
         return 0;
     }
@@ -1006,13 +1007,12 @@ static int explicit_free_list_heap_init()
     set_prevfree(first_block, first_block);
     set_nextfree(first_block, first_block);
 
-    explicit_free_list_head = first_block;
-    explicit_free_list_counter = 1;
+    explicit_list_insert(&explicit_list_head, &explicit_list_counter, first_block);
 
     return 1;
 }
 
-static uint64_t explicit_free_list_mem_alloc(uint32_t size)
+static uint64_t explicit_list_mem_alloc(uint32_t size)
 {
 #ifdef DEBUG_MALLOC
     sprintf(debug_message, "mem_malloc(%u)", size);
@@ -1026,10 +1026,10 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
     request_blocksize = request_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
         MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : request_blocksize;
 
-    uint64_t b = explicit_free_list_head;
+    uint64_t b = explicit_list_head;
 
     // not thread safe
-    uint32_t counter_copy = explicit_free_list_counter;
+    uint32_t counter_copy = explicit_list_counter;
     for (int i = 0; i < counter_copy; ++ i)
     {
         uint32_t b_old_blocksize = get_blocksize(b);
@@ -1039,7 +1039,7 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
         {
             uint32_t b_new_blocksize = get_blocksize(b);
             assert(b_new_blocksize <= b_old_blocksize);
-            explicit_free_list_delete(b);
+            explicit_list_delete(&explicit_list_head, &explicit_list_counter, b);
 
             if (b_old_blocksize > b_new_blocksize)
             {
@@ -1047,7 +1047,7 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
                 uint64_t a = get_nextheader(b);
                 assert(get_allocated(a) == 0);
                 assert(get_blocksize(a) == b_old_blocksize - b_new_blocksize);
-                explicit_free_list_insert(a);
+                explicit_list_insert(&explicit_list_head, &explicit_list_counter, a);
             }
 
 #ifdef DEBUG_MALLOC
@@ -1067,7 +1067,7 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
     uint64_t old_last = get_lastblock();
     if (get_allocated(old_last) == 0)
     {
-        explicit_free_list_delete(old_last);
+        explicit_list_delete(&explicit_list_head, &explicit_list_counter, old_last);
     }
 
     payload_vaddr = try_extend_heap_to_alloc(request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
@@ -1075,13 +1075,13 @@ static uint64_t explicit_free_list_mem_alloc(uint32_t size)
     uint64_t new_last = get_lastblock();
     if (get_allocated(new_last) == 0)
     {
-        explicit_free_list_insert(new_last);
+        explicit_list_insert(&explicit_list_head, &explicit_list_counter, new_last);
     }
 
     return payload_vaddr;
 }
 
-static void explicit_free_list_mem_free(uint64_t payload_addr)
+static void explicit_list_mem_free(uint64_t payload_addr)
 {
     // TODO
 }
@@ -1109,36 +1109,54 @@ static void explicit_free_list_mem_free(uint64_t payload_addr)
     hh hh hh h8/h0  [8n + 4] - header
 */
 
-#define MIN_binary_tree_BLOCKSIZE (20)
+#define MIN_BINARY_TREE_BLOCKSIZE (20)
 
 static uint32_t get_binary_tree_prev(uint64_t header_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
-
-    return *(uint32_t *)&heap[header_vaddr + 4];
+    return get_field32_block_ptr(header_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 4);
 }
 
 static uint32_t get_binary_tree_left(uint64_t header_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
-    
-    return *(uint32_t *)&heap[header_vaddr + 8];
+    return get_field32_block_ptr(header_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 8);
 }
 
 static uint32_t get_binary_tree_right(uint64_t header_vaddr)
 {
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= MIN_binary_tree_BLOCKSIZE);
-    
-    return *(uint32_t *)&heap[header_vaddr + 12];
+    return get_field32_block_ptr(header_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 12);
+}
+
+static void set_binary_tree_prev(uint64_t header_vaddr, uint64_t prev_vaddr)
+{
+    set_field32_block_ptr(header_vaddr, prev_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 4);
+}
+
+static void set_binary_tree_left(uint64_t header_vaddr, uint64_t left_vaddr)
+{
+    set_field32_block_ptr(header_vaddr, left_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 8);
+}
+
+static void set_binary_tree_right(uint64_t header_vaddr, uint64_t right_vaddr)
+{
+    set_field32_block_ptr(header_vaddr, right_vaddr, MIN_BINARY_TREE_BLOCKSIZE, 12);
 }
 
 static uint64_t binary_tree_root_node = 0;
+
+static void binary_tree_insert(uint64_t tree_root, uint64_t node_ptr)
+{
+    // TODO: implement insert
+}
+
+static void binary_tree_delete(uint64_t tree_root, uint64_t node_ptr)
+{
+    // TODO: implement delete
+}
+
+static void binary_tree_search(uint64_t tree_root, uint32_t size)
+{
+    // TODO: implement search
+}
 
 static int binary_tree_heap_init()
 {
