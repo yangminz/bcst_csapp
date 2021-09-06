@@ -283,7 +283,7 @@ static int explicit_list_heap_init()
     set_prevfree(first_block, first_block);
     set_nextfree(first_block, first_block);
 
-    explicit_list_head = 0;
+    explicit_list_head = NIL;
     explicit_list_counter = 0;
     explicit_list_insert(&explicit_list_head, &explicit_list_counter, first_block);
 
