@@ -105,7 +105,7 @@ static int set_nextfree(uint64_t header_vaddr, uint64_t next_vaddr)
 }
 
 // register the 5 functions above to be called by the linked list framework
-static linkedlist_node_access free_block_access =
+static linkedlist_node_interface i_free_block =
 {
     .construct_node = NULL,
     .destruct_node = &destruct_node,
@@ -122,7 +122,7 @@ static linkedlist_node_access free_block_access =
 /*  Operations for Linked List           */
 /* ------------------------------------- */
 
-static int update_head(linkedlist_base *this, uint64_t block_vaddr)
+static int update_head(linkedlist_internal_t *this, uint64_t block_vaddr)
 {
     if (this == NULL)
     {
@@ -138,7 +138,7 @@ static int update_head(linkedlist_base *this, uint64_t block_vaddr)
 }
 
 // The explicit free linked list
-static linkedlist_base explicit_list;
+static linkedlist_internal_t explicit_list;
 
 static void explist_list_init()
 {
@@ -154,7 +154,7 @@ static void explicit_list_insert(uint64_t free_header)
     assert(get_blocksize(free_header) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
     assert(get_allocated(free_header) == FREE);
 
-    linkedlist_internal_insert(&explicit_list, &free_block_access, free_header);
+    linkedlist_internal_insert(&explicit_list, &i_free_block, free_header);
 }
 
 static void explicit_list_delete(uint64_t free_header)
@@ -164,7 +164,7 @@ static void explicit_list_delete(uint64_t free_header)
     assert(get_blocksize(free_header) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
     // assert(get_allocated(free_header) == FREE);
 
-    linkedlist_internal_delete(&explicit_list, &free_block_access, free_header);
+    linkedlist_internal_delete(&explicit_list, &i_free_block, free_header);
 }
 
 /* ------------------------------------- */

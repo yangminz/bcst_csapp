@@ -18,107 +18,6 @@
 #define NULL_ID (0)
 
 /*======================================*/
-/*      Circular Doubly Linked List     */
-/*======================================*/
-
-// interface of linked list node
-typedef struct
-{
-    // "malloc" the memory of a node
-    uint64_t (*construct_node)();
-    // "free" the memory of a node
-    int (*destruct_node)(uint64_t);
-
-    // <uint64_t> "first": the id of first node
-    // <uint64_t> "second": the id of second node
-    // return <uint64_t>: 0 if they are the same
-    int (*compare_nodes)(uint64_t, uint64_t);
-
-    // <uint64_t> "node": the id of current node
-    // return <uint64_t>: the id of the previous node
-    uint64_t (*get_node_prev)(uint64_t);
-    // <uint64_t> "node": the id of current node
-    // <uint64_t> "prev": the id of previous node
-    // return <int>: 1 if the setting is successful
-    int (*set_node_prev)(uint64_t, uint64_t);
-
-    // <uint64_t> "node": the id of current node
-    // return <uint64_t>: the id of the next node
-    uint64_t (*get_node_next)(uint64_t);
-    // <uint64_t> "node": the id of current node
-    // <uint64_t> "next": the id of next node
-    // return <int>: 1 if the setting is successful
-    int (*set_node_next)(uint64_t, uint64_t);
-
-    // <uint64_t> "node": the id of current node
-    // return <uint64_t>: the value of node
-    uint64_t (*get_node_value)(uint64_t);
-    // <uint64_t> "node": the id of current node
-    // <uint64_t> "value": the value of the node
-    // return <int>: 1 if the setting is successful
-    int (*set_node_value)(uint64_t, uint64_t);
-} linkedlist_node_access;
-
-// base class of the linked list
-typedef struct LINKEDLIST_BASE_STRUCT
-{
-    uint64_t    head;
-    uint64_t    count;
-
-    // this: this pointer
-    // <uint64_t> "node": the id of new head node
-    // return <int>: 1 if the updating is successful
-    int (*update_head)(struct LINKEDLIST_BASE_STRUCT *this, uint64_t);
-} linkedlist_base;
-
-// The linked list implementation open to other data structures
-// especially useful for malloc explicit list implementation
-void linkedlist_internal_free(linkedlist_base *list, 
-    linkedlist_node_access *node_access);
-linkedlist_base *linkedlist_internal_add(linkedlist_base *list, 
-    linkedlist_node_access *node_access, 
-    uint64_t value);
-linkedlist_base *linkedlist_internal_insert(linkedlist_base *list, 
-    linkedlist_node_access *node_access, 
-    uint64_t node);
-int linkedlist_internal_delete(linkedlist_base *list, 
-    linkedlist_node_access *node_access, 
-    uint64_t node);
-uint64_t linkedlist_internal_index(linkedlist_base *list,
-    linkedlist_node_access *node_access, 
-    uint64_t index);
-uint64_t linkedlist_internal_next(linkedlist_base *list,
-    linkedlist_node_access *node_access);
-
-//
-//  The implementation of the default linked list
-//
-
-typedef union
-{
-    linkedlist_base base;
-    struct
-    {
-        uint64_t head;
-        uint64_t count;
-    };
-} linkedlist_t;
-
-typedef struct LINKED_LIST_NODE_STRUCT
-{
-    uint64_t value;
-    struct LINKED_LIST_NODE_STRUCT *prev;
-    struct LINKED_LIST_NODE_STRUCT *next;
-} linkedlist_node_t;
-
-linkedlist_t *linkedlist_construct();
-void linkedlist_free(linkedlist_t *list);
-linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
-int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
-linkedlist_node_t *linkedlist_next(linkedlist_t *list);
-linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index);
-
-/*======================================*/
 /*      Dynamic Array                   */
 /*======================================*/
 typedef struct
@@ -174,14 +73,198 @@ void trie_free(trie_node_t *root);
 trie_node_t *trie_insert(trie_node_t *root, char *key, uint64_t value);
 int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
 
+//  The following data structures and algorithms
+//  are designed to be Generic. To use, the user
+//  should design their own data structure and
+//  implement the interface with function pointers.
+//  With this design, the actual data structure
+//  can be very free. It can be malloced on heap.
+//  And it can be a byte-block like in ./src/malloc
+
+/*======================================*/
+/*      Circular Doubly Linked List     */
+/*======================================*/
+
+// Define the interface for generic linked list node structure
+typedef struct
+{
+    // "malloc" the memory of a node
+    uint64_t (*construct_node)();
+    // "free" the memory of a node
+    int (*destruct_node)(uint64_t);
+
+    // <uint64_t> "first": the id of first node
+    // <uint64_t> "second": the id of second node
+    // return <uint64_t>: 0 if they are the same
+    int (*compare_nodes)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the previous node
+    uint64_t (*get_node_prev)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "prev": the id of previous node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_prev)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the next node
+    uint64_t (*get_node_next)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "next": the id of next node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_next)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the value of node
+    uint64_t (*get_node_value)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "value": the value of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_value)(uint64_t, uint64_t);
+} linkedlist_node_interface;
+
+// internal class of the linked list
+typedef struct LINKEDLIST_INTERNAL_STRUCT
+{
+    uint64_t    head;
+    uint64_t    count;
+
+    // this: this pointer
+    // <uint64_t> "node": the id of new head node
+    // return <int>: 1 if the updating is successful
+    int (*update_head)(struct LINKEDLIST_INTERNAL_STRUCT *this, uint64_t);
+} linkedlist_internal_t;
+
+// The linked list implementation open to other data structures
+// especially useful for malloc explicit list implementation
+void linkedlist_internal_free(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node);
+linkedlist_internal_t *linkedlist_internal_add(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node, 
+    uint64_t value);
+linkedlist_internal_t *linkedlist_internal_insert(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node, 
+    uint64_t node);
+int linkedlist_internal_delete(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node, 
+    uint64_t node);
+uint64_t linkedlist_internal_index(linkedlist_internal_t *list,
+    linkedlist_node_interface *i_node, 
+    uint64_t index);
+uint64_t linkedlist_internal_next(linkedlist_internal_t *list,
+    linkedlist_node_interface *i_node);
+
+//
+//  The implementation of the default linked list
+//
+
+typedef union
+{
+    linkedlist_internal_t base;
+    struct
+    {
+        uint64_t head;
+        uint64_t count;
+    };
+} linkedlist_t;
+
+typedef struct LINKED_LIST_NODE_STRUCT
+{
+    uint64_t value;
+    struct LINKED_LIST_NODE_STRUCT *prev;
+    struct LINKED_LIST_NODE_STRUCT *next;
+} linkedlist_node_t;
+
+linkedlist_t *linkedlist_construct();
+void linkedlist_free(linkedlist_t *list);
+linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
+int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
+linkedlist_node_t *linkedlist_next(linkedlist_t *list);
+linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index);
+
 /*======================================*/
 /*      Red Black Tree                  */
 /*======================================*/
 typedef enum
 {
-    COLOR_RED,
     COLOR_BLACK,
+    COLOR_RED,
 } rb_color_t;
+
+// Define the generic class for RB Tree node
+typedef struct
+{
+    // "malloc" the memory of a node
+    uint64_t (*construct_node)();
+    // "free" the memory of a node
+    int (*destruct_node)(uint64_t);
+
+    // <uint64_t> "first": the id of first node
+    // <uint64_t> "second": the id of second node
+    // return <uint64_t>: 0 if they are the same
+    int (*compare_nodes)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the previous node
+    uint64_t (*get_parent)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "parent": the id of parent node
+    // return <int>: 1 if the setting is successful
+    int (*set_parent)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the left node
+    uint64_t (*get_leftchild)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "left": the id of left child
+    // return <int>: 1 if the setting is successful
+    int (*set_leftchild)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the right child of node
+    uint64_t (*get_rightchild)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "right": the right child of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_rightchild)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <rb_color_t>: the color of the node
+    rb_color_t (*get_color)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <rb_color_t> "color": the red-black color of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_color)(uint64_t, rb_color_t);
+} rbtree_node_interface;
+
+// internal class of the red-black tree
+typedef struct RBTREE_INTERNAL_STRUCT
+{
+    // the root node of the tree
+    uint64_t root;
+
+    // this: this pointer
+    // <uint64_t> "node": the id of new root node
+    // return <int>: 1 if the updating is successful
+    int (*update_root)(struct RBTREE_INTERNAL_STRUCT *this, uint64_t);
+} rbtree_internal_t;
+
+// The red-black tree implementation open to other data structures
+// especially useful for malloc explicit list implementation
+// and vm_area_struct
+void rbtree_internal_insert(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id);
+void rbtree_internal_delete(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id);
+uint64_t rbtree_internal_find(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t value);
+
+//
+//  The default implementation of red-black tree
+//
 
 typedef struct RB_NODE_STRUCT
 {
