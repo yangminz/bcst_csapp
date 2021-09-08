@@ -25,9 +25,9 @@
 typedef struct
 {
     // "malloc" the memory of a node
-    uint64_t (*alloc_node)();
+    uint64_t (*construct_node)();
     // "free" the memory of a node
-    int (*free_node)(uint64_t);
+    int (*destruct_node)(uint64_t);
 
     // <uint64_t> "first": the id of first node
     // <uint64_t> "second": the id of second node
@@ -73,18 +73,21 @@ typedef struct LINKEDLIST_BASE_STRUCT
 
 // The linked list implementation open to other data structures
 // especially useful for malloc explicit list implementation
-void linkedlist_base_free(linkedlist_base *list, 
+void linkedlist_internal_free(linkedlist_base *list, 
     linkedlist_node_access *node_access);
-linkedlist_base *linkedlist_base_add(linkedlist_base *list, 
+linkedlist_base *linkedlist_internal_add(linkedlist_base *list, 
     linkedlist_node_access *node_access, 
     uint64_t value);
-int linkedlist_base_delete(linkedlist_base *list, 
+linkedlist_base *linkedlist_internal_insert(linkedlist_base *list, 
     linkedlist_node_access *node_access, 
     uint64_t node);
-uint64_t linkedlist_base_index(linkedlist_base *list,
+int linkedlist_internal_delete(linkedlist_base *list, 
+    linkedlist_node_access *node_access, 
+    uint64_t node);
+uint64_t linkedlist_internal_index(linkedlist_base *list,
     linkedlist_node_access *node_access, 
     uint64_t index);
-uint64_t linkedlist_base_next(linkedlist_base *list,
+uint64_t linkedlist_internal_next(linkedlist_base *list,
     linkedlist_node_access *node_access);
 
 //

@@ -15,9 +15,9 @@
 #include <signal.h>
 #include "headers/allocator.h"
 
-static int redblack_tree_heap_init();
-static uint64_t redblack_tree_mem_alloc(uint32_t size);
-static void redblack_tree_mem_free(uint64_t payload_vaddr);
+static int internal_heap_init();
+static uint64_t internal_malloc(uint32_t size);
+static void internal_free(uint64_t payload_vaddr);
 
 /* ------------------------------------- */
 /*  Implementation of the Interfaces     */
@@ -27,17 +27,17 @@ static void redblack_tree_mem_free(uint64_t payload_vaddr);
 
 int heap_init()
 {
-    return redblack_tree_heap_init();
+    return internal_heap_init();
 }
 
 uint64_t mem_alloc(uint32_t size)
 {
-    return redblack_tree_mem_alloc(size);
+    return internal_malloc(size);
 }
 
 void mem_free(uint64_t payload_vaddr)
 {
-    redblack_tree_mem_free(payload_vaddr);
+    internal_free(payload_vaddr);
 }
 
 #ifdef DEBUG_MALLOC
@@ -174,19 +174,19 @@ static void redblack_tree_search(uint64_t tree_root, uint32_t size)
 /*  Implementation                       */
 /* ------------------------------------- */
 
-static int redblack_tree_heap_init()
+static int internal_heap_init()
 {
     // TODO
     return 0;
 }
 
-static uint64_t redblack_tree_mem_alloc(uint32_t size)
+static uint64_t internal_malloc(uint32_t size)
 {
     // TODO
     return 0;
 }
 
-static void redblack_tree_mem_free(uint64_t payload_addr)
+static void internal_free(uint64_t payload_addr)
 {
     // TODO
 }

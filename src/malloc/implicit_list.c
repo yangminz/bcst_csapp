@@ -15,9 +15,9 @@
 #include <signal.h>
 #include "headers/allocator.h"
 
-static int implicit_list_heap_init();
-static uint64_t implicit_list_mem_alloc(uint32_t size);
-static void implicit_list_mem_free(uint64_t payload_vaddr);
+static int internal_heap_init();
+static uint64_t internal_malloc(uint32_t size);
+static void internal_free(uint64_t payload_vaddr);
 
 /* ------------------------------------- */
 /*  Implementation of the Interfaces     */
@@ -27,17 +27,17 @@ static void implicit_list_mem_free(uint64_t payload_vaddr);
 
 int heap_init()
 {
-    return implicit_list_heap_init();
+    return internal_heap_init();
 }
 
 uint64_t mem_alloc(uint32_t size)
 {
-    return implicit_list_mem_alloc(size);
+    return internal_malloc(size);
 }
 
 void mem_free(uint64_t payload_vaddr)
 {
-    implicit_list_mem_free(payload_vaddr);
+    internal_free(payload_vaddr);
 }
 
 #ifdef DEBUG_MALLOC
@@ -81,7 +81,7 @@ void on_sigabrt(int signum)
 /*  Implementation                       */
 /* ------------------------------------- */
 
-static int implicit_list_heap_init()
+static int internal_heap_init()
 {
     // reset all to 0
     for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
@@ -129,7 +129,7 @@ static int implicit_list_heap_init()
 
 // size - requested payload size
 // return - the virtual address of payload
-static uint64_t implicit_list_mem_alloc(uint32_t size)
+static uint64_t internal_malloc(uint32_t size)
 {
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
@@ -165,7 +165,7 @@ static uint64_t implicit_list_mem_alloc(uint32_t size)
     return try_extend_heap_to_alloc(request_blocksize, MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
 }
 
-static void implicit_list_mem_free(uint64_t payload_vaddr)
+static void internal_free(uint64_t payload_vaddr)
 {
     if (payload_vaddr == NIL)
     {

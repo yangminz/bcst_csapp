@@ -14,10 +14,11 @@
 #include <stdint.h>
 #include <signal.h>
 #include "headers/allocator.h"
+#include "headers/algorithm.h"
 
-static int explicit_list_heap_init();
-static uint64_t explicit_list_mem_alloc(uint32_t size);
-static void explicit_list_mem_free(uint64_t payload_vaddr);
+static int internal_heap_init();
+static uint64_t internal_malloc(uint32_t size);
+static void internal_free(uint64_t payload_vaddr);
 
 /* ------------------------------------- */
 /*  Implementation of the Interfaces     */
@@ -27,17 +28,17 @@ static void explicit_list_mem_free(uint64_t payload_vaddr);
 
 int heap_init()
 {
-    return explicit_list_heap_init();
+    return internal_heap_init();
 }
 
 uint64_t mem_alloc(uint32_t size)
 {
-    return explicit_list_mem_alloc(size);
+    return internal_malloc(size);
 }
 
 void mem_free(uint64_t payload_vaddr)
 {
-    explicit_list_mem_free(payload_vaddr);
+    internal_free(payload_vaddr);
 }
 
 #endif
@@ -66,12 +67,20 @@ void mem_free(uint64_t payload_vaddr)
 */
 #define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
 
-static uint64_t explicit_list_head = NIL;
-static uint32_t explicit_list_counter = 0;
-
 /* ------------------------------------- */
 /*  Operations for List Block Structure  */
 /* ------------------------------------- */
+
+static int destruct_node(uint64_t header_vaddr) 
+{
+    // do nothing here
+    return 1;
+}
+
+static int compare_nodes(uint64_t first, uint64_t second)
+{
+    return !(first == second);
+}
 
 static uint64_t get_prevfree(uint64_t header_vaddr)
 {
@@ -83,90 +92,79 @@ static uint64_t get_nextfree(uint64_t header_vaddr)
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
 }
 
-static void set_prevfree(uint64_t header_vaddr, uint64_t prev_vaddr)
+static int set_prevfree(uint64_t header_vaddr, uint64_t prev_vaddr)
 {
     set_field32_block_ptr(header_vaddr, prev_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
+    return 1;
 }
 
-static void set_nextfree(uint64_t header_vaddr, uint64_t next_vaddr)
+static int set_nextfree(uint64_t header_vaddr, uint64_t next_vaddr)
 {
     set_field32_block_ptr(header_vaddr, next_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
+    return 1;
 }
+
+// register the 5 functions above to be called by the linked list framework
+static linkedlist_node_access free_block_access =
+{
+    .construct_node = NULL,
+    .destruct_node = &destruct_node,
+    .compare_nodes = &compare_nodes,
+    .get_node_prev = &get_prevfree,
+    .set_node_prev = &set_prevfree,
+    .get_node_next = &get_nextfree,
+    .set_node_next = &set_nextfree,
+    .get_node_value = NULL,
+    .set_node_value = NULL
+};
 
 /* ------------------------------------- */
 /*  Operations for Linked List           */
 /* ------------------------------------- */
 
-static void explicit_list_insert(uint64_t *head_vaddr, uint32_t *counter_ptr, uint64_t block)
+static int update_head(linkedlist_base *this, uint64_t block_vaddr)
 {
-    assert(get_firstblock() <= block && block <= get_lastblock());
-    assert(block % 8 == 4);
-    assert(get_blocksize(block) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    if ((*head_vaddr) == NIL || (*counter_ptr) == 0)
+    if (this == NULL)
     {
-        assert((*head_vaddr) == NIL);
-        assert((*counter_ptr) == 0);
-
-        set_prevfree(block, block);
-        set_nextfree(block, block);
-
-        (*head_vaddr) = block;
-        (*counter_ptr) = 1;
-
-        return;
-    }
-
-    // list is not empty
-    uint64_t head = (*head_vaddr);
-    uint64_t tail = get_prevfree(head);
-
-    set_nextfree(block, head);
-    set_prevfree(head, block);
-    set_nextfree(tail, block);
-    set_prevfree(block, tail);
-
-    (*head_vaddr) = block;
-    (*counter_ptr) += 1;
-}
-
-static void explicit_list_delete(uint64_t *head_vaddr, uint32_t *counter_ptr, uint64_t block)
-{
-    assert(get_firstblock() <= block && block <= get_lastblock());
-    assert(block % 8 == 4);
-    assert(get_blocksize(block) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    if ((*head_vaddr) == NIL || (*counter_ptr) == 0)
-    {
-        assert(explicit_list_head == NIL);
-        assert((*counter_ptr) == 0);
-        return;
-    }
-
-    if ((*counter_ptr) == 1)
-    {
-        assert(get_prevfree((*head_vaddr)) == (*head_vaddr));
-        assert(get_nextfree((*head_vaddr)) == (*head_vaddr));
-
-        (*head_vaddr) = NIL;
-        (*counter_ptr) = 0;
-
-        return;
-    }
-
-    // counter >= 2
-    uint64_t prev = get_prevfree(block);
-    uint64_t next = get_nextfree(block);
-
-    if (block == (*head_vaddr))
-    {
-        (*head_vaddr) = next;
+        return 0;
     }
     
-    set_nextfree(prev, next);
-    set_prevfree(next, prev);
+    assert(block_vaddr == NULL_ID || (get_firstblock() <= block_vaddr && block_vaddr <= get_lastblock()));
+    assert(block_vaddr == NULL_ID || block_vaddr % 8 == 4);
+    assert(block_vaddr == NULL_ID || get_blocksize(block_vaddr) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
 
-    (*counter_ptr) -= 1;
+    this->head = block_vaddr;
+    return 1;
+}
+
+// The explicit free linked list
+static linkedlist_base explicit_list;
+
+static void explist_list_init()
+{
+    explicit_list.head = NULL_ID;
+    explicit_list.count = 0;
+    explicit_list.update_head = &update_head;
+}
+
+static void explicit_list_insert(uint64_t free_header)
+{
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(free_header % 8 == 4);
+    assert(get_blocksize(free_header) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    assert(get_allocated(free_header) == FREE);
+
+    linkedlist_internal_insert(&explicit_list, &free_block_access, free_header);
+}
+
+static void explicit_list_delete(uint64_t free_header)
+{
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(free_header % 8 == 4);
+    assert(get_blocksize(free_header) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
+    // assert(get_allocated(free_header) == FREE);
+
+    linkedlist_internal_delete(&explicit_list, &free_block_access, free_header);
 }
 
 /* ------------------------------------- */
@@ -175,9 +173,9 @@ static void explicit_list_delete(uint64_t *head_vaddr, uint32_t *counter_ptr, ui
 
 static void explicit_list_print()
 {
-    uint64_t p = explicit_list_head;
-    printf("explicit free list <{%lu},{%u}>:\n", explicit_list_head, explicit_list_counter);
-    for (int i = 0; i < explicit_list_counter; ++ i)
+    uint64_t p = explicit_list.head;
+    printf("explicit free list <{%lu},{%lu}>:\n", explicit_list.head, explicit_list.count);
+    for (int i = 0; i < explicit_list.count; ++ i)
     {
         printf("<%lu:%u/%u> ", p, get_blocksize(p), get_allocated(p));
         p = get_nextfree(p);
@@ -207,17 +205,17 @@ static void check_explicit_list_correctness()
             free_counter += 1;
 
             assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-            assert(get_allocated(get_nextfree(p)) == FREE);
             assert(get_allocated(get_prevfree(p)) == FREE);
+            assert(get_allocated(get_nextfree(p)) == FREE);
         }
 
         p = get_nextheader(p);
     }
-    assert(free_counter == explicit_list_counter);
+    assert(free_counter == explicit_list.count);
 
-    p = explicit_list_head;
-    uint64_t n = explicit_list_head;
-    for (int i = 0; i < explicit_list_counter; ++ i)
+    p = explicit_list.head;
+    uint64_t n = explicit_list.head;
+    for (int i = 0; i < explicit_list.count; ++ i)
     {
         assert(get_allocated(p) == FREE);
         assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
@@ -228,15 +226,15 @@ static void check_explicit_list_correctness()
         p = get_prevfree(p);
         n = get_nextfree(n);
     }
-    assert(p == explicit_list_head);
-    assert(n == explicit_list_head);
+    assert(p == explicit_list.head);
+    assert(n == explicit_list.head);
 }
 
 /* ------------------------------------- */
 /*  Implementation                       */
 /* ------------------------------------- */
 
-static int explicit_list_heap_init()
+static int internal_heap_init()
 {
     // reset all to 0
     for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
@@ -283,14 +281,13 @@ static int explicit_list_heap_init()
     set_prevfree(first_block, first_block);
     set_nextfree(first_block, first_block);
 
-    explicit_list_head = NIL;
-    explicit_list_counter = 0;
-    explicit_list_insert(&explicit_list_head, &explicit_list_counter, first_block);
+    explist_list_init();
+    explicit_list_insert(first_block);
 
     return 1;
 }
 
-static uint64_t explicit_list_mem_alloc(uint32_t size)
+static uint64_t internal_malloc(uint32_t size)
 {
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
 
@@ -300,10 +297,10 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
     request_blocksize = request_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
         MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : request_blocksize;
 
-    uint64_t b = explicit_list_head;
+    uint64_t b = explicit_list.head;
 
     // not thread safe
-    uint32_t counter_copy = explicit_list_counter;
+    uint32_t counter_copy = explicit_list.count;
     // T(explicit) <= 1/2 * T(implicit)
     // much more fast when the heap is nearly full
     for (int i = 0; i < counter_copy; ++ i)
@@ -315,7 +312,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
         {
             uint32_t b_new_blocksize = get_blocksize(b);
             assert(b_new_blocksize <= b_old_blocksize);
-            explicit_list_delete(&explicit_list_head, &explicit_list_counter, b);
+            explicit_list_delete(b);
 
             if (b_old_blocksize > b_new_blocksize)
             {
@@ -323,7 +320,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
                 uint64_t a = get_nextheader(b);
                 assert(get_allocated(a) == FREE);
                 assert(get_blocksize(a) == b_old_blocksize - b_new_blocksize);
-                explicit_list_insert(&explicit_list_head, &explicit_list_counter, a);
+                explicit_list_insert(a);
             }
 
 #ifdef DEBUG_MALLOC
@@ -344,7 +341,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
     uint64_t old_last = get_lastblock();
     if (get_allocated(old_last) == FREE)
     {
-        explicit_list_delete(&explicit_list_head, &explicit_list_counter, old_last);
+        explicit_list_delete(old_last);
     }
 
     payload_vaddr = try_extend_heap_to_alloc(request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
@@ -352,7 +349,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
     uint64_t new_last = get_lastblock();
     if (get_allocated(new_last) == FREE)
     {
-        explicit_list_insert(&explicit_list_head, &explicit_list_counter, new_last);
+        explicit_list_insert(new_last);
     }
 
 #ifdef DEBUG_MALLOC
@@ -363,7 +360,7 @@ static uint64_t explicit_list_mem_alloc(uint32_t size)
     return payload_vaddr;
 }
 
-static void explicit_list_mem_free(uint64_t payload_vaddr)
+static void internal_free(uint64_t payload_vaddr)
 {
     if (payload_vaddr == NIL)
     {
@@ -395,7 +392,7 @@ static void explicit_list_mem_free(uint64_t payload_vaddr)
         set_allocated(req, FREE);
         set_allocated(req_footer, FREE);
 
-        explicit_list_insert(&explicit_list_head, &explicit_list_counter, req);
+        explicit_list_insert(req);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
         check_explicit_list_correctness();
@@ -405,11 +402,11 @@ static void explicit_list_mem_free(uint64_t payload_vaddr)
     {
         // case 2: *A(A->F)FA
         // ==> *AFFA ==> *A[FF]A merge current and next
-        explicit_list_delete(&explicit_list_head, &explicit_list_counter, next);
+        explicit_list_delete(next);
 
         uint64_t one_free  = merge_blocks_as_free(req, next);
         
-        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+        explicit_list_insert(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
         check_explicit_list_correctness();
@@ -419,11 +416,11 @@ static void explicit_list_mem_free(uint64_t payload_vaddr)
     {
         // case 3: AF(A->F)A*
         // ==> AFFA* ==> A[FF]A* merge current and prev
-        explicit_list_delete(&explicit_list_head, &explicit_list_counter, prev);
+        explicit_list_delete(prev);
 
         uint64_t one_free  = merge_blocks_as_free(prev, req);
         
-        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+        explicit_list_insert(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
         check_explicit_list_correctness();
@@ -433,12 +430,12 @@ static void explicit_list_mem_free(uint64_t payload_vaddr)
     {
         // case 4: AF(A->F)FA
         // ==> AFFFA ==> A[FFF]A merge current and prev and next
-        explicit_list_delete(&explicit_list_head, &explicit_list_counter, prev);
-        explicit_list_delete(&explicit_list_head, &explicit_list_counter, next);
+        explicit_list_delete(prev);
+        explicit_list_delete(next);
 
         uint64_t one_free = merge_blocks_as_free(merge_blocks_as_free(prev, req), next);
         
-        explicit_list_insert(&explicit_list_head, &explicit_list_counter, one_free);
+        explicit_list_insert(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
         check_explicit_list_correctness();

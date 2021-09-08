@@ -18,15 +18,21 @@
 /*      Base Class Methods              */
 /*======================================*/
 
-void linkedlist_base_free(linkedlist_base *list, 
+void linkedlist_internal_free(linkedlist_base *list, 
     linkedlist_node_access *node_access)
 {
     if (list == NULL)
     {
         return;
     }
-
+    assert(list->update_head != NULL);
     assert(node_access != NULL);
+    assert(node_access->compare_nodes != NULL);
+    assert(node_access->destruct_node != NULL);
+    assert(node_access->get_node_prev != NULL);
+    assert(node_access->set_node_prev != NULL);
+    assert(node_access->get_node_next != NULL);
+    assert(node_access->set_node_next != NULL);
 
     int count_copy = list->count;
     for (int i = 0; i < count_copy; ++ i)
@@ -39,7 +45,7 @@ void linkedlist_base_free(linkedlist_base *list,
         {
             // TODO: logic can be removed
             // only one element
-            node_access->free_node(node);
+            node_access->destruct_node(node);
             // do not update list->count during deleting
         }
         else
@@ -51,7 +57,7 @@ void linkedlist_base_free(linkedlist_base *list,
             node_access->set_node_next(prev, next);
             node_access->set_node_prev(next, prev);
             
-            node_access->free_node(node);
+            node_access->destruct_node(node);
             // do not update list->count during deleting
         }
     }
@@ -59,7 +65,7 @@ void linkedlist_base_free(linkedlist_base *list,
     free(list);
 }
 
-linkedlist_base *linkedlist_base_add(linkedlist_base *list, 
+linkedlist_base *linkedlist_internal_add(linkedlist_base *list, 
     linkedlist_node_access *node_access, 
     uint64_t value)
 {
@@ -67,26 +73,45 @@ linkedlist_base *linkedlist_base_add(linkedlist_base *list,
     {
         return NULL;
     }
-
+    assert(list->update_head != NULL);
     assert(node_access != NULL);
+    assert(node_access->get_node_prev != NULL);
+    assert(node_access->set_node_prev != NULL);
+    assert(node_access->set_node_next != NULL);
+    assert(node_access->construct_node != NULL);
+    assert(node_access->set_node_value != NULL);
+
+    uint64_t node = node_access->construct_node();
+    node_access->set_node_value(node, value);
+    return linkedlist_internal_insert(list, node_access, node);
+}
+
+linkedlist_base *linkedlist_internal_insert(linkedlist_base *list, 
+    linkedlist_node_access *node_access, 
+    uint64_t node)
+{
+    if (list == NULL)
+    {
+        return NULL;
+    }
+    assert(list->update_head != NULL);
+    assert(node_access != NULL);
+    assert(node_access->get_node_prev != NULL);
+    assert(node_access->set_node_prev != NULL);
+    assert(node_access->set_node_next != NULL);
 
     if (list->count == 0)
     {
         // create a new head
-        uint64_t head = node_access->alloc_node();
-        list->update_head(list, head);
+        list->update_head(list, node);
         list->count = 1;
         // circular linked list initialization
-        node_access->set_node_prev(head, head);
-        node_access->set_node_next(head, head);
-        node_access->set_node_value(head, value);
+        node_access->set_node_prev(node, node);
+        node_access->set_node_next(node, node);
     }
     else
     {
         // insert to head
-        uint64_t node = node_access->alloc_node();
-        node_access->set_node_value(node, value);
-        
         uint64_t head = list->head;
         uint64_t head_prev = node_access->get_node_prev(head);
 
@@ -103,7 +128,7 @@ linkedlist_base *linkedlist_base_add(linkedlist_base *list,
     return list;
 }
 
-int linkedlist_base_delete(linkedlist_base *list, 
+int linkedlist_internal_delete(linkedlist_base *list, 
     linkedlist_node_access *node_access, 
     uint64_t node)
 {
@@ -111,8 +136,14 @@ int linkedlist_base_delete(linkedlist_base *list,
     {
         return 0;
     }
-
+    assert(list->update_head != NULL);
     assert(node_access != NULL);
+    assert(node_access->destruct_node != NULL);
+    assert(node_access->compare_nodes != NULL);
+    assert(node_access->get_node_prev != NULL);
+    assert(node_access->set_node_prev != NULL);
+    assert(node_access->get_node_next != NULL);
+    assert(node_access->set_node_next != NULL);
 
     // update the prev and next pointers
     // same for the only one node situation
@@ -136,7 +167,7 @@ int linkedlist_base_delete(linkedlist_base *list,
     }
 
     // free the node managed by the list
-    node_access->free_node(node);
+    node_access->destruct_node(node);
 
     // reset the linked list status
     list->count --;
@@ -149,7 +180,7 @@ int linkedlist_base_delete(linkedlist_base *list,
     return 1;
 }
 
-uint64_t linkedlist_base_index(linkedlist_base *list,
+uint64_t linkedlist_internal_index(linkedlist_base *list,
     linkedlist_node_access *node_access, 
     uint64_t index)
 {
@@ -157,6 +188,8 @@ uint64_t linkedlist_base_index(linkedlist_base *list,
     {
         return NULL_ID;
     }
+    assert(node_access != NULL);
+    assert(node_access->get_node_next != NULL);
 
     uint64_t p = list->head;
     for (int i = 0; i <= index; ++ i)
@@ -168,13 +201,16 @@ uint64_t linkedlist_base_index(linkedlist_base *list,
 }
 
 // traverse the linked list
-uint64_t linkedlist_base_next(linkedlist_base *list,
+uint64_t linkedlist_internal_next(linkedlist_base *list,
     linkedlist_node_access *node_access)
 {
     if (list == NULL || node_access->compare_nodes(list->head, NULL_ID) == 0)
     {
         return NULL_ID;
     }
+    assert(list->update_head != NULL);
+    assert(node_access != NULL);
+    assert(node_access->get_node_next != NULL);
 
     uint64_t old_head = list->head;
     list->update_head(list,
@@ -189,12 +225,12 @@ uint64_t linkedlist_base_next(linkedlist_base *list,
 
 // Implementation of the list node access
 
-static uint64_t alloc_node()
+static uint64_t construct_node()
 {
     return (uint64_t)malloc(sizeof(linkedlist_node_t));
 }
 
-static int free_node(uint64_t node_id)
+static int destruct_node(uint64_t node_id)
 {
     if (node_id == NULL_ID)
     {
@@ -208,21 +244,10 @@ static int free_node(uint64_t node_id)
 
 static int compare_nodes(uint64_t first, uint64_t second)
 {
-    if (first == second)
-    {
-        return 0;
-    }
-    else if (first > second)
-    {
-        return 1;
-    }
-    else
-    {
-        return -1;
-    }
+    return !(first == second);
 }
 
-uint64_t get_node_prev(uint64_t node_id)
+static uint64_t get_node_prev(uint64_t node_id)
 {
     if (node_id == NULL_ID)
     {
@@ -231,7 +256,7 @@ uint64_t get_node_prev(uint64_t node_id)
     return (uint64_t)(((linkedlist_node_t *)node_id)->prev);
 }
 
-int set_node_prev(uint64_t node_id, uint64_t prev_id)
+static int set_node_prev(uint64_t node_id, uint64_t prev_id)
 {
     if (node_id == NULL_ID)
     {
@@ -241,7 +266,7 @@ int set_node_prev(uint64_t node_id, uint64_t prev_id)
     return 1;
 }
 
-uint64_t get_node_next(uint64_t node_id)
+static uint64_t get_node_next(uint64_t node_id)
 {
     if (node_id == NULL_ID)
     {
@@ -250,7 +275,7 @@ uint64_t get_node_next(uint64_t node_id)
     return (uint64_t)(((linkedlist_node_t *)node_id)->next);
 }
 
-int set_node_next(uint64_t node_id, uint64_t next_id)
+static int set_node_next(uint64_t node_id, uint64_t next_id)
 {
     if (node_id == NULL_ID)
     {
@@ -260,7 +285,7 @@ int set_node_next(uint64_t node_id, uint64_t next_id)
     return 1;
 }
 
-uint64_t get_node_value(uint64_t node_id)
+static uint64_t get_node_value(uint64_t node_id)
 {
     if (node_id == NULL_ID)
     {
@@ -269,7 +294,7 @@ uint64_t get_node_value(uint64_t node_id)
     return (uint64_t)(((linkedlist_node_t *)node_id)->value);
 }
 
-int set_node_value(uint64_t node_id, uint64_t value)
+static int set_node_value(uint64_t node_id, uint64_t value)
 {
     if (node_id == NULL_ID)
     {
@@ -281,8 +306,8 @@ int set_node_value(uint64_t node_id, uint64_t value)
 
 static linkedlist_node_access node_access =
 {
-    .alloc_node = &alloc_node,
-    .free_node = &free_node,
+    .construct_node = &construct_node,
+    .destruct_node = &destruct_node,
     .compare_nodes = &compare_nodes,
     .get_node_prev = &get_node_prev,
     .set_node_prev = &set_node_prev,
@@ -315,12 +340,12 @@ linkedlist_t *linkedlist_construct()
 
 void linkedlist_free(linkedlist_t *list)
 {
-    linkedlist_base_free(&(list->base), &node_access);
+    linkedlist_internal_free(&(list->base), &node_access);
 }
 
 linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value)
 {
-    linkedlist_base_add(
+    linkedlist_internal_add(
         &list->base,
         &node_access,
         value
@@ -330,7 +355,7 @@ linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value)
 
 int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node)
 {
-    return linkedlist_base_delete(
+    return linkedlist_internal_delete(
         &list->base,
         &node_access,
         (uint64_t)node
@@ -339,14 +364,14 @@ int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node)
 
 linkedlist_node_t *linkedlist_next(linkedlist_t *list)
 {
-    return (linkedlist_node_t *)linkedlist_base_next(
+    return (linkedlist_node_t *)linkedlist_internal_next(
         &list->base,
         &node_access);
 }
 
 linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index)
 {
-    return (linkedlist_node_t *)linkedlist_base_index(
+    return (linkedlist_node_t *)linkedlist_internal_index(
         &list->base,
         &node_access,
         index);
