@@ -15,9 +15,92 @@
 
 #include <stdint.h>
 
+#define NULL_ID (0)
+
 /*======================================*/
 /*      Circular Doubly Linked List     */
 /*======================================*/
+
+// interface of linked list node
+typedef struct
+{
+    // "malloc" the memory of a node
+    uint64_t (*alloc_node)();
+    // "free" the memory of a node
+    int (*free_node)(uint64_t);
+
+    // <uint64_t> "first": the id of first node
+    // <uint64_t> "second": the id of second node
+    // return <uint64_t>: 0 if they are the same
+    int (*compare_nodes)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the previous node
+    uint64_t (*get_node_prev)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "prev": the id of previous node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_prev)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the id of the next node
+    uint64_t (*get_node_next)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "next": the id of next node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_next)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the value of node
+    uint64_t (*get_node_value)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "value": the value of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_node_value)(uint64_t, uint64_t);
+} linkedlist_node_access;
+
+// base class of the linked list
+typedef struct LINKEDLIST_BASE_STRUCT
+{
+    uint64_t    head;
+    uint64_t    count;
+
+    // this: this pointer
+    // <uint64_t> "node": the id of new head node
+    // return <int>: 1 if the updating is successful
+    int (*update_head)(struct LINKEDLIST_BASE_STRUCT *this, uint64_t);
+} linkedlist_base;
+
+// The linked list implementation open to other data structures
+// especially useful for malloc explicit list implementation
+void linkedlist_base_free(linkedlist_base *list, 
+    linkedlist_node_access *node_access);
+linkedlist_base *linkedlist_base_add(linkedlist_base *list, 
+    linkedlist_node_access *node_access, 
+    uint64_t value);
+int linkedlist_base_delete(linkedlist_base *list, 
+    linkedlist_node_access *node_access, 
+    uint64_t node);
+uint64_t linkedlist_base_index(linkedlist_base *list,
+    linkedlist_node_access *node_access, 
+    uint64_t index);
+uint64_t linkedlist_base_next(linkedlist_base *list,
+    linkedlist_node_access *node_access);
+
+//
+//  The implementation of the default linked list
+//
+
+typedef union
+{
+    linkedlist_base base;
+    struct
+    {
+        uint64_t head;
+        uint64_t count;
+    };
+} linkedlist_t;
+
 typedef struct LINKED_LIST_NODE_STRUCT
 {
     uint64_t value;
@@ -25,17 +108,10 @@ typedef struct LINKED_LIST_NODE_STRUCT
     struct LINKED_LIST_NODE_STRUCT *next;
 } linkedlist_node_t;
 
-typedef struct
-{
-    linkedlist_node_t  *head;
-    uint64_t    count;
-} linkedlist_t;
-
 linkedlist_t *linkedlist_construct();
 void linkedlist_free(linkedlist_t *list);
 linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
 int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
-linkedlist_node_t *linkedlist_get(linkedlist_t *list, uint64_t value);
 linkedlist_node_t *linkedlist_next(linkedlist_t *list);
 linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index);
 
