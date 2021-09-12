@@ -199,6 +199,10 @@ typedef struct
     // "free" the memory of a node
     int (*destruct_node)(uint64_t);
 
+    // <uint64_t> "node": the id of node
+    // return <uint64_t>: 1 if node is null
+    int (*is_null_node)(uint64_t);
+
     // <uint64_t> "first": the id of first node
     // <uint64_t> "second": the id of second node
     // return <uint64_t>: 0 if they are the same
@@ -235,6 +239,14 @@ typedef struct
     // <rb_color_t> "color": the red-black color of the node
     // return <int>: 1 if the setting is successful
     int (*set_color)(uint64_t, rb_color_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <rb_color_t>: the color of the node
+    uint64_t (*get_key)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <rb_color_t> "color": the red-black color of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_key)(uint64_t, rb_color_t);
 } rbtree_node_interface;
 
 // internal class of the red-black tree

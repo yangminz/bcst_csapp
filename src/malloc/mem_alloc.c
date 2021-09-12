@@ -446,14 +446,16 @@ uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksi
         }
         else if (b_blocksize - request_blocksize < min_blocksize)
         {
+            /*
             // TODO: potential optimization: reduce the fragmentation
             // no need to split this block
             // set_blocksize(b, request_blocksize);
             set_allocated(b, ALLOCATED);
             uint64_t b_footer = get_footer(b);
             set_allocated(b_footer, ALLOCATED);
+            */
 
-            return get_payload(b);
+            return NIL;
         }
     }
 

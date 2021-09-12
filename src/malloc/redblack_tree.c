@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include "headers/allocator.h"
+#include "headers/algorithm.h"
 
 static int internal_heap_init();
 static uint64_t internal_malloc(uint32_t size);
@@ -145,6 +146,21 @@ static void set_redblack_tree_color(uint64_t header_vaddr, uint32_t color)
     *(uint32_t *)&heap[header_vaddr] &= 0xFFFFFFFD;
     *(uint32_t *)&heap[header_vaddr] |= ((color & 0x1) << 1);
 }
+
+static rbtree_node_interface i_node = 
+{
+    .construct_node = NULL,
+    .destruct_node = NULL,
+    .compare_nodes = NULL,
+    .get_parent = &get_redblack_tree_prev,
+    .set_parent = &set_redblack_tree_prev,
+    .get_leftchild = &get_redblack_tree_left,
+    .set_leftchild = &set_redblack_tree_left,
+    .get_rightchild = &get_redblack_tree_right,
+    .set_rightchild = &set_redblack_tree_right,
+    .get_color = &get_redblack_tree_color,
+    .set_color = &set_redblack_tree_color,
+};
 
 /* ------------------------------------- */
 /*  Operations for Red-Black Tree        */
