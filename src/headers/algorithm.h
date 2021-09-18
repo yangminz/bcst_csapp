@@ -348,6 +348,7 @@ uint64_t bstree_internal_find(rbtree_internal_t *tree,
 
 rb_tree_t *bst_construct();
 void bst_free(rb_tree_t *tree);
+void bst_add(rb_tree_t *tree, uint64_t key);
 void bst_insert(rb_tree_t *tree, rb_node_t *node);
 void bst_delete(rb_tree_t *tree, rb_node_t *node);
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key);

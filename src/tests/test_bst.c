@@ -17,9 +17,7 @@
 #include "headers/common.h"
 
 rb_tree_t *bst_construct_keystr(char *str);
-
-
-
+int bst_compare(rb_tree_t *a, rb_tree_t *b);
 
 static void test_build()
 {
@@ -126,8 +124,36 @@ static void test_build()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
+static void test_insert()
+{
+    printf("Testing Binary Search tree insertion ...\n");
+
+    rb_tree_t *r = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
+
+    // test insert
+    bst_add(r, 4);
+
+    // check
+    rb_tree_t *a = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,(4,#,#),#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
+    assert(bst_compare(r, a) == 1);
+
+    // free
+    bst_free(r);
+    bst_free(a);
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
 int main()
 {
     test_build();
+    test_insert();
     return 0;
 }

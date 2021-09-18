@@ -106,6 +106,13 @@ uint64_t bstree_internal_find(rbtree_internal_t *tree,
 
 static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
 {
+    assert(i_node != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_key != NULL);
+    assert(i_node->get_color != NULL);
+
     if (i_node->is_null_node(node) == 1)
     {
         printf("#");
@@ -127,9 +134,13 @@ static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
     printf(")");
 }
 
-void bstree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
+void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
 {
-    tree_print_dfs(tree->root, i_node);
+    if (tree != NULL)
+    {
+        assert(i_node != NULL);
+        tree_print_dfs(tree->root, i_node);
+    }
     printf("\n");
 }
 
@@ -137,8 +148,25 @@ void bstree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_nod
 // the format of string str:
 // 1. NULL node - `#`
 // 2. (root node key, left tree key, right tree key)
-void tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interface *i_node, char *str)
+void internal_tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interface *i_node, char *str)
 {
+    assert(i_node != NULL);
+    assert(tree != NULL);
+    assert(tree->update_root != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->compare_nodes != NULL);
+    assert(i_node->construct_node != NULL);
+    assert(i_node->get_parent != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_key != NULL);
+    assert(i_node->get_color != NULL);
+    assert(i_node->set_parent != NULL);
+    assert(i_node->set_leftchild != NULL);
+    assert(i_node->set_rightchild != NULL);
+    assert(i_node->set_key != NULL);
+    assert(i_node->set_color != NULL);
+
     // a node on STACK, a LOCAL variable!
     // this is the sentinel to mark the unprocessed sub-tree
     // this node_id is different from NULL_ID, and should be 
@@ -275,6 +303,40 @@ void tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interface *i_nod
             i ++;
             continue;
         }
+    }
+}
+
+// a and b are node ids
+int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node)
+{
+    assert(i_node != NULL);
+    assert(i_node->is_null_node != NULL);
+
+    int is_a_null = i_node->is_null_node(a);
+    int is_b_null = i_node->is_null_node(b);
+
+    if (is_a_null == 1 && is_b_null == 1)
+    {
+        return 1;
+    }
+
+    if (is_a_null == 1 || is_b_null == 1)
+    {
+        return 0;
+    }
+
+    // both not NULL
+    if (
+        (i_node->get_key(a) == i_node->get_key(b)) &&
+        (i_node->get_color(a) == i_node->get_color(b))
+    )
+    {
+        return  internal_tree_compare(i_node->get_leftchild(a), i_node->get_leftchild(b), i_node) && 
+                internal_tree_compare(i_node->get_rightchild(a), i_node->get_rightchild(b), i_node);
+    }
+    else
+    {
+        return 0;
     }
 }
 
@@ -477,31 +539,6 @@ static int update_root(rbtree_internal_t *this, uint64_t new_root)
     return 1;
 }
 
-// Helper functions
-static int compare_tree(rb_node_t *a, rb_node_t *b)
-{
-    if (a == NULL && b == NULL)
-    {
-        return 1;
-    }
-
-    if (a == NULL || b == NULL)
-    {
-        return 0;
-    }
-
-    // both not NULL
-    if (a->key == b->key)
-    {
-        return  compare_tree(a->left, b->left) && 
-                compare_tree(a->right, b->right);
-    }
-    else
-    {
-        return 0;
-    }
-}
-
 //
 //  The exposed interfaces
 //
@@ -519,7 +556,7 @@ rb_tree_t *bst_construct()
 rb_tree_t *bst_construct_keystr(char *str)
 {
     rb_tree_t *tree = bst_construct();
-    tree_construct_keystr(&(tree->base), &default_i_node, str);
+    internal_tree_construct_keystr(&(tree->base), &default_i_node, str);
     return tree;
 }
 
@@ -555,6 +592,14 @@ void bst_free(rb_tree_t *tree)
     free(tree);
 }
 
+void bst_add(rb_tree_t *tree, uint64_t key)
+{
+    rb_node_t *n = (rb_node_t *)default_i_node.construct_node();
+    n->key = key;
+
+    bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)n);
+}
+
 void bst_insert(rb_tree_t *tree, rb_node_t *node)
 {
     bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)node);
@@ -575,4 +620,18 @@ rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)
     }
 
     return (rb_node_t *)node_id;
+}
+
+int bst_compare(rb_tree_t *a, rb_tree_t *b)
+{
+    if (a == NULL && b == NULL)
+    {
+        return 1;
+    }
+    if (a == NULL || b == NULL)
+    {
+        return 0;
+    }
+    
+    return internal_tree_compare(a->root, b->root, &default_i_node);
 }
