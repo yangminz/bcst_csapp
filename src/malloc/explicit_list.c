@@ -82,6 +82,11 @@ static int compare_nodes(uint64_t first, uint64_t second)
     return !(first == second);
 }
 
+static int is_null_node(uint64_t node_id)
+{
+    return node_id == NULL_ID;
+}
+
 static uint64_t get_prevfree(uint64_t header_vaddr)
 {
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
@@ -110,6 +115,7 @@ static linkedlist_node_interface i_free_block =
     .construct_node = NULL,
     .destruct_node = &destruct_node,
     .compare_nodes = &compare_nodes,
+    .is_null_node = &is_null_node,
     .get_node_prev = &get_prevfree,
     .set_node_prev = &set_prevfree,
     .get_node_next = &get_nextfree,

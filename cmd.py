@@ -149,6 +149,9 @@ def count_lines():
         count = 0
         for index, line in enumerate(open(filename, 'r')):
             count += 1
+        # skip the test files
+        if "/tests/" in str(filename):
+            continue
         name_count += [[str(filename), count]]
         total_count += count
         if len(str(filename)) > maxfilename:
@@ -172,9 +175,7 @@ def build(key):
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
                     "-I", "./src",
-                    # "-DDEBUG_PARSE_INSTRUCTION",
                     "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DDEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK",
                     "./src/common/convert.c",
                     "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
@@ -183,7 +184,24 @@ def build(key):
                     "./src/hardware/cpu/isa.c",
                     "./src/hardware/cpu/mmu.c",
                     "./src/hardware/memory/dram.c",
-                    "-o", "./bin/isa"
+                    "./src/tests/test_parse_isa.c",
+                    "-o", "./bin/parse_isa"
+                ],
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
+                    "-I", "./src",
+                    "-DDEBUG_INSTRUCTION_CYCLE",
+                    "./src/common/convert.c",
+                    "./src/common/cleanup.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/trie.c",
+                    "./src/algorithm/array.c",
+                    "./src/hardware/cpu/isa.c",
+                    "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/memory/dram.c",
+                    "./src/tests/test_run_isa.c",
+                    "-o", "./bin/run_isa"
                 ]
             ],
         "link" : [
@@ -275,6 +293,7 @@ def build(key):
                     "-I", "./src",
                     "-DDEBUG_TRIE",
                     "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
+                    "./src/tests/test_trie.c",
                     "-o", "./bin/trie"
                 ],
             ],
@@ -286,6 +305,7 @@ def build(key):
                     "-DDEBUG_BST",
                     "./src/algorithm/bst.c",
                     "./src/common/convert.c",
+                    "./src/tests/test_bst.c",
                     "-o", "./bin/bst"
                 ],
             ],
@@ -299,9 +319,22 @@ def build(key):
                     "-DEXPLICIT_FREE_LIST",
                     # "-DREDBLACK_TREE",
                     "./src/algorithm/linkedlist.c",
-                    "./src/malloc/implicit_list.c", "./src/malloc/explicit_list.c", "./src/malloc/redblack_tree.c",
+                    "./src/malloc/implicit_list.c", "./src/malloc/explicit_list.c", 
+                    #"./src/malloc/redblack_tree.c",
                     "./src/malloc/mem_alloc.c",
+                    "./src/tests/test_malloc.c",
                     "-o", "./bin/malloc"
+                ],
+            ],
+        "convert" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_BST",
+                    "./src/common/convert.c",
+                    "./src/tests/test_convert.c",
+                    "-o", "./bin/convert"
                 ],
             ],
     }
@@ -315,7 +348,7 @@ def build(key):
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        "isa" : ["./bin/isa"],
+        "isa" : ["./bin/parse_isa", "./bin/run_isa"],
         "elf" : ["./bin/elf"],
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
@@ -324,6 +357,7 @@ def run(key):
         "trie" : ["./bin/trie"],
         "bst" : ["./bin/bst"],
         "malloc" : ["./bin/malloc"],
+        "convert" : ["./bin/convert"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -337,6 +371,7 @@ def debug(key):
         "isa" : [gdb, "./bin/isa"],
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
         "malloc" : [gdb, "./bin/malloc"],
+        "bst" : [gdb, "./bin/bst"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -384,7 +419,7 @@ def cache_verify():
         # thus we start a new process
         a = [
             "/usr/bin/python3",
-            "./src/mains/cache_verify.py",
+            "./src/tests/test_cache.py",
             "/mnt/e/Ubuntu/cache/csim-ref",
             "/mnt/e/Ubuntu/cache/traces/" + file,
             str(s), str(E), str(b),

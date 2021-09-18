@@ -93,6 +93,10 @@ typedef struct
     // "free" the memory of a node
     int (*destruct_node)(uint64_t);
 
+    // <uint64_t> "node": the id of node
+    // return <uint64_t>: 1 if node is null
+    int (*is_null_node)(uint64_t);
+
     // <uint64_t> "first": the id of first node
     // <uint64_t> "second": the id of second node
     // return <uint64_t>: 0 if they are the same
@@ -137,12 +141,10 @@ typedef struct LINKEDLIST_INTERNAL_STRUCT
 
 // The linked list implementation open to other data structures
 // especially useful for malloc explicit list implementation
-void linkedlist_internal_free(linkedlist_internal_t *list, 
-    linkedlist_node_interface *i_node);
-linkedlist_internal_t *linkedlist_internal_add(linkedlist_internal_t *list, 
+int linkedlist_internal_add(linkedlist_internal_t *list, 
     linkedlist_node_interface *i_node, 
     uint64_t value);
-linkedlist_internal_t *linkedlist_internal_insert(linkedlist_internal_t *list, 
+int linkedlist_internal_insert(linkedlist_internal_t *list, 
     linkedlist_node_interface *i_node, 
     uint64_t node);
 int linkedlist_internal_delete(linkedlist_internal_t *list, 
@@ -177,8 +179,8 @@ typedef struct LINKED_LIST_NODE_STRUCT
 
 linkedlist_t *linkedlist_construct();
 void linkedlist_free(linkedlist_t *list);
-linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
-int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
+void linkedlist_add(linkedlist_t *list, uint64_t value);
+void linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
 linkedlist_node_t *linkedlist_next(linkedlist_t *list);
 linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index);
 
@@ -241,12 +243,20 @@ typedef struct
     int (*set_color)(uint64_t, rb_color_t);
 
     // <uint64_t> "node": the id of current node
-    // return <rb_color_t>: the color of the node
+    // return <uint64_t>: the key of the node
     uint64_t (*get_key)(uint64_t);
     // <uint64_t> "node": the id of current node
-    // <rb_color_t> "color": the red-black color of the node
+    // <uint64_t> "key": the key of the node
     // return <int>: 1 if the setting is successful
-    int (*set_key)(uint64_t, rb_color_t);
+    int (*set_key)(uint64_t, uint64_t);
+
+    // <uint64_t> "node": the id of current node
+    // return <uint64_t>: the value of the node
+    uint64_t (*get_value)(uint64_t);
+    // <uint64_t> "node": the id of current node
+    // <uint64_t> "key": the value of the node
+    // return <int>: 1 if the setting is successful
+    int (*set_value)(uint64_t, uint64_t);
 } rbtree_node_interface;
 
 // internal class of the red-black tree
@@ -296,9 +306,28 @@ typedef struct RB_NODE_STRUCT
     // edge color to parent
     rb_color_t color;
 
-    // tree node value
+    // tree node key
+    uint64_t key;
+
+    // tree node values
     uint64_t value;
 } rb_node_t;
+
+typedef union
+{
+    rbtree_internal_t base;
+    // this struct is the same with rbtree_internal_t
+    struct
+    {
+        // the root node of the tree
+        uint64_t root;
+
+        // this: this pointer
+        // <uint64_t> "node": the id of new root node
+        // return <int>: 1 if the updating is successful
+        int (*update_root)(struct RBTREE_INTERNAL_STRUCT *this, uint64_t);
+    };
+} rb_tree_t;
 
 rb_node_t *rb_insert(rb_node_t *root, uint64_t val);
 rb_node_t *rb_delete(rb_node_t *root, uint64_t val);
@@ -307,9 +336,20 @@ rb_node_t *rb_find(rb_node_t *root, uint64_t val);
 /*======================================*/
 /*      Binary Search Tree              */
 /*======================================*/
+void bstree_internal_insert(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id);
+void bstree_internal_delete(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id);
+uint64_t bstree_internal_find(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t value);
 
-rb_node_t *bst_insert(rb_node_t *root, uint64_t val);
-rb_node_t *bst_delete(rb_node_t *root, uint64_t val);
-rb_node_t *bst_find(rb_node_t *root, uint64_t val);
+rb_tree_t *bst_construct();
+void bst_free(rb_tree_t *tree);
+void bst_insert(rb_tree_t *tree, rb_node_t *node);
+void bst_delete(rb_tree_t *tree, rb_node_t *node);
+rb_node_t *bst_find(rb_tree_t *tree, uint64_t key);
 
 #endif

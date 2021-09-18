@@ -13,378 +13,140 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <headers/algorithm.h>
-#include <headers/common.h>
+#include "headers/algorithm.h"
+#include "headers/common.h"
 
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack);
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack);
-
-// insert value to the tree
-// return the updated tree root node
-rb_node_t *bst_insert(rb_node_t *root, uint64_t val)
+void bstree_internal_insert(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id)
 {
-    rb_node_t *redblack;
-    return bst_insert_node(root, val, &redblack);
-}
-
-rb_node_t *bst_insert_node(rb_node_t *root, uint64_t val, rb_node_t **redblack)
-{
-    // create
-    if (root == NULL)
-    {
-        root = malloc(sizeof(rb_node_t));
-        
-        // update properties
-        root->parent = NULL;
-        root->left = NULL;
-        root->right = NULL;
-        root->value = val;
-        root->color = COLOR_BLACK;
-
-        *redblack = root;
-        return root;
-    }
-
-    // search the right place (leaf node) to insert data
-    rb_node_t *n = root;
-
-    while (n != NULL)
-    {
-        if (val < n->value)
-        {
-            if (n->left == NULL)
-            {
-                // insert here
-                n->left = malloc(sizeof(rb_node_t));
-                n->left->parent = n;
-                n->left->left = NULL;
-                n->left->right = NULL;
-                n->left->value = val;
-                n->left->color = COLOR_RED;
-                
-                *redblack = n->left;
-                return root;
-            }
-            else
-            {
-                n = n->left;
-            }
-        }
-        else if (val > n->value)
-        {
-            if (n->right == NULL)
-            {
-                // insert here
-                n->right = malloc(sizeof(rb_node_t));
-                n->right->parent = n;
-                n->right->left = NULL;
-                n->right->right = NULL;
-                n->right->value = val;
-                n->right->color = COLOR_RED;
-
-                *redblack = n->right;
-                return root;
-            }
-            else
-            {
-                n = n->right;
-            }
-        }
-        else
-        {
-            // equals
-            printf("bst insertion: existing value {%lx} being tried to redblack.\n", val);
-            exit(0);
-        }
-    }
-
-    *redblack = NULL;
-    return root;
-}
-
-rb_node_t *bst_delete(rb_node_t *root, uint64_t val)
-{
-    rb_node_t *redblack;
-    rb_node_t *n = bst_find(root, val);
-    return bst_delete_node(root, n, &redblack);
-}
-
-// delete the node
-// return the updated tree root node
-// this delete will try to fix the RBT with recoloring
-// and only double black NULL nodes need further fixing
-// record the parent node of this double black node
-rb_node_t *bst_delete_node(rb_node_t *root, rb_node_t *n, rb_node_t **redblack)
-{
-    *redblack = NULL;
-    if (n == NULL)
-    {
-        return NULL;
-    }
-
-    // in case root is deleted
-    rb_node_t *p = NULL;
-    int is_n_root = 0;
-    if (n == root)
-    {
-        // no parent pointer, create a dummy one
-        p = malloc(sizeof(rb_node_t));
-        p->color = COLOR_BLACK;
-        p->left = n;
-        n->parent = p;
-        p->parent = NULL;
-        p->right = NULL;
-        is_n_root = 1;
-    }
-    else
-    {
-        p = n->parent;
-        is_n_root = 0;
-    }
-
-    int p_n_index = (n == n->parent->right);
-
-    if (n->left == NULL && n->right == NULL)
-    {
-        //////////////////////////////////////////////
-        // case 1: leaf node                        //
-        //////////////////////////////////////////////
-        n->parent->childs[p_n_index] = NULL;
-        
-        if (is_n_root == 1)
-        {
-            // tree is empty now, no steps
-            root = NULL;
-        }
-        else if (n->color == COLOR_BLACK)
-        {
-            // for RB, we record the parent node of double black
-            *redblack = p;
-        }
-
-        // when this leaf node is black, DOUBLE BLACK for NULL
-        free(n);
-    }
-    else if (n->left == NULL || n->right == NULL)
-    {
-        //////////////////////////////////////////////
-        // case 2: one sub-tree is empty            //
-        //////////////////////////////////////////////
-
-        // transplant the not-empty sub-tree to the node to be deleted
-        // 0 - left; 1 - right
-        rb_node_t *c = n->childs[n->left == NULL];
-
-        /*  With one child is NULL, there are only 2 possibilities:
-            CASE 1 - this node is red, then its black height is 0
-                T0 --> # | (R, #, #)
-                impossible
-            CASE 2 - this node is black, then its black height is 1
-                T1 --> (B, #, T0) | (B, T0, #)
-
-                (B, #, (R, #, #))
-                (B, (R, #, #), #)
-                pass the black to the child, then done:
-                (B, #, #)
-         */
-#ifdef DEBUG_REDBLACK
-        assert(n->color == COLOR_BLACK);
-        assert(c->color == COLOR_RED);
-        assert(c->left == NULL);
-        assert(c->right == NULL);
-#endif
-        
-        // we do not manipulate the pointers here so we can remain the colors of rbt
-        n->value = c->value;
-        n->left = c->left;
-        n->right = c->right;
-        n->color = COLOR_BLACK; // should be still black
-
-        // this happens in BST only
-        // for RBT, they are all NULL
-        if (n->left != NULL)
-        {
-            n->left->parent = n;
-        }
-
-        if (n->right != NULL)
-        {
-            n->right->parent = n;
-        }
-        
-        free(c);
-    }
-    else if (n->right->left == NULL)
-    {
-        //////////////////////////////////////////////
-        // case 3: both sub-trees are not empty     //
-        // 3.1: a simple remove will do the job     //
-        //////////////////////////////////////////////
-
-        // transplant the left sub-tree
-        rb_node_t *successor = n->right;
-
-        /*  successor is at most height 1: (successor, #, T0)
-            CASE 1 - successor red
-                (R, #, T0) --> (R, #, #), just delete it
-            CASE 2 - successor black
-                (B, #, T0) --> 
-                    (B, #, #)   NULL double black
-                    (B, #, (R, #, #))
-                        With successor (B, #, (R, #, #)), the node to be deleted n can be
-
-                        CASE 1 - n red
-                            T1 = (R, T1, (B, #, (R, #, #)))
-                            after deletion, (B, T1, (R, #, #))
-                            recoloring, (R, T1, (B, #, #))
-                        CASE 2 - n black
-                            T2 = (B, T1, (B, #, (R, #, #)))
-                            after deletion, (DB, T1, (R, #, #))
-                            recoloring, (B, T1, (B, #, #))
-         */
-#ifdef DEBUG_REDBLACK
-        if (successor->color == COLOR_RED)
-        {
-            assert(successor->right == NULL);
-        }
-        else if (successor->right != NULL)
-        {
-            assert(successor->right->color == COLOR_RED);
-            assert(successor->right->left == NULL);
-            assert(successor->right->right == NULL);
-        }
-#endif
-        if (successor->color == COLOR_BLACK && successor->right == NULL)
-        {
-            // successor (B, #, #)
-            *redblack = n;
-        }
-        
-        n->value = successor->value;
-
-        n->right = successor->right;
-        if (n->right != NULL)
-        {
-            n->right->parent = n;
-            // for red-black tree
-            // (B, #, (R, #, #)) --> (R, #, #) --> (B, #, #)
-            assert(n->right->color == COLOR_RED);
-            n->right->color = COLOR_BLACK;
-        }
-
-        free(successor);
-    }
-    else if (n->right->left != NULL)
-    {
-        //////////////////////////////////////////////
-        // 3.2: float up the tight upper bound      //
-        // as root of sub-tree                      //
-        //////////////////////////////////////////////
-
-        rb_node_t *successor = n->right;
-        while (successor->left != NULL)
-        {
-            successor = successor->left;
-        }
-
-        // float up successor
-        n->value = successor->value;
-        
-        /*  Same analysis, for (Successor, #, T0)
-                (R, #, T0) -->
-                    (R, #, #), just delete it
-
-                (B, #, T0) -->
-                    (B, #, #), NULL becomes double black
-                    (B, #, (R, #, #)), consider the parent:
-                        (R, (B, #, (R, #, #)), T1)
-                            free successor: (R, (R, #, #), T1); recoloring: (R, (B, #, #), T1)
-                        (B, (B, #, (R, #, #)), T1)
-                            free successor: (B, (R, #, #), T1); recoloring: (B, (B, #, #), T1)
-         */
-
-        successor->parent->left = successor->right;
-        if (successor->right != NULL)
-        {
-            successor->right->parent = successor->parent;
-            // for RBT, only (B, #, (R, #, #))
-            // a simple recoloring will fix
-            successor->right->color = COLOR_BLACK;
-        }
-        else if (successor->color == COLOR_BLACK)
-        {
-            // for RBT, only (B, #, #)
-            // and successor should not be root
-            *redblack = successor->parent;
-        }
-
-        // when this successor is black, DOUBLE BLACK for successor
-        free(successor);
-    }
-    
-    if (is_n_root == 1)
-    {
-        free(p);
-
-        if (root != NULL)
-        {
-            root->parent = NULL;
-        }
-    }
-
-    return root;
-}
-
-// find the node owning the target value
-rb_node_t *bst_find(rb_node_t *root, uint64_t val)
-{
-    rb_node_t *n = root;
-    uint64_t n_value;
-
-    while (n != NULL)
-    {
-        n_value = n->value;
-
-        if (n_value == val)
-        {
-            return n;
-        }
-        else if (val < n_value)
-        {
-            n = n->left;
-        }
-        else
-        {
-            n = n->right;
-        }
-    }
-
-    return NULL;
-}
-
-void tree_free(rb_node_t *root)
-{
-    if (root == NULL)
+    if (tree == NULL)
     {
         return;
     }
+    assert(i_node->is_null_node != NULL);
 
-    tree_free(root->left);
-    tree_free(root->right);
+    assert(i_node->set_parent != NULL);
+    assert(i_node->set_leftchild != NULL);
+    assert(i_node->set_rightchild != NULL);
+    assert(i_node->set_color != NULL);
+    assert(i_node->set_key != NULL);
 
-    free(root);
+    assert(i_node->get_parent != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_color != NULL);
+    assert(i_node->get_key != NULL);
+
+    if (i_node->is_null_node(tree->root) == 1)
+    {
+        i_node->set_parent(node_id, NULL_ID);
+        i_node->set_leftchild(node_id, NULL_ID);
+        i_node->set_rightchild(node_id, NULL_ID);
+        i_node->set_color(node_id, COLOR_BLACK);
+
+        tree->update_root(tree, node_id);
+        return;
+    }
+    
+    uint64_t p = tree->root;
+    uint64_t n_key = i_node->get_key(node_id);
+
+    while (i_node->is_null_node(p) == 0)
+    {
+        uint64_t p_key = i_node->get_key(p);
+
+        if (n_key < p_key)
+        {
+            uint64_t p_left = i_node->get_leftchild(p);
+
+            if (i_node->is_null_node(p_left) == 1)
+            {
+                // insert node to p->left
+                i_node->set_leftchild(p, node_id);
+                return;
+            }
+            else
+            {
+                p = p_left;
+            }
+        }
+        else // if (n_key > p_key)
+        {
+            uint64_t p_right = i_node->get_rightchild(p);
+
+            if (i_node->is_null_node(p_right) == 1)
+            {
+                // insert node to p->left
+                i_node->set_rightchild(p, node_id);
+                return;
+            }
+            else
+            {
+                p = p_right;
+            }
+        }
+    }
 }
 
-rb_node_t *tree_construct(char *str)
+void bstree_internal_delete(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t node_id)
 {
-    // (root node, left tree, right tree)
-    // for NULL node, #
+    // TODO
+}
 
-    // sentinel to mark the unprocessed sub-tree
-    rb_node_t todo;
+uint64_t bstree_internal_find(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t value)
+{
+    // TODO
+    return 0;
+}
 
-    // pointer stack
-    rb_node_t *stack[1000];
+static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
+{
+    if (i_node->is_null_node(node) == 1)
+    {
+        printf("#");
+        return;
+    }
+
+    if (i_node->get_color(node) == COLOR_RED)
+    {
+        printf("(\033[31m%lu\033[0m,", i_node->get_key(node));
+    }
+    else
+    {
+        printf("(%lu,", i_node->get_key(node));
+    }
+
+    tree_print_dfs(i_node->get_leftchild(node), i_node);
+    printf(",");
+    tree_print_dfs(i_node->get_rightchild(node), i_node);
+    printf(")");
+}
+
+void bstree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
+{
+    tree_print_dfs(tree->root, i_node);
+    printf("\n");
+}
+
+// For test use
+// the format of string str:
+// 1. NULL node - `#`
+// 2. (root node key, left tree key, right tree key)
+void tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interface *i_node, char *str)
+{
+    // a node on STACK, a LOCAL variable!
+    // this is the sentinel to mark the unprocessed sub-tree
+    // this node_id is different from NULL_ID, and should be 
+    // different from all possibilities from node constructor
+    uint64_t todo = 1;
+
+    // pointer stack (at most 1K nodes) for node ids
+    uint64_t stack[1000];
     int top = -1;
 
     int i = 0;
@@ -394,10 +156,11 @@ rb_node_t *tree_construct(char *str)
         {
             // push the node as being processed
             top ++;
-            stack[top] = malloc(sizeof(rb_node_t));
-            stack[top]->parent = NULL;
-            stack[top]->left = &todo;
-            stack[top]->right = &todo;
+            
+            uint64_t x = i_node->construct_node();
+            i_node->set_parent(x, NULL_ID);
+            i_node->set_leftchild(x, todo);
+            i_node->set_rightchild(x, todo);
 
             // scan the value
             // (value,
@@ -406,8 +169,12 @@ rb_node_t *tree_construct(char *str)
             {
                 ++ j;
             }
-            stack[top]->value = string2uint_range(str, i + 1, j - 1);
+            i_node->set_key(x, string2uint_range(str, i + 1, j - 1));
 
+            // push to stack
+            stack[top] = x;
+
+            // move to next node
             i = j + 1;
             continue;
         }
@@ -417,64 +184,90 @@ rb_node_t *tree_construct(char *str)
             if (top == 0)
             {
                 // pop root
-                assert(stack[0]->left != &todo && stack[0]->right != &todo);
-                return stack[0];
+                uint64_t first = stack[0];
+                uint64_t first_left = i_node->get_leftchild(first);
+                uint64_t first_right = i_node->get_rightchild(first);
+
+                assert(i_node->compare_nodes(first_left, todo) != 0 &&
+                    i_node->compare_nodes(first_right, todo) != 0);
+
+                tree->update_root(tree, first);
+                return;
             }
 
-            rb_node_t *p = stack[top - 1];
-            rb_node_t *t = stack[top];
-            assert(t->left != &todo && t->right != &todo);
+            // pop a non-root node
+            uint64_t p = stack[top - 1];    // the parent of top
+            uint64_t t = stack[top];        // the poped top - can be left or right child of parent
+
+            // when pop top, its left & right subtree are all reduced
+            assert(i_node->compare_nodes(t, todo) != 0 &&
+                i_node->compare_nodes(t, todo) != 0);
 
             top --;
 
-            // else, pop this node
-            if (p->left == &todo)
+            // pop this node
+            uint64_t p_left = i_node->get_leftchild(p);
+            uint64_t p_right = i_node->get_rightchild(p);
+
+            if (i_node->compare_nodes(p_left, todo) == 0)
             {
-                p->left = t;
-                p->left->parent = p;
+                // check left child of parent FIRST
+                // it's not yet processed
+                // thus top is parent's left child
+                i_node->set_leftchild(p, t);
+                i_node->set_parent(t, p);
                 i ++;
                 continue;
             }
-            else if (p->right == &todo)
+            else if (i_node->compare_nodes(p_right, todo) == 0)
             {
-                p->right = t;
-                p->right->parent = p;
+                // check right child of parent THEN
+                // left sub-tree has been reduced
+                // but right sub-tree has not yet
+                i_node->set_rightchild(p, t);
+                i_node->set_parent(t, p);
                 i ++;
                 continue;
             }
 
-            printf("node %p:%lx is not having any unprocessed sub-tree\n  while %p:%lx is redblack into it.\n",
-                p, p->value, t, t->value);
-            exit(0);
+            printf("node %lx:%lx is not having any unprocessed sub-tree\n  while %lx:%lx is redblack into it.\n",
+                p, i_node->get_key(p), t, i_node->get_key(t));
+            assert(0);
         }
         else if (str[i] == '#')
         {
             if (top < 0)
             {
                 assert(strlen(str) == 1);
-                return NULL;
+                return;
             }
+
+            uint64_t top_id = stack[top];
 
             // push NULL node
             // pop NULL node
-            if (stack[top]->left == &todo)
+            if (i_node->compare_nodes(
+                    i_node->get_leftchild(top_id),
+                    todo) == 0)
             {
                 // must check parent's left node first
-                stack[top]->left = NULL;
+                i_node->set_leftchild(top_id, NULL_ID);
                 i ++;
                 continue;
             }
-            else if (stack[top]->right == &todo)
+            else if (i_node->compare_nodes(
+                        i_node->get_rightchild(top_id),
+                        todo) == 0)
             {
                 // then check parent's right node
-                stack[top]->right = NULL;
+                i_node->set_rightchild(top_id, NULL_ID);
                 i ++;
                 continue;
             }
 
-            printf("node %p:(%lx) is not having any unprocessed sub-tree\n  while NULL is redblack into it.\n",
-                stack[top], stack[top]->value);
-            exit(0);
+            printf("node %lx:(%lx) is not having any unprocessed sub-tree\n  while NULL is redblack into it.\n",
+                top_id, i_node->get_key(top_id));
+            assert(0);
         }
         else
         {
@@ -483,41 +276,208 @@ rb_node_t *tree_construct(char *str)
             continue;
         }
     }
-
-    return NULL;
 }
 
-static void tree_print_dfs(rb_node_t *root)
+/*======================================*/
+/*      Default Implementation          */
+/*======================================*/
+
+// Implementation of the binary search tree node access
+
+static int is_null_node(uint64_t node_id)
 {
-    if (root == NULL)
+    if (node_id == NULL_ID)
     {
-        printf("#");
-        return;
+        return 1;
     }
-
-    if (root->color == COLOR_RED)
-    {
-        printf("(\033[31m%lu\033[0m,", root->value);
-    }
-    else
-    {
-        printf("(%lu,", root->value);
-    }
-
-    tree_print_dfs(root->left);
-    printf(",");
-    tree_print_dfs(root->right);
-    printf(")");
+    return 0;
 }
 
-void tree_print(rb_node_t *root)
+static uint64_t construct_node()
 {
-    tree_print_dfs(root);
-    printf("\n");
+    rb_node_t *node = malloc(sizeof(rb_node_t));
+    if (node != NULL)
+    {
+        node->parent = NULL;
+        node->left = NULL;
+        node->right = NULL;
+        node->color = COLOR_BLACK;
+        node->key = 0;
+        node->value = 0;
+
+        return (uint64_t) node;
+    }
+    return NULL_ID;
 }
 
-#ifdef DEBUG_BST
+static int destruct_node(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
 
+    rb_node_t *ptr = (rb_node_t *)node_id;
+    if (ptr != NULL)
+    {
+        free(ptr);
+    }
+
+    return 1;
+}
+
+static int compare_nodes(uint64_t first, uint64_t second)
+{
+    return !(first == second);
+}
+
+static uint64_t get_parent(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return (uint64_t)(((rb_node_t *)node_id)->parent);
+}
+
+static int set_parent(uint64_t node_id, uint64_t parent_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    *(uint64_t *)&(((rb_node_t *)node_id)->parent) = parent_id;
+    return 1;
+}
+
+static uint64_t get_leftchild(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return (uint64_t)(((rb_node_t *)node_id)->left);
+}
+
+static int set_leftchild(uint64_t node_id, uint64_t left_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    *(uint64_t *)&(((rb_node_t *)node_id)->left) = left_id;
+    return 1;
+}
+
+static uint64_t get_rightchild(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return (uint64_t)(((rb_node_t *)node_id)->right);
+}
+
+static int set_rightchild(uint64_t node_id, uint64_t right_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    *(uint64_t *)&(((rb_node_t *)node_id)->right) = right_id;
+    return 1;
+}
+
+static rb_color_t get_color(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return ((rb_node_t *)node_id)->color;
+}
+
+static int set_color(uint64_t node_id, rb_color_t color)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    ((rb_node_t *)node_id)->color = color;
+    return 1;
+}
+
+static uint64_t get_key(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return ((rb_node_t *)node_id)->key;
+}
+
+static int set_key(uint64_t node_id, uint64_t key)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    ((rb_node_t *)node_id)->key = key;
+    return 1;
+}
+
+static uint64_t get_value(uint64_t node_id)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return NULL_ID;
+    }
+    return ((rb_node_t *)node_id)->value;
+}
+
+static int set_value(uint64_t node_id, uint64_t value)
+{
+    if (is_null_node(node_id) == 1)
+    {
+        return 0;
+    }
+    ((rb_node_t *)node_id)->value = value;
+    return 1;
+}
+
+static rbtree_node_interface default_i_node =
+{
+    .construct_node = &construct_node,
+    .destruct_node = &destruct_node,
+    .is_null_node = &is_null_node,
+    .compare_nodes = &compare_nodes,
+    .get_parent = &get_parent,
+    .set_parent = &set_parent,
+    .get_leftchild = &get_leftchild,
+    .set_leftchild = &set_leftchild,
+    .get_rightchild = &get_rightchild,
+    .set_rightchild = &set_rightchild,
+    .get_color = &get_color,
+    .set_color = &set_color,
+    .get_key = &get_key,
+    .set_key = &set_key,
+    .get_value = &get_value,
+    .set_value = &set_value,
+};
+
+
+// child class of base class
+static int update_root(rbtree_internal_t *this, uint64_t new_root)
+{
+    if (this == NULL)
+    {
+        return 0;
+    }
+    this->root = new_root;
+    return 1;
+}
+
+// Helper functions
 static int compare_tree(rb_node_t *a, rb_node_t *b)
 {
     if (a == NULL && b == NULL)
@@ -531,7 +491,7 @@ static int compare_tree(rb_node_t *a, rb_node_t *b)
     }
 
     // both not NULL
-    if (a->value == b->value)
+    if (a->key == b->key)
     {
         return  compare_tree(a->left, b->left) && 
                 compare_tree(a->right, b->right);
@@ -542,306 +502,77 @@ static int compare_tree(rb_node_t *a, rb_node_t *b)
     }
 }
 
-static void test_build()
+//
+//  The exposed interfaces
+//
+
+// constructor and destructor
+rb_tree_t *bst_construct()
 {
-    printf("Testing build tree from string ...\n");
-
-    rb_node_t *r;
-
-    char s[1000];
-
-    memset(s, 0, sizeof(char) * 1000);
-    strcpy(s, "#");
-    r = tree_construct(s);
-    assert(r == NULL);
-    tree_free(r);
-
-    memset(s, 0, sizeof(char) * 1000);
-    strcpy(s, "(12, #, #)");
-    r = tree_construct(s);
-    assert(r->parent == NULL);
-    assert(r->left == NULL);
-    assert(r->right == NULL);
-    assert(r->value == 12);
-    tree_free(r);
-
-    memset(s, 0, sizeof(char) * 1000);
-    strcpy(s, 
-        "("
-            "6,"
-            "("
-                "3,"
-                "("
-                    "2,"
-                    "(1,#,#),"
-                    "#"
-                "),"
-                "("
-                    "4,"
-                    "#,"
-                    "(5,#,#)"
-                ")"
-            "),"
-            "("
-                "7,"
-                "#,"
-                "(8,#,#)"
-            ")"
-        ")");
-    r = tree_construct(s);
-
-    rb_node_t *n1 = r->left->left->left;
-    rb_node_t *n2 = r->left->left;
-    rb_node_t *n3 = r->left;
-    rb_node_t *n4 = r->left->right;
-    rb_node_t *n5 = r->left->right->right;
-    rb_node_t *n6 = r;
-    rb_node_t *n7 = r->right;
-    rb_node_t *n8 = r->right->right;
-
-    assert(n1->value == 1);
-    assert(n1->parent == n2);
-    assert(n1->left == NULL);
-    assert(n1->right == NULL);
-
-    assert(n2->value == 2);
-    assert(n2->parent == n3);
-    assert(n2->left == n1);
-    assert(n2->right == NULL);
-
-    assert(n3->value == 3);
-    assert(n3->parent == n6);
-    assert(n3->left == n2);
-    assert(n3->right == n4);
-
-    assert(n4->value == 4);
-    assert(n4->parent == n3);
-    assert(n4->left == NULL);
-    assert(n4->right == n5);
-
-    assert(n5->value == 5);
-    assert(n5->parent == n4);
-    assert(n5->left == NULL);
-    assert(n5->right == NULL);
-
-    assert(n6->value == 6);
-    assert(n6->parent == NULL);
-    assert(n6->left == n3);
-    assert(n6->right == n7);
-
-    assert(n7->value == 7);
-    assert(n7->parent == n6);
-    assert(n7->left == NULL);
-    assert(n7->right == n8);
-
-    assert(n8->value == 8);
-    assert(n8->parent == n7);
-    assert(n8->left == NULL);
-    assert(n8->right == NULL);
-
-    tree_free(r);
-
-    printf("\033[32;1m\tPass\033[0m\n");
+    rb_tree_t *tree = malloc(sizeof(rb_tree_t));
+    tree->root = NULL_ID;
+    tree->update_root = &update_root;
+    return tree;
 }
 
-static void test_delete()
+// for test use
+rb_tree_t *bst_construct_keystr(char *str)
 {
-    printf("Testing Binary Search tree deletion ...\n");
-
-    rb_node_t *r = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,(1,#,#),(3,#,#)),"
-                "(7,"
-                    "(6,(5,#,#),#),"
-                    "(8,#,(9,#,#))"
-                ")"
-            "),"
-            "(17,"
-                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    rb_node_t *a;
-
-    // case 1: leaf node - parent's left child
-    r = bst_delete(r, 1);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,(3,#,#)),"
-                "(7,"
-                    "(6,(5,#,#),#),"
-                    "(8,#,(9,#,#))"
-                ")"
-            "),"
-            "(17,"
-                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 2: leaf node - parent's right child
-    r = bst_delete(r, 3);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(6,(5,#,#),#),"
-                    "(8,#,(9,#,#))"
-                ")"
-            "),"
-            "(17,"
-                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 3: right NULL
-    r = bst_delete(r, 6);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(5,#,#),"
-                    "(8,#,(9,#,#))"
-                ")"
-            "),"
-            "(17,"
-                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 4: left NULL
-    r = bst_delete(r, 8);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(5,#,#),"
-                    "(9,#,#)"
-                ")"
-            "),"
-            "(17,"
-                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 5: right child's left NULL
-    r = bst_delete(r, 12);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(5,#,#),"
-                    "(9,#,#)"
-                ")"
-            "),"
-            "(17,"
-                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
-                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
-            ")"
-        ")"
-    );
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 6: right child's left not NULL
-    r = bst_delete(r, 19);
-    a = tree_construct(
-        "(10,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(5,#,#),"
-                    "(9,#,#)"
-                ")"
-            "),"
-            "(17,"
-                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
-                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
-            ")"
-        ")");
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    // case 7: delete root
-    r = bst_delete(r, 10);
-    a = tree_construct(
-        "(11,"
-            "(4,"
-                "(2,#,#),"
-                "(7,"
-                    "(5,#,#),"
-                    "(9,#,#)"
-                ")"
-            "),"
-            "(17,"
-                "(13,#,(15,(14,#,#),(16,#,#))),"
-                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
-            ")"
-        ")");
-    int equal = compare_tree(r, a);
-
-    assert(compare_tree(r, a) == 1);
-    tree_free(a);
-
-    tree_free(r);
-
-    printf("\033[32;1m\tPass\033[0m\n");
+    rb_tree_t *tree = bst_construct();
+    tree_construct_keystr(&(tree->base), &default_i_node, str);
+    return tree;
 }
 
-static void test_insert()
+static void bst_destruct_subtree(uint64_t root)
 {
-    printf("Testing Binary Search tree insertion ...\n");
+    if (default_i_node.is_null_node(root) == 1)
+    {
+        return;
+    }
 
-    rb_node_t *r = tree_construct(
-        "(11,"
-            "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
-            "(14,#,(15,#,#)))"
-    );
+    // (sub)root is not null
+    // free its left and right childs
+    bst_destruct_subtree(default_i_node.get_leftchild(root));
+    bst_destruct_subtree(default_i_node.get_rightchild(root));
 
-    // test insert
-    r = bst_insert(r, 4);
+    // free the (sub)root node
+    default_i_node.destruct_node(root);
 
-    // check
-    rb_node_t *a = tree_construct(
-        "(11,"
-            "(2,(1,#,#),(7,(5,(4,#,#),#),(8,#,#))),"
-            "(14,#,(15,#,#)))"
-    );
-    assert(compare_tree(r, a) == 1);
-
-    // free
-    tree_free(r);
-    tree_free(a);
-    printf("\033[32;1m\tPass\033[0m\n");
+    return;
 }
 
-int main()
+void bst_free(rb_tree_t *tree)
 {
-    test_build();
-    test_insert();
-    test_delete();
+    if (tree == NULL)
+    {
+        return;
+    }
+
+    // remove the tree from root
+    bst_destruct_subtree(tree->root);
+
+    // finally, free the struct for tree
+    free(tree);
 }
 
-#endif
+void bst_insert(rb_tree_t *tree, rb_node_t *node)
+{
+    bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)node);
+}
+
+void bst_delete(rb_tree_t *tree, rb_node_t *node)
+{
+    bstree_internal_delete(&(tree->base), &default_i_node, (uint64_t)node);
+}
+
+rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)
+{
+    uint64_t node_id = bstree_internal_find(&(tree->base), &default_i_node, key);
+
+    if (default_i_node.is_null_node(node_id) == 1)
+    {
+        return NULL;
+    }
+
+    return (rb_node_t *)node_id;
+}
