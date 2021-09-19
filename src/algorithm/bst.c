@@ -251,7 +251,7 @@ void bstree_internal_delete(rbtree_internal_t *tree,
             uint64_t q_key = i_node->get_key(q);
             uint64_t q_value = i_node->get_value(q);
             uint64_t q_parent = i_node->get_parent(q);
-            uint64_t q_left = i_node->get_leftchild(q);
+            q_left = i_node->get_leftchild(q);
             uint64_t q_right = i_node->get_rightchild(q);
 
             assert(i_node->is_null_node(q_parent) == 0);

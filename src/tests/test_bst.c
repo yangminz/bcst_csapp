@@ -429,5 +429,6 @@ int main()
     test_build();
     test_insert();
     test_find();
+    test_delete();
     return 0;
 }
