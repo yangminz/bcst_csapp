@@ -18,6 +18,7 @@
 
 rb_tree_t *bst_construct_keystr(char *str);
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
+void bst_print(rb_tree_t *tree);
 
 static void test_build()
 {
@@ -126,7 +127,7 @@ static void test_build()
 
 static void test_insert()
 {
-    printf("Testing Binary Search tree insertion ...\n");
+    printf("Testing Binary Search Tree insertion ...\n");
 
     rb_tree_t *r = bst_construct_keystr(
         "(11,"
@@ -148,6 +149,278 @@ static void test_insert()
     // free
     bst_free(r);
     bst_free(a);
+
+    // insertion the same value at the right child
+    r = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
+
+    // test insert
+    bst_add(r, 8);
+
+    // check
+    a = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,#,(8,#,#)))),"
+            "(14,#,(15,#,#)))"
+    );
+
+    assert(bst_compare(r, a) == 1);
+
+    // free
+    bst_free(r);
+    bst_free(a);
+    
+    // insert the same value in right sub tree
+    r = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
+            "(14,#,(15,#,#)))"
+    );
+
+    // test insert
+    bst_add(r, 7);
+
+    // check
+    a = bst_construct_keystr(
+        "(11,"
+            "(2,(1,#,#),(7,(5,#,#),(8,(7,#,#),#))),"
+            "(14,#,(15,#,#)))"
+    );
+
+    assert(bst_compare(r, a) == 1);
+
+    // free
+    bst_free(r);
+    bst_free(a);
+
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
+static void test_find()
+{
+    printf("Testing Binary Search Tree searching ...\n");
+
+    rb_tree_t *t = bst_construct_keystr(
+        "(7,"
+            "(4,"
+                "(2,(1,#,#),(3,(2,#,#),#)),"
+                "(5,(4,#,#),(5,#,(6,#,#)))),"
+            "(12,"
+                "(9,(8,#,#),(11,(10,#,#),#)),"
+                "(13,(12,#,(12,#,#)),(14,#,#))))"
+    );
+    rb_node_t *r = (rb_node_t *)t->root;
+
+    rb_node_t *f = bst_find(t, 1);
+    assert(f == r->left->left->left);
+    
+    f = bst_find(t, 2);
+    assert(f == r->left->left);
+
+    f = bst_find(t, 3);
+    assert(f == r->left->left->right);
+
+    f = bst_find(t, 4);
+    assert(f == r->left);
+
+    f = bst_find(t, 5);
+    assert(f == r->left->right);
+
+    f = bst_find(t, 6);
+    assert(f == r->left->right->right->right);
+
+    f = bst_find(t, 7);
+    assert(f == r);
+
+    f = bst_find(t, 8);
+    assert(f == r->right->left->left);
+
+    f = bst_find(t, 9);
+    assert(f == r->right->left);
+
+    f = bst_find(t, 10);
+    assert(f == r->right->left->right->left);
+
+    f = bst_find(t, 12);
+    assert(f == r->right);
+
+    f = bst_find(t, 13);
+    assert(f == r->right->right);
+
+    f = bst_find(t, 14);
+    assert(f == r->right->right->right);
+
+    bst_free(t);
+
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
+static void test_delete()
+{
+    printf("Testing Binary Search Tree deletion ...\n");
+
+    rb_tree_t *r = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,(1,#,#),(3,#,#)),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    rb_tree_t *a;
+
+    // case 1: leaf node - parent's left child
+    bst_remove(r, 1);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,(3,#,#)),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 2: leaf node - parent's right child
+    bst_remove(r, 3);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(6,(5,#,#),#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 3: right NULL
+    bst_remove(r, 6);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(8,#,(9,#,#))"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 4: left NULL
+    bst_remove(r, 8);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(12,(11,#,#),(13,#,(15,(14,#,#),(16,#,#)))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 5: right child's left NULL
+    bst_remove(r, 12);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
+                "(19,(18,#,#),(24,(22,(20,#,(21,#,#)),(23,#,#)),(25,#,#)))"
+            ")"
+        ")"
+    );
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 6: right child's left not NULL
+    bst_remove(r, 19);
+    a = bst_construct_keystr(
+        "(10,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,(11,#,#),(15,(14,#,#),(16,#,#))),"
+                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
+            ")"
+        ")");
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    // case 7: delete root
+    bst_remove(r, 10);
+    a = bst_construct_keystr(
+        "(11,"
+            "(4,"
+                "(2,#,#),"
+                "(7,"
+                    "(5,#,#),"
+                    "(9,#,#)"
+                ")"
+            "),"
+            "(17,"
+                "(13,#,(15,(14,#,#),(16,#,#))),"
+                "(20,(18,#,#),(24,(22,(21,#,#),(23,#,#)),(25,#,#)))"
+            ")"
+        ")");
+    int equal = bst_compare(r, a);
+
+    assert(bst_compare(r, a) == 1);
+    bst_free(a);
+
+    bst_free(r);
+
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
@@ -155,5 +428,6 @@ int main()
 {
     test_build();
     test_insert();
+    test_find();
     return 0;
 }

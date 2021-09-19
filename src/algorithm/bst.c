@@ -24,14 +24,13 @@ void bstree_internal_insert(rbtree_internal_t *tree,
     {
         return;
     }
+    assert(tree->update_root != NULL);
     assert(i_node->is_null_node != NULL);
-
     assert(i_node->set_parent != NULL);
     assert(i_node->set_leftchild != NULL);
     assert(i_node->set_rightchild != NULL);
     assert(i_node->set_color != NULL);
     assert(i_node->set_key != NULL);
-
     assert(i_node->get_parent != NULL);
     assert(i_node->get_leftchild != NULL);
     assert(i_node->get_rightchild != NULL);
@@ -93,15 +92,129 @@ void bstree_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
 {
-    // TODO
+    if (tree == NULL)
+    {
+        return;
+    }
+    assert(tree->update_root != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->set_parent != NULL);
+    assert(i_node->set_leftchild != NULL);
+    assert(i_node->set_rightchild != NULL);
+    assert(i_node->set_color != NULL);
+    assert(i_node->set_key != NULL);
+    assert(i_node->get_parent != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_color != NULL);
+    assert(i_node->get_key != NULL);
+
+    if (i_node->is_null_node(tree->root) == 1)
+    {
+        // nothing to delete
+        return;
+    }
+
+    if (i_node->is_null_node(node_id) == 1)
+    {
+        // delete a null
+        return;
+    }
+
+    if (i_node->compare_nodes(tree->root, node_id) == 1)
+    {
+        // delete the root
+        // but what if the root is having subtrees?
+        // TODO: set up a dummy root
+    }
+
+    uint64_t n_left = i_node->get_leftchild(node_id);
+    uint64_t n_right = i_node->get_rightchild(node_id);
+
+    int is_n_left_null = i_node->is_null_node(n_left);
+    int is_n_right_null = i_node->is_null_node(n_right);
+
+    if (is_n_left_null == 1 && is_n_right_null == 1)
+    {
+        //////////////////////////////////////////////
+        // case 1: leaf node                        //
+        //////////////////////////////////////////////
+        
+        // TODO
+    }
+    else if (is_n_left_null == 1 || is_n_right_null == 1)
+    {
+        //////////////////////////////////////////////
+        // case 2: one sub-tree is empty            //
+        //////////////////////////////////////////////
+    }
+    else
+    {
+        
+        //////////////////////////////////////////////
+        // case 3: neither sub-tree is empty        //
+        //////////////////////////////////////////////
+
+        // check the n->right->left
+        uint64_t n_right_left = i_node->get_leftchild(n_right);
+        int is_n_right_left_null = i_node->is_null_node(n_right_left);
+
+        if (is_n_right_left_null == 1)
+        {
+            // 3.1: a simple remove will do the job
+            // TODO
+        }
+        else
+        {
+            // 3.2: float up the upper bound
+            // as root of the sub-tree of node_id
+            // TODO
+        }
+    }
+
 }
 
 uint64_t bstree_internal_find(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
-    uint64_t value)
+    uint64_t key)
 {
-    // TODO
-    return 0;
+    if (tree == NULL)
+    {
+        return NULL_ID;
+    }
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_key != NULL);
+
+    if (i_node->is_null_node(tree->root) == 1)
+    {
+        return NULL_ID;
+    }
+    
+    uint64_t p = tree->root;
+
+    while (i_node->is_null_node(p) == 0)
+    {
+        uint64_t p_key = i_node->get_key(p);
+
+        if (key == p_key)
+        {
+            // return the first found key
+            // which is the most left node of equals
+            return p;
+        }
+        else if (key < p_key)
+        {
+            p = i_node->get_leftchild(p);
+        }
+        else // if (n_key > p_key)
+        {
+            p = i_node->get_rightchild(p);
+        }
+    }
+
+    return NULL_ID;
 }
 
 static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
@@ -560,6 +673,11 @@ rb_tree_t *bst_construct_keystr(char *str)
     return tree;
 }
 
+void bst_print(rb_tree_t *tree)
+{
+    tree_internal_print(&(tree->base), &default_i_node);
+}
+
 static void bst_destruct_subtree(uint64_t root)
 {
     if (default_i_node.is_null_node(root) == 1)
@@ -603,6 +721,16 @@ void bst_add(rb_tree_t *tree, uint64_t key)
 void bst_insert(rb_tree_t *tree, rb_node_t *node)
 {
     bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)node);
+}
+
+void bst_remove(rb_tree_t *tree, uint64_t key)
+{
+    rb_node_t *node = bst_find(tree, key);
+    if (node == NULL)
+    {
+        return;
+    }
+    bst_delete(tree, node);
 }
 
 void bst_delete(rb_tree_t *tree, rb_node_t *node)

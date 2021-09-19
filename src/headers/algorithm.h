@@ -344,12 +344,13 @@ void bstree_internal_delete(rbtree_internal_t *tree,
     uint64_t node_id);
 uint64_t bstree_internal_find(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
-    uint64_t value);
+    uint64_t key);
 
 rb_tree_t *bst_construct();
 void bst_free(rb_tree_t *tree);
 void bst_add(rb_tree_t *tree, uint64_t key);
 void bst_insert(rb_tree_t *tree, rb_node_t *node);
+void bst_remove(rb_tree_t *tree, uint64_t key);
 void bst_delete(rb_tree_t *tree, rb_node_t *node);
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key);
 
