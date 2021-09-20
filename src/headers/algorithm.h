@@ -211,7 +211,7 @@ typedef struct
     int (*compare_nodes)(uint64_t, uint64_t);
 
     // <uint64_t> "node": the id of current node
-    // return <uint64_t>: the id of the previous node
+    // return <uint64_t>: the id of the parent node
     uint64_t (*get_parent)(uint64_t);
     // <uint64_t> "node": the id of current node
     // <uint64_t> "parent": the id of parent node
@@ -219,7 +219,7 @@ typedef struct
     int (*set_parent)(uint64_t, uint64_t);
 
     // <uint64_t> "node": the id of current node
-    // return <uint64_t>: the id of the left node
+    // return <uint64_t>: the id of the left child
     uint64_t (*get_leftchild)(uint64_t);
     // <uint64_t> "node": the id of current node
     // <uint64_t> "left": the id of left child
@@ -283,6 +283,9 @@ void rbtree_internal_delete(rbtree_internal_t *tree,
 uint64_t rbtree_internal_find(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
     uint64_t value);
+uint64_t bstree_internal_find_succ(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t key);
 
 //
 //  The default implementation of red-black tree
@@ -353,5 +356,6 @@ void bst_insert(rb_tree_t *tree, rb_node_t *node);
 void bst_remove(rb_tree_t *tree, uint64_t key);
 void bst_delete(rb_tree_t *tree, rb_node_t *node);
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key);
+rb_node_t *bst_find_succ(rb_tree_t *tree, uint64_t key);
 
 #endif

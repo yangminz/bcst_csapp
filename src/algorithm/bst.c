@@ -319,6 +319,63 @@ uint64_t bstree_internal_find(rbtree_internal_t *tree,
     return NULL_ID;
 }
 
+// The returned node should have the key >= target key
+uint64_t bstree_internal_find_succ(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t key)
+{
+    if (tree == NULL)
+    {
+        return NULL_ID;
+    }
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+    assert(i_node->get_key != NULL);
+
+    if (i_node->is_null_node(tree->root) == 1)
+    {
+        return NULL_ID;
+    }
+    
+    uint64_t p = tree->root;
+
+    uint64_t successor = NULL_ID;
+    // positive infinite. should be large enough
+    uint64_t successor_key = 0x7FFFFFFFFFFFFFFF;
+
+    while (i_node->is_null_node(p) == 0)
+    {
+        uint64_t p_key = i_node->get_key(p);
+
+        if (key == p_key)
+        {
+            // return the first found key
+            // which is the most left node of equals
+            return p;
+        }
+        else if (key < p_key)
+        {
+            if (p_key <= successor_key)
+            {
+                // p is more close to target key than
+                // the recorded successor
+                successor = p;
+                successor_key = p_key;
+            }
+
+            p = i_node->get_leftchild(p);
+        }
+        else // if (n_key > p_key)
+        {
+            p = i_node->get_rightchild(p);
+        }
+    }
+
+    // if no node key >= target key, return NULL_ID
+    return successor;
+}
+
 static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
 {
     assert(i_node != NULL);
@@ -843,6 +900,18 @@ void bst_delete(rb_tree_t *tree, rb_node_t *node)
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)
 {
     uint64_t node_id = bstree_internal_find(&(tree->base), &default_i_node, key);
+
+    if (default_i_node.is_null_node(node_id) == 1)
+    {
+        return NULL;
+    }
+
+    return (rb_node_t *)node_id;
+}
+
+rb_node_t *bst_find_succ(rb_tree_t *tree, uint64_t key)
+{
+    uint64_t node_id = bstree_internal_find_succ(&(tree->base), &default_i_node, key);
 
     if (default_i_node.is_null_node(node_id) == 1)
     {

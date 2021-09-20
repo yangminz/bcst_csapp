@@ -150,7 +150,7 @@ def count_lines():
         for index, line in enumerate(open(filename, 'r')):
             count += 1
         # skip the test files
-        if "/tests/" in str(filename):
+        if "tests" in str(filename):
             continue
         name_count += [[str(filename), count]]
         total_count += count

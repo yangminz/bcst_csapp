@@ -204,54 +204,136 @@ static void test_find()
     printf("Testing Binary Search Tree searching ...\n");
 
     rb_tree_t *t = bst_construct_keystr(
-        "(7,"
-            "(4,"
-                "(2,(1,#,#),(3,(2,#,#),#)),"
-                "(5,(4,#,#),(5,#,(6,#,#)))),"
-            "(12,"
-                "(9,(8,#,#),(11,(10,#,#),#)),"
-                "(13,(12,#,(12,#,#)),(14,#,#))))"
+        "(70,"
+            "(40,"
+                "(20,(10,#,#),(30,(20,#,#),#)),"
+                "(50,(40,#,#),(50,#,(60,#,#)))),"
+            "(120,"
+                "(90,(80,#,#),(110,(100,#,#),#)),"
+                "(130,(120,#,(120,#,#)),(140,#,#))))"
     );
     rb_node_t *r = (rb_node_t *)t->root;
 
-    rb_node_t *f = bst_find(t, 1);
-    assert(f == r->left->left->left);
+    rb_node_t *f;
+    rb_node_t *g;
     
-    f = bst_find(t, 2);
-    assert(f == r->left->left);
-
-    f = bst_find(t, 3);
-    assert(f == r->left->left->right);
-
-    f = bst_find(t, 4);
-    assert(f == r->left);
-
-    f = bst_find(t, 5);
-    assert(f == r->left->right);
-
-    f = bst_find(t, 6);
-    assert(f == r->left->right->right->right);
-
-    f = bst_find(t, 7);
-    assert(f == r);
-
-    f = bst_find(t, 8);
-    assert(f == r->right->left->left);
-
-    f = bst_find(t, 9);
-    assert(f == r->right->left);
-
     f = bst_find(t, 10);
+    assert(f == r->left->left->left);
+    for (int i = 0; i < 10; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 20);
+    assert(f == r->left->left);
+    for (int i = 11; i < 20; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 30);
+    assert(f == r->left->left->right);
+    for (int i = 21; i < 30; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 40);
+    assert(f == r->left);
+    for (int i = 31; i < 40; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 50);
+    assert(f == r->left->right);
+    for (int i = 41; i < 50; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 60);
+    assert(f == r->left->right->right->right);
+    for (int i = 51; i < 60; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 70);
+    assert(f == r);
+    for (int i = 61; i < 70; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 80);
+    assert(f == r->right->left->left);
+    for (int i = 71; i < 80; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 90);
+    assert(f == r->right->left);
+    for (int i = 81; i < 90; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 100);
     assert(f == r->right->left->right->left);
+    for (int i = 91; i < 100; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
 
-    f = bst_find(t, 12);
+    f = bst_find(t, 110);
+    assert(f == r->right->left->right);
+    for (int i = 101; i < 110; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    f = bst_find(t, 120);
     assert(f == r->right);
+    for (int i = 111; i < 120; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
 
-    f = bst_find(t, 13);
+    f = bst_find(t, 130);
     assert(f == r->right->right);
+    for (int i = 121; i < 130; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
 
-    f = bst_find(t, 14);
+    f = bst_find(t, 140);
     assert(f == r->right->right->right);
+    for (int i = 131; i < 140; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == f);
+    }
+
+    for (int i = 141; i < 1000; ++ i)
+    {
+        g = bst_find_succ(t, i);
+        assert(g == NULL);
+    }
 
     bst_free(t);
 
