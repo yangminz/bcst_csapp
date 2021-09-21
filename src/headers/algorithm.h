@@ -274,18 +274,12 @@ typedef struct RBTREE_INTERNAL_STRUCT
 // The red-black tree implementation open to other data structures
 // especially useful for malloc explicit list implementation
 // and vm_area_struct
-void rbtree_internal_insert(rbtree_internal_t *tree,
+void rbt_internal_insert(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id);
-void rbtree_internal_delete(rbtree_internal_t *tree,
+void rbt_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id);
-uint64_t rbtree_internal_find(rbtree_internal_t *tree, 
-    rbtree_node_interface *i_node, 
-    uint64_t value);
-uint64_t bstree_internal_find_succ(rbtree_internal_t *tree, 
-    rbtree_node_interface *i_node, 
-    uint64_t key);
 
 //
 //  The default implementation of red-black tree
@@ -295,16 +289,8 @@ typedef struct RB_NODE_STRUCT
 {
     // pointers
     struct RB_NODE_STRUCT *parent;
-
-    union
-    {
-        struct RB_NODE_STRUCT *childs[2];
-        struct
-        {
-            struct RB_NODE_STRUCT *left;        // childs[0]
-            struct RB_NODE_STRUCT *right;       // childs[1]
-        };
-    };
+    struct RB_NODE_STRUCT *left; 
+    struct RB_NODE_STRUCT *right;
 
     // edge color to parent
     rb_color_t color;
@@ -332,20 +318,28 @@ typedef union
     };
 } rb_tree_t;
 
-rb_node_t *rb_insert(rb_node_t *root, uint64_t val);
-rb_node_t *rb_delete(rb_node_t *root, uint64_t val);
-rb_node_t *rb_find(rb_node_t *root, uint64_t val);
+rb_tree_t *rbt_construct();
+void rbt_free(rb_tree_t *tree);
+void rbt_add(rb_tree_t *tree, uint64_t key);
+void rbt_insert(rb_tree_t *tree, rb_node_t *node);
+void rbt_remove(rb_tree_t *tree, uint64_t key);
+void rbt_delete(rb_tree_t *tree, rb_node_t *node);
+rb_node_t *rbt_find(rb_tree_t *tree, uint64_t key);
+rb_node_t *rbt_find_succ(rb_tree_t *tree, uint64_t key);
 
 /*======================================*/
 /*      Binary Search Tree              */
 /*======================================*/
-void bstree_internal_insert(rbtree_internal_t *tree,
+void bst_internal_insert(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id);
-void bstree_internal_delete(rbtree_internal_t *tree,
+void bst_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id);
-uint64_t bstree_internal_find(rbtree_internal_t *tree, 
+uint64_t bst_internal_find(rbtree_internal_t *tree, 
+    rbtree_node_interface *i_node, 
+    uint64_t key);
+uint64_t bst_internal_find_succ(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
     uint64_t key);
 

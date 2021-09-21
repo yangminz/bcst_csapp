@@ -283,6 +283,7 @@ def build(key):
                     "./src/common/convert.c",
                     "./src/algorithm/bst.c",
                     "./src/algorithm/redblack.c",
+                    "./src/tests/test_rbt.c",
                     "-o", "./bin/rb"
                 ],
             ],

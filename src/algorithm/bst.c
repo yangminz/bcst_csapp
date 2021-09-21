@@ -16,7 +16,7 @@
 #include "headers/algorithm.h"
 #include "headers/common.h"
 
-void bstree_internal_insert(rbtree_internal_t *tree,
+void bst_internal_insert(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
 {
@@ -88,7 +88,7 @@ void bstree_internal_insert(rbtree_internal_t *tree,
     }
 }
 
-void bstree_internal_delete(rbtree_internal_t *tree,
+void bst_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
 {
@@ -276,7 +276,7 @@ void bstree_internal_delete(rbtree_internal_t *tree,
     }
 }
 
-uint64_t bstree_internal_find(rbtree_internal_t *tree, 
+uint64_t bst_internal_find(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
     uint64_t key)
 {
@@ -320,7 +320,7 @@ uint64_t bstree_internal_find(rbtree_internal_t *tree,
 }
 
 // The returned node should have the key >= target key
-uint64_t bstree_internal_find_succ(rbtree_internal_t *tree, 
+uint64_t bst_internal_find_succ(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
     uint64_t key)
 {
@@ -579,7 +579,7 @@ void internal_tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interfa
 }
 
 // a and b are node ids
-int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node)
+int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt)
 {
     assert(i_node != NULL);
     assert(i_node->is_null_node != NULL);
@@ -598,18 +598,26 @@ int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node)
     }
 
     // both not NULL
-    if (
-        (i_node->get_key(a) == i_node->get_key(b)) &&
-        (i_node->get_color(a) == i_node->get_color(b))
-    )
+    if (i_node->get_key(a) == i_node->get_key(b))
     {
-        return  internal_tree_compare(i_node->get_leftchild(a), i_node->get_leftchild(b), i_node) && 
-                internal_tree_compare(i_node->get_rightchild(a), i_node->get_rightchild(b), i_node);
+        if (is_rbt == 0)
+        {
+            return  internal_tree_compare(i_node->get_leftchild(a), i_node->get_leftchild(b), i_node, is_rbt) && 
+                    internal_tree_compare(i_node->get_rightchild(a), i_node->get_rightchild(b), i_node, is_rbt);
+        }
+        else if (is_rbt == 1)
+        {
+            // red-black tree needs to compare the node color
+            if (i_node->get_color(a) == i_node->get_color(b))
+            {
+                return  internal_tree_compare(i_node->get_leftchild(a), i_node->get_leftchild(b), i_node, is_rbt) && 
+                        internal_tree_compare(i_node->get_rightchild(a), i_node->get_rightchild(b), i_node, is_rbt);
+            }
+        }
+        assert(0);
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 /*======================================*/
@@ -779,7 +787,8 @@ static int set_value(uint64_t node_id, uint64_t value)
     return 1;
 }
 
-static rbtree_node_interface default_i_node =
+// shared with red-black tree
+rbtree_node_interface default_i_rbt_node =
 {
     .construct_node = &construct_node,
     .destruct_node = &destruct_node,
@@ -828,29 +837,29 @@ rb_tree_t *bst_construct()
 rb_tree_t *bst_construct_keystr(char *str)
 {
     rb_tree_t *tree = bst_construct();
-    internal_tree_construct_keystr(&(tree->base), &default_i_node, str);
+    internal_tree_construct_keystr(&(tree->base), &default_i_rbt_node, str);
     return tree;
 }
 
 void bst_print(rb_tree_t *tree)
 {
-    tree_internal_print(&(tree->base), &default_i_node);
+    tree_internal_print(&(tree->base), &default_i_rbt_node);
 }
 
 static void bst_destruct_subtree(uint64_t root)
 {
-    if (default_i_node.is_null_node(root) == 1)
+    if (default_i_rbt_node.is_null_node(root) == 1)
     {
         return;
     }
 
     // (sub)root is not null
     // free its left and right childs
-    bst_destruct_subtree(default_i_node.get_leftchild(root));
-    bst_destruct_subtree(default_i_node.get_rightchild(root));
+    bst_destruct_subtree(default_i_rbt_node.get_leftchild(root));
+    bst_destruct_subtree(default_i_rbt_node.get_rightchild(root));
 
     // free the (sub)root node
-    default_i_node.destruct_node(root);
+    default_i_rbt_node.destruct_node(root);
 
     return;
 }
@@ -871,15 +880,15 @@ void bst_free(rb_tree_t *tree)
 
 void bst_add(rb_tree_t *tree, uint64_t key)
 {
-    rb_node_t *n = (rb_node_t *)default_i_node.construct_node();
+    rb_node_t *n = (rb_node_t *)default_i_rbt_node.construct_node();
     n->key = key;
 
-    bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)n);
+    bst_internal_insert(&(tree->base), &default_i_rbt_node, (uint64_t)n);
 }
 
 void bst_insert(rb_tree_t *tree, rb_node_t *node)
 {
-    bstree_internal_insert(&(tree->base), &default_i_node, (uint64_t)node);
+    bst_internal_insert(&(tree->base), &default_i_rbt_node, (uint64_t)node);
 }
 
 void bst_remove(rb_tree_t *tree, uint64_t key)
@@ -894,14 +903,14 @@ void bst_remove(rb_tree_t *tree, uint64_t key)
 
 void bst_delete(rb_tree_t *tree, rb_node_t *node)
 {
-    bstree_internal_delete(&(tree->base), &default_i_node, (uint64_t)node);
+    bst_internal_delete(&(tree->base), &default_i_rbt_node, (uint64_t)node);
 }
 
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)
 {
-    uint64_t node_id = bstree_internal_find(&(tree->base), &default_i_node, key);
+    uint64_t node_id = bst_internal_find(&(tree->base), &default_i_rbt_node, key);
 
-    if (default_i_node.is_null_node(node_id) == 1)
+    if (default_i_rbt_node.is_null_node(node_id) == 1)
     {
         return NULL;
     }
@@ -911,9 +920,9 @@ rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)
 
 rb_node_t *bst_find_succ(rb_tree_t *tree, uint64_t key)
 {
-    uint64_t node_id = bstree_internal_find_succ(&(tree->base), &default_i_node, key);
+    uint64_t node_id = bst_internal_find_succ(&(tree->base), &default_i_rbt_node, key);
 
-    if (default_i_node.is_null_node(node_id) == 1)
+    if (default_i_rbt_node.is_null_node(node_id) == 1)
     {
         return NULL;
     }
@@ -932,5 +941,5 @@ int bst_compare(rb_tree_t *a, rb_tree_t *b)
         return 0;
     }
     
-    return internal_tree_compare(a->root, b->root, &default_i_node);
+    return internal_tree_compare(a->root, b->root, &default_i_rbt_node, 0);
 }
