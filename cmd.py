@@ -282,7 +282,7 @@ def build(key):
                     "-DDEBUG_REDBLACK",
                     "./src/common/convert.c",
                     "./src/algorithm/bst.c",
-                    "./src/algorithm/redblack.c",
+                    "./src/algorithm/rbt.c",
                     "./src/tests/test_rbt.c",
                     "-o", "./bin/rb"
                 ],
