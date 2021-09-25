@@ -358,6 +358,7 @@ uint64_t bst_internal_find_succ(rbtree_internal_t *tree,
         {
             if (p_key <= successor_key)
             {
+                // key < p_key <= successor_key
                 // p is more close to target key than
                 // the recorded successor
                 successor = p;

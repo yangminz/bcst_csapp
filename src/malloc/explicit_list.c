@@ -283,12 +283,11 @@ static int internal_heap_init()
     signal(SIGABRT, &on_sigabrt);
 #endif
 
-    uint64_t first_block = get_firstblock();
-    set_prevfree(first_block, first_block);
-    set_nextfree(first_block, first_block);
+    set_prevfree(first_header, first_header);
+    set_nextfree(first_header, first_header);
 
     explist_list_init();
-    explicit_list_insert(first_block);
+    explicit_list_insert(first_header);
 
     return 1;
 }
