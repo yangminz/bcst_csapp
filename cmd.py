@@ -373,6 +373,7 @@ def debug(key):
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
         "malloc" : [gdb, "./bin/malloc"],
         "bst" : [gdb, "./bin/bst"],
+        "rb" : [gdb, "./bin/rb"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

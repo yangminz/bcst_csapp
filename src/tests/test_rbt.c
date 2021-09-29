@@ -19,6 +19,8 @@ int rbt_compare(rb_tree_t *a, rb_tree_t *b);
 rb_tree_t *rbt_construct_keystr(char *tree, char *color);
 rb_tree_t *bst_construct_keystr(char *str);
 void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g);
+int bst_compare(rb_tree_t *a, rb_tree_t *b);
+void bst_print(rb_tree_t *tree);
 
 static void test_delete()
 {
@@ -517,23 +519,15 @@ static void test_insert()
 
     // check
     rb_tree_t *ans = rbt_construct_keystr(
-        "(7,"
-            "(2,"
-                "(1,#,#),"
-                "(5,(4,#,#),#)"
-            "),"
-            "(11,"
-                "(8,#,#),"
-                "(14,#,(15,#,#))"
-            ")"
-        ")",
+        "(5,(2,(1,#,#),(4,#,#)),(11,(7,#,(8,#,#)),(14,#,(15,#,#))))",
         "B"
-            "R"
+            "B"
                 "B##"
-                "BR###"
-            "R"
                 "B##"
+            "B"
+                "B#R##"
                 "B#R##");
+
     assert(rbt_compare(r, ans) == 1);
 
     bst_free(r);
@@ -546,9 +540,8 @@ static void test_rotate()
 {
     printf("Testing Red-Black tree rotation ...\n");
 
-    rb_tree_t *r;
+    rb_tree_t *t;
     rb_tree_t *a;
-    rb_node_t *t;
 
     char inputs[8][100] = {
         "(6,"   // g
@@ -597,25 +590,26 @@ static void test_rotate()
                         "(5,#,#),(7,#,#)))))",
     };
 
-    char balanced[100] = "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))";
+    char rotated[100] = "(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#)))";
+    char rotated2[100] = "(0,#,(4,(2,(1,#,#),(3,#,#)),(6,(5,#,#),(7,#,#))))";
 
     rb_node_t *g = NULL;
-    rb_node_t* p = NULL;
-    rb_node_t* n = NULL;
+    rb_node_t *p = NULL;
+    rb_node_t *n = NULL;
 
     for (int i = 0; i < 8; ++ i)
     {
-        r = bst_construct_keystr(inputs[i]);
+        t = bst_construct_keystr(inputs[i]);
 
         if ((0x1 & (i >> 2)) == 0)
         {
             // test grandparent root
-            g = (rb_node_t *)r->root;
+            g = (rb_node_t *)t->root;
         }
         else
         {
             // test grandparent not root
-            g = ((rb_node_t *)(r->root))->right;
+            g = ((rb_node_t *)(t->root))->right;
         }
 
         if ((0x1 & (i >> 1)) == 0)
@@ -637,11 +631,18 @@ static void test_rotate()
         }
 
         rbt_rotate(n, p, g);
-        a = bst_construct_keystr(balanced);
-        // assert(rbt_compare(t, a) == 1);
+        if (i < 4)
+        {
+            a = bst_construct_keystr(rotated);
+        }
+        else
+        {
+            a = bst_construct_keystr(rotated2);
+        }
+        assert(bst_compare(t, a) == 1);
 
         bst_free(a);
-        bst_free(r);
+        bst_free(t);
     }
     
     printf("\033[32;1m\tPass\033[0m\n");

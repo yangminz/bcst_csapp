@@ -37,11 +37,14 @@ void bst_internal_insert(rbtree_internal_t *tree,
     assert(i_node->get_color != NULL);
     assert(i_node->get_key != NULL);
 
+    assert(i_node->is_null_node(node_id) == 0);
+
     if (i_node->is_null_node(tree->root) == 1)
     {
         i_node->set_parent(node_id, NULL_ID);
         i_node->set_leftchild(node_id, NULL_ID);
         i_node->set_rightchild(node_id, NULL_ID);
+        // for RBT
         i_node->set_color(node_id, COLOR_BLACK);
 
         tree->update_root(tree, node_id);
@@ -63,6 +66,7 @@ void bst_internal_insert(rbtree_internal_t *tree,
             {
                 // insert node to p->left
                 i_node->set_leftchild(p, node_id);
+                i_node->set_parent(node_id, p);
                 return;
             }
             else
@@ -78,6 +82,7 @@ void bst_internal_insert(rbtree_internal_t *tree,
             {
                 // insert node to p->left
                 i_node->set_rightchild(p, node_id);
+                i_node->set_parent(node_id, p);
                 return;
             }
             else
