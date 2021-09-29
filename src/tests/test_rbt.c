@@ -19,6 +19,8 @@ int rbt_compare(rb_tree_t *a, rb_tree_t *b);
 rb_tree_t *rbt_construct_keystr(char *tree, char *color);
 rb_tree_t *bst_construct_keystr(char *str);
 void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g);
+void rbt_verify(rb_tree_t *tree);
+
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
 void bst_print(rb_tree_t *tree);
 
@@ -515,6 +517,7 @@ static void test_insert()
             "B#R##");
 
     // test insert
+    rbt_verify(r);
     rbt_add(r, 4);
 
     // check
@@ -528,7 +531,18 @@ static void test_insert()
                 "B#R##"
                 "B#R##");
 
+    rbt_verify(ans);
+    rbt_verify(r);
+
     assert(rbt_compare(r, ans) == 1);
+
+    // randomly insert values
+    for (int i = 0; i < 50000; ++ i)
+    {
+        uint64_t key = rand() % 1000000;
+        rbt_add(r, key);
+        rbt_verify(r);
+    }
 
     bst_free(r);
     bst_free(ans);
@@ -650,6 +664,8 @@ static void test_rotate()
 
 int main()
 {
+    srand(123456);
+
     test_rotate();
     test_insert();
     test_delete();

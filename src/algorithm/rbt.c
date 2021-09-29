@@ -254,6 +254,102 @@ void rbt_internal_delete(rbtree_internal_t *tree,
 {
 }
 
+static void rbt_verify_dfs(uint64_t p, 
+    uint64_t *black_height, 
+    uint64_t *key_min, uint64_t *key_max,
+    rbtree_node_interface *i_node)
+{
+    assert(i_node != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->compare_nodes != NULL);
+    assert(i_node->get_color != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+
+    if (i_node->compare_nodes(p, NULL_ID) == 0)
+    {
+        *black_height = 0;
+        *key_min = 0xFFFFFFFFFFFFFFFF;
+        *key_max = 0;
+        return;
+    }
+
+    uint64_t p_left = i_node->get_leftchild(p);
+    uint64_t p_right = i_node->get_rightchild(p);
+    rb_color_t p_color = i_node->get_color(p);
+    uint64_t p_key = i_node->get_key(p);
+
+    uint64_t p_left_bh = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_left_key_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_left_key_max = 0xFFFFFFFFFFFFFFFF;
+    rbt_verify_dfs(p_left, &p_left_bh, &p_left_key_min, &p_left_key_max, i_node);
+
+    uint64_t p_right_bh = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_right_key_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_right_key_max = 0xFFFFFFFFFFFFFFFF;
+    rbt_verify_dfs(p_right, &p_right_bh, &p_right_key_min, &p_right_key_max, i_node);
+
+    // check color and black height
+    assert(p_left_bh == p_right_bh);
+    if (p_color == COLOR_RED)
+    {
+        assert(i_node->get_color(p_left) == COLOR_BLACK);
+        assert(i_node->get_color(p_right) == COLOR_BLACK);
+        *black_height = p_left_bh;
+    }
+    else if (p_color == COLOR_BLACK)
+    {
+        *black_height = p_left_bh + 1;
+    }
+    else
+    {
+        assert(0);
+    }
+
+    // check key
+    *key_min = p_key;
+    *key_max = p_key;
+    if (i_node->compare_nodes(p_left, NULL_ID) != 0)
+    {
+        assert(p_left_key_max <= p_key);
+        *key_min = p_left_key_min;
+    }
+
+    if (i_node->compare_nodes(p_right, NULL_ID) != 0)
+    {
+        assert(p_key <= p_right_key_min);
+        *key_max = p_right_key_max;
+    }
+}
+
+void rbt_internal_verify(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node)
+{
+    if (tree == NULL)
+    {
+        return;
+    }
+
+    assert(i_node != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->get_color != NULL);
+
+    uint64_t root = tree->root;
+    if (i_node->is_null_node(root) == 1)
+    {
+        // empty tree
+        return;
+    }
+
+    // assert root is black
+    assert(i_node->get_color(root) == COLOR_BLACK);
+
+    uint64_t tree_bh = 0;
+    uint64_t tree_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t tree_max = 0;
+    rbt_verify_dfs(root, &tree_bh, &tree_min, &tree_max, i_node);
+}
+
 /*======================================*/
 /*      Default Implementation          */
 /*======================================*/
@@ -371,4 +467,14 @@ int rbt_compare(rb_tree_t *a, rb_tree_t *b)
 void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g)
 {
     rbt_internal_rotate((uint64_t)n, (uint64_t)p, (uint64_t)g, &default_i_rbt_node);
+}
+
+void rbt_verify(rb_tree_t *tree)
+{
+    if (tree == NULL)
+    {
+        return;
+    }
+
+    rbt_internal_verify(&tree->base, &default_i_rbt_node);
 }

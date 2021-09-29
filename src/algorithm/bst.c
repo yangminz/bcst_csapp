@@ -740,7 +740,7 @@ static rb_color_t get_color(uint64_t node_id)
 {
     if (is_null_node(node_id) == 1)
     {
-        return NULL_ID;
+        return COLOR_BLACK;
     }
     return ((rb_node_t *)node_id)->color;
 }
