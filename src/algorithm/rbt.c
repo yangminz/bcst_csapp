@@ -266,7 +266,7 @@ static void rbt_verify_dfs(uint64_t p,
     assert(i_node->get_leftchild != NULL);
     assert(i_node->get_rightchild != NULL);
 
-    if (i_node->compare_nodes(p, NULL_ID) == 0)
+    if (i_node->is_null_node(p) == 1)
     {
         *black_height = 0;
         *key_min = 0xFFFFFFFFFFFFFFFF;
@@ -309,13 +309,13 @@ static void rbt_verify_dfs(uint64_t p,
     // check key
     *key_min = p_key;
     *key_max = p_key;
-    if (i_node->compare_nodes(p_left, NULL_ID) != 0)
+    if (i_node->is_null_node(p_left) == 0)
     {
         assert(p_left_key_max <= p_key);
         *key_min = p_left_key_min;
     }
 
-    if (i_node->compare_nodes(p_right, NULL_ID) != 0)
+    if (i_node->is_null_node(p_right) == 0)
     {
         assert(p_key <= p_right_key_min);
         *key_max = p_right_key_max;
