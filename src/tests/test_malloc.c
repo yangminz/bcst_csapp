@@ -245,7 +245,6 @@ static void test_malloc_free()
 
     for (int i = 0; i < 50000; ++ i)
     {
-        printf("%d\n", i);
         if ((rand() & 0x1) == 0)
         {
             // malloc

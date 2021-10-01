@@ -19,6 +19,7 @@
 static int internal_heap_init();
 static uint64_t internal_malloc(uint32_t size);
 static void internal_free(uint64_t payload_vaddr);
+void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node);
 
 /* ------------------------------------- */
 /*  Implementation of the Interfaces     */
@@ -53,7 +54,7 @@ void on_sigabrt(int signum)
 
 #endif
 
-#define MIN_REDBLACK_TREE_BLOCKSIZE (20)
+#define MIN_REDBLACK_TREE_BLOCKSIZE (24)
 
 /* ------------------------------------- */
 /*  Operations for Tree Block Structure  */
@@ -221,6 +222,11 @@ static void redblack_tree_init()
 static void redblack_tree_insert(uint64_t node_ptr)
 {
     // BST for now
+    set_redblack_tree_parent(node_ptr, NIL);
+    set_redblack_tree_left(node_ptr, NIL);
+    set_redblack_tree_right(node_ptr, NIL);
+    set_redblack_tree_color(node_ptr, COLOR_RED);
+
     bst_internal_insert(&rbt, &i_node, node_ptr);
 }
 
@@ -228,6 +234,10 @@ static void redblack_tree_delete(uint64_t node_ptr)
 {
     // BST for now
     bst_internal_delete(&rbt, &i_node, node_ptr, 0);
+
+    set_redblack_tree_parent(node_ptr, NIL);
+    set_redblack_tree_left(node_ptr, NIL);
+    set_redblack_tree_right(node_ptr, NIL);
 }
 
 static uint64_t redblack_tree_search(uint32_t size)

@@ -403,7 +403,7 @@ uint64_t bst_internal_find_succ(rbtree_internal_t *tree,
     return successor;
 }
 
-static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
+static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node, int depth)
 {
     assert(i_node != NULL);
     assert(i_node->is_null_node != NULL);
@@ -411,6 +411,12 @@ static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
     assert(i_node->get_rightchild != NULL);
     assert(i_node->get_key != NULL);
     assert(i_node->get_color != NULL);
+
+    if (depth >= 10)
+    {
+        // meanless to print depth >= 10
+        return;
+    }
 
     if (i_node->is_null_node(node) == 1)
     {
@@ -427,9 +433,9 @@ static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node)
         printf("(%lu,", i_node->get_key(node));
     }
 
-    tree_print_dfs(i_node->get_leftchild(node), i_node);
+    tree_print_dfs(i_node->get_leftchild(node), i_node, depth + 1);
     printf(",");
-    tree_print_dfs(i_node->get_rightchild(node), i_node);
+    tree_print_dfs(i_node->get_rightchild(node), i_node, depth + 1);
     printf(")");
 }
 
@@ -438,7 +444,7 @@ void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
     if (tree != NULL)
     {
         assert(i_node != NULL);
-        tree_print_dfs(tree->root, i_node);
+        tree_print_dfs(tree->root, i_node, 0);
     }
     printf("\n");
 }
