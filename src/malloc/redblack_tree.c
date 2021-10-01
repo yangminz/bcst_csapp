@@ -70,6 +70,17 @@ static int compare_nodes(uint64_t first, uint64_t second)
     return !(first == second);
 }
 
+static int is_null_node(uint64_t header_vaddr)
+{
+    if (get_firstblock() <= header_vaddr &&
+        header_vaddr <= get_lastblock() &&
+        header_vaddr % 8 == 4)
+    {
+        return 0;
+    }
+    return 1;
+}
+
 static uint64_t get_redblack_tree_parent(uint64_t header_vaddr)
 {
     return get_field32_block_ptr(header_vaddr, 
@@ -108,11 +119,6 @@ static uint64_t get_redblack_tree_key(uint64_t header_vaddr)
 {
     uint32_t blocksize = get_blocksize(header_vaddr);
     return blocksize;
-}
-
-static uint64_t get_redblack_tree_value(uint64_t header_vaddr)
-{
-    return 0;
 }
 
 static int set_redblack_tree_parent(uint64_t header_vaddr,
@@ -164,16 +170,12 @@ static int set_redblack_tree_key(uint64_t header_vaddr, uint64_t blocksize)
     return 1;
 }
 
-static int set_redblack_tree_value(uint64_t header_vaddr, uint64_t value)
-{
-    return 1;
-}
-
 static rbtree_node_interface i_node = 
 {
     .construct_node = NULL,
     .destruct_node = &destruct_node,
     .compare_nodes = &compare_nodes,
+    .is_null_node = &is_null_node,
     .get_parent = &get_redblack_tree_parent,
     .set_parent = &set_redblack_tree_parent,
     .get_leftchild = &get_redblack_tree_left,

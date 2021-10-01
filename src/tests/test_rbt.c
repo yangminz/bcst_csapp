@@ -18,7 +18,7 @@
 int rbt_compare(rb_tree_t *a, rb_tree_t *b);
 rb_tree_t *rbt_construct_keystr(char *tree, char *color);
 rb_tree_t *bst_construct_keystr(char *str);
-void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g);
+void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g, rb_tree_t *tree);
 void rbt_verify(rb_tree_t *tree);
 
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
@@ -644,7 +644,7 @@ static void test_rotate()
             n = p->right;
         }
 
-        rbt_rotate(n, p, g);
+        rbt_rotate(n, p, g, t);
         if (i < 4)
         {
             a = bst_construct_keystr(rotated);

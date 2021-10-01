@@ -19,41 +19,17 @@
 rbtree_node_interface default_i_rbt_node;
 rb_tree_t *bst_construct_keystr(char *str);
 int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt);
-
-static void swap_node_content(uint64_t a, uint64_t b, 
-    rbtree_node_interface *i_node)
-{
-    assert(i_node != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->set_color != NULL);
-    assert(i_node->set_key != NULL);
-    assert(i_node->set_value != NULL);
-    assert(i_node->get_color != NULL);
-    assert(i_node->get_key != NULL);
-    assert(i_node->get_value != NULL);
-
-    assert(i_node->is_null_node(a) == 0);
-    assert(i_node->is_null_node(b) == 0);
-
-    uint64_t a_key = i_node->get_key(a);
-    uint64_t a_value = i_node->get_value(a);
-    rb_color_t a_color = i_node->get_color(a);
-
-    uint64_t b_key = i_node->get_key(b);
-    uint64_t b_value = i_node->get_value(b);
-    rb_color_t b_color = i_node->get_color(b);
-
-    i_node->set_key(a, b_key);
-    i_node->set_value(a, b_value);
-    i_node->set_color(a, b_color);
-
-    i_node->set_key(b, a_key);
-    i_node->set_value(b, a_value);
-    i_node->set_color(b, a_color);
-}
+void bst_internal_setchild(uint64_t parent, uint64_t child,
+    child_t direction,
+    rbtree_node_interface *i_node);
+void bst_internal_replace(uint64_t victim, uint64_t node,
+    rbtree_internal_t *tree,
+    rbtree_node_interface *i_node);
 
 // 4 kinds of rotations
-static void rbt_internal_rotate(uint64_t n, uint64_t p, uint64_t g,
+// return the new root of the subtree
+static uint64_t rbt_internal_rotate(uint64_t n, uint64_t p, uint64_t g,
+    rbtree_internal_t *tree,
     rbtree_node_interface *i_node)
 {
     assert(i_node != NULL);
@@ -89,82 +65,46 @@ static void rbt_internal_rotate(uint64_t n, uint64_t p, uint64_t g,
     {
         if (i_node->compare_nodes(p_left, n) == 0)
         {
-            // update pointers
-            i_node->set_leftchild(g, n);
-            i_node->set_parent(n, g);
+            // (g,(p,(n,A,B),C),D) ==> (p,(n,A,B),(g,C,D))
+            bst_internal_replace(g, p, tree, i_node);
 
-            i_node->set_rightchild(g, p);
-
-            i_node->set_leftchild(p, p_right);
-            i_node->set_rightchild(p, g_right);
-            if (i_node->is_null_node(g_right) == 0)
-            {
-                i_node->set_parent(g_right, p);
-            }
-            
-            swap_node_content(g, p, i_node);
+            bst_internal_setchild(p, g, RIGHT_CHILD, i_node);
+            bst_internal_setchild(g, p_right, LEFT_CHILD, i_node);
+            return p;
         }
         else
         {
-            // update pointers
-            i_node->set_rightchild(g, n);
-            i_node->set_parent(n, g);
-
-            i_node->set_rightchild(p, n_left);
-            if (i_node->is_null_node(n_left) == 0)
-            {
-                i_node->set_parent(n_left, p);
-            }
-
-            i_node->set_leftchild(n, n_right);
-            i_node->set_rightchild(n, g_right);
-            if (i_node->is_null_node(g_right) == 0)
-            {
-                i_node->set_parent(g_right, n);
-            }
-
-            swap_node_content(g, n, i_node);
+            // (g,(p,A,(n,B,C)),D) ==> (n,(p,A,B),(g,C,D))
+            bst_internal_replace(g, n, tree, i_node);
+            
+            bst_internal_setchild(n, p, LEFT_CHILD, i_node);
+            bst_internal_setchild(n, g, RIGHT_CHILD, i_node);
+            bst_internal_setchild(p, n_left, RIGHT_CHILD, i_node);
+            bst_internal_setchild(g, n_right, LEFT_CHILD, i_node);
+            return n;
         }
     }
     else
     {
         if (i_node->compare_nodes(p_left, n) == 0)
         {
-            // update pointers
-            i_node->set_leftchild(g, n);
-            i_node->set_parent(n, g);
-
-            i_node->set_leftchild(p, n_right);
-            if (i_node->is_null_node(n_right) == 0)
-            {
-                i_node->set_parent(n_right, p);
-            }
-
-            i_node->set_rightchild(n, n_left);
-            i_node->set_leftchild(n, g_left);
-            if (i_node->is_null_node(g_left) == 0)
-            {
-                i_node->set_parent(g_left, n);
-            }
-
-            swap_node_content(g, n, i_node);
+            // (g,A,(p,(n,B,C),D)) ==> (n,(g,A,B),(p,C,D))
+            bst_internal_replace(g, n, tree, i_node);
+            
+            bst_internal_setchild(n, g, LEFT_CHILD, i_node);
+            bst_internal_setchild(n, p, RIGHT_CHILD, i_node);
+            bst_internal_setchild(g, n_left, RIGHT_CHILD, i_node);
+            bst_internal_setchild(p, n_right, LEFT_CHILD, i_node);
+            return n;
         }
         else
         {
-            // update pointers
-            i_node->set_rightchild(g, n);
-            i_node->set_parent(n, g);
+            // (g,A,(p,B,(n,C,D))) ==> (p,(g,A,B),(n,C,D))
+            bst_internal_replace(g, p, tree, i_node);
 
-            i_node->set_leftchild(g, p);
-
-            i_node->set_rightchild(p, p_left);
-            i_node->set_leftchild(p, g_left);
-            if (i_node->is_null_node(g_left) == 0)
-            {
-                i_node->set_parent(g_left, p);
-            }
-            
-            swap_node_content(g, p, i_node);
+            bst_internal_setchild(p, g, LEFT_CHILD, i_node);
+            bst_internal_setchild(g, p_left, RIGHT_CHILD, i_node);
+            return p;
         }
     }
 }
@@ -227,15 +167,15 @@ void rbt_internal_insert(rbtree_internal_t *tree,
                 assert(i_node->get_color(g) == COLOR_BLACK);
 
                 // rotate
-                rbt_internal_rotate(n, p, g, i_node);
+                uint64_t r_root = rbt_internal_rotate(n, p, g, tree, i_node);
 
                 // recolor
-                // the root of {g, p, n} subtree is g!
-                i_node->set_color(g, COLOR_RED);
+                i_node->set_color(g, COLOR_BLACK);
                 i_node->set_color(p, COLOR_BLACK);
                 i_node->set_color(n, COLOR_BLACK);
+                i_node->set_color(r_root, COLOR_RED);
 
-                n = g;
+                n = r_root;
                 continue;
             }
         }
@@ -464,9 +404,9 @@ int rbt_compare(rb_tree_t *a, rb_tree_t *b)
     return internal_tree_compare(a->root, b->root, &default_i_rbt_node, 1);
 }
 
-void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g)
+void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g, rb_tree_t *tree)
 {
-    rbt_internal_rotate((uint64_t)n, (uint64_t)p, (uint64_t)g, &default_i_rbt_node);
+    rbt_internal_rotate((uint64_t)n, (uint64_t)p, (uint64_t)g, &tree->base, &default_i_rbt_node);
 }
 
 void rbt_verify(rb_tree_t *tree)

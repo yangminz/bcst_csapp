@@ -16,6 +16,85 @@
 #include "headers/algorithm.h"
 #include "headers/common.h"
 
+void bst_internal_setchild(uint64_t parent, uint64_t child,
+    child_t direction,
+    rbtree_node_interface *i_node)
+{
+    assert(i_node != NULL);
+    assert(i_node->is_null_node != NULL);
+
+    assert(i_node->is_null_node(parent) == 0);
+    switch (direction)
+    {
+        case LEFT_CHILD:
+            assert(i_node->set_leftchild != NULL);
+            i_node->set_leftchild(parent, child);
+            if (i_node->is_null_node(child) == 0)
+            {
+                i_node->set_parent(child, parent);
+            }
+            break;
+        case RIGHT_CHILD:
+            assert(i_node->set_rightchild != NULL);
+            i_node->set_rightchild(parent, child);
+            if (i_node->is_null_node(child) == 0)
+            {
+                i_node->set_parent(child, parent);
+            }
+            break;
+        default:
+            assert(0);
+    }
+}
+
+void bst_internal_replace(uint64_t victim, uint64_t node,
+    rbtree_internal_t *tree,
+    rbtree_node_interface *i_node)
+{
+    assert(i_node != NULL);
+    assert(i_node->compare_nodes != NULL);
+    assert(i_node->get_parent != NULL);
+    assert(i_node->is_null_node != NULL);
+    assert(i_node->get_leftchild != NULL);
+    assert(i_node->get_rightchild != NULL);
+
+    assert(i_node->is_null_node(victim) == 0);
+    assert(i_node->is_null_node(tree->root) == 0);
+
+    uint64_t v_parent = i_node->get_parent(victim);
+    if (i_node->compare_nodes(tree->root, victim) == 0)
+    {
+        // victim is root
+        assert(i_node->is_null_node(v_parent) == 1);
+        tree->update_root(tree, node);
+        i_node->set_parent(node, NULL_ID);
+        return;
+    }
+    else
+    {
+        // victim has parent
+        uint64_t v_parent_left = i_node->get_leftchild(v_parent);
+        uint64_t v_parent_right = i_node->get_rightchild(v_parent);
+
+        if (i_node->compare_nodes(v_parent_left, victim) == 0)
+        {
+            // victim is the left child of its parent
+            bst_internal_setchild(v_parent, node, LEFT_CHILD, i_node);
+            return;
+        }
+        else if (i_node->compare_nodes(v_parent_right, victim) == 0)
+        {
+            // victim is the right child of its parent
+            bst_internal_setchild(v_parent, node, RIGHT_CHILD, i_node);
+            return;
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+}
+
 void bst_internal_insert(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
@@ -65,8 +144,7 @@ void bst_internal_insert(rbtree_internal_t *tree,
             if (i_node->is_null_node(p_left) == 1)
             {
                 // insert node to p->left
-                i_node->set_leftchild(p, node_id);
-                i_node->set_parent(node_id, p);
+                bst_internal_setchild(p, node_id, LEFT_CHILD, i_node);
                 return;
             }
             else
@@ -81,8 +159,7 @@ void bst_internal_insert(rbtree_internal_t *tree,
             if (i_node->is_null_node(p_right) == 1)
             {
                 // insert node to p->left
-                i_node->set_rightchild(p, node_id);
-                i_node->set_parent(node_id, p);
+                bst_internal_setchild(p, node_id, RIGHT_CHILD, i_node);
                 return;
             }
             else

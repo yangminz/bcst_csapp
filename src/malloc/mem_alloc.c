@@ -366,8 +366,8 @@ void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t m
     assert(get_blocksize(header_vaddr) >= min_blocksize);
 
     assert(block_ptr == NIL || (get_firstblock() <= block_ptr && block_ptr <= get_lastblock()));
-    assert(block_ptr % 8 == 4);
-    assert(get_blocksize(block_ptr) >= min_blocksize);
+    assert(block_ptr == NIL || block_ptr % 8 == 4);
+    assert(block_ptr == NIL || get_blocksize(block_ptr) >= min_blocksize);
 
     assert(offset % 4 == 0);
 
@@ -581,7 +581,7 @@ void print_heap()
     printf("============\nheap blocks:\n");
     uint64_t h = get_firstblock();
     int i = 0;
-    while (h != NIL && h < get_epilogue())
+    while (i < (HEAP_MAX_SIZE / 8) && h != NIL && h < get_epilogue())
     {
         uint32_t a = get_allocated(h);
         uint32_t s = get_blocksize(h);

@@ -271,6 +271,12 @@ typedef struct RBTREE_INTERNAL_STRUCT
     int (*update_root)(struct RBTREE_INTERNAL_STRUCT *this, uint64_t);
 } rbtree_internal_t;
 
+typedef enum
+{
+    LEFT_CHILD = 0,
+    RIGHT_CHILD = 1,
+} child_t;
+
 // The red-black tree implementation open to other data structures
 // especially useful for malloc explicit list implementation
 // and vm_area_struct
