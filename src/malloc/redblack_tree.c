@@ -55,11 +55,6 @@ void on_sigabrt(int signum)
 
 #define MIN_REDBLACK_TREE_BLOCKSIZE (20)
 
-#define BLACK (0)
-#define RED (1)
-
-static uint64_t redblack_tree_root_node = NIL;
-
 /* ------------------------------------- */
 /*  Operations for Tree Block Structure  */
 /* ------------------------------------- */
@@ -75,64 +70,103 @@ static int compare_nodes(uint64_t first, uint64_t second)
     return !(first == second);
 }
 
-static uint32_t get_redblack_tree_parent(uint64_t header_vaddr)
+static uint64_t get_redblack_tree_parent(uint64_t header_vaddr)
 {
-    return get_field32_block_ptr(header_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 4);
+    return get_field32_block_ptr(header_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 4);
 }
 
-static uint32_t get_redblack_tree_left(uint64_t header_vaddr)
+static uint64_t get_redblack_tree_left(uint64_t header_vaddr)
 {
-    return get_field32_block_ptr(header_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 8);
+    return get_field32_block_ptr(header_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 8);
 }
 
-static uint32_t get_redblack_tree_right(uint64_t header_vaddr)
+static uint64_t get_redblack_tree_right(uint64_t header_vaddr)
 {
-    return get_field32_block_ptr(header_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 12);
+    return get_field32_block_ptr(header_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 12);
 }
 
-static uint32_t get_redblack_tree_color(uint64_t header_vaddr)
+static rb_color_t get_redblack_tree_color(uint64_t header_vaddr)
 {
     if (header_vaddr == NIL)
     {
         // default BLACK
-        return BLACK;
+        return COLOR_BLACK;
     }
 
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
+    assert(get_prologue() <= header_vaddr && 
+        header_vaddr <= get_epilogue());
+    assert((header_vaddr & 0x3) == 0x0);
 
     uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    return ((header_value >> 1) & 0x1);
+    return (rb_color_t)((header_value >> 1) & 0x1);
 }
 
-static void set_redblack_tree_parent(uint64_t header_vaddr, uint64_t prev_vaddr)
+static uint64_t get_redblack_tree_key(uint64_t header_vaddr)
 {
-    set_field32_block_ptr(header_vaddr, prev_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 4);
+    uint32_t blocksize = get_blocksize(header_vaddr);
+    return blocksize;
 }
 
-static void set_redblack_tree_left(uint64_t header_vaddr, uint64_t left_vaddr)
+static uint64_t get_redblack_tree_value(uint64_t header_vaddr)
 {
-    set_field32_block_ptr(header_vaddr, left_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 8);
+    return 0;
 }
 
-static void set_redblack_tree_right(uint64_t header_vaddr, uint64_t right_vaddr)
+static int set_redblack_tree_parent(uint64_t header_vaddr,
+    uint64_t prev_vaddr)
 {
-    set_field32_block_ptr(header_vaddr, right_vaddr, MIN_REDBLACK_TREE_BLOCKSIZE, 12);
+    set_field32_block_ptr(header_vaddr, prev_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 4);
+    return 1;
 }
 
-static void set_redblack_tree_color(uint64_t header_vaddr, uint32_t color)
+static int set_redblack_tree_left(uint64_t header_vaddr, 
+    uint64_t left_vaddr)
+{
+    set_field32_block_ptr(header_vaddr, left_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 8);
+    return 1;
+}
+
+static int set_redblack_tree_right(uint64_t header_vaddr, 
+    uint64_t right_vaddr)
+{
+    set_field32_block_ptr(header_vaddr, right_vaddr, 
+        MIN_REDBLACK_TREE_BLOCKSIZE, 12);
+    return 1;
+}
+
+static int set_redblack_tree_color(uint64_t header_vaddr, rb_color_t color)
 {
     if (header_vaddr == NIL)
     {
-        return;
+        return 0;
     }
 
-    assert(color == BLACK || color == RED);
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
+    assert(color == COLOR_BLACK || color == COLOR_RED);
+    assert(get_prologue() <= header_vaddr && 
+        header_vaddr <= get_epilogue());
+    assert((header_vaddr & 0x3) == 0x0);
 
     *(uint32_t *)&heap[header_vaddr] &= 0xFFFFFFFD;
     *(uint32_t *)&heap[header_vaddr] |= ((color & 0x1) << 1);
+
+    return 1;
+}
+
+static int set_redblack_tree_key(uint64_t header_vaddr, uint64_t blocksize)
+{
+    assert((blocksize & 0xFFFFFFFF00000000) == 0);
+    set_blocksize(header_vaddr, (uint32_t)blocksize);
+    return 1;
+}
+
+static int set_redblack_tree_value(uint64_t header_vaddr, uint64_t value)
+{
+    return 1;
 }
 
 static rbtree_node_interface i_node = 
@@ -148,6 +182,10 @@ static rbtree_node_interface i_node =
     .set_rightchild = &set_redblack_tree_right,
     .get_color = &get_redblack_tree_color,
     .set_color = &set_redblack_tree_color,
+    .get_key = &get_redblack_tree_key,
+    .set_key = &set_redblack_tree_key,
+    .get_value = &get_redblack_tree_value,
+    .set_value = &set_redblack_tree_value,
 };
 
 /* ------------------------------------- */
@@ -161,9 +199,12 @@ static int update_root(rbtree_internal_t *this, uint64_t block_vaddr)
         return 0;
     }
     
-    assert(block_vaddr == NULL_ID || (get_firstblock() <= block_vaddr && block_vaddr <= get_lastblock()));
-    assert(block_vaddr == NULL_ID || block_vaddr % 8 == 4);
-    assert(block_vaddr == NULL_ID || get_blocksize(block_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
+    assert(block_vaddr == NULL_ID ||
+        (get_firstblock() <= block_vaddr && block_vaddr <= get_lastblock()));
+    assert(block_vaddr == NULL_ID || 
+        block_vaddr % 8 == 4);
+    assert(block_vaddr == NULL_ID || 
+        get_blocksize(block_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
 
     this->root = block_vaddr;
     return 1;
