@@ -71,12 +71,6 @@ void mem_free(uint64_t payload_vaddr)
 /*  Operations for List Block Structure  */
 /* ------------------------------------- */
 
-static int destruct_node(uint64_t header_vaddr) 
-{
-    // do nothing here
-    return 1;
-}
-
 static int compare_nodes(uint64_t first, uint64_t second)
 {
     return !(first == second);
@@ -112,16 +106,12 @@ static int set_nextfree(uint64_t header_vaddr, uint64_t next_vaddr)
 // register the 5 functions above to be called by the linked list framework
 static linkedlist_node_interface i_free_block =
 {
-    .construct_node = NULL,
-    .destruct_node = &destruct_node,
     .compare_nodes = &compare_nodes,
     .is_null_node = &is_null_node,
     .get_node_prev = &get_prevfree,
     .set_node_prev = &set_prevfree,
     .get_node_next = &get_nextfree,
     .set_node_next = &set_nextfree,
-    .get_node_value = NULL,
-    .set_node_value = NULL
 };
 
 /* ------------------------------------- */

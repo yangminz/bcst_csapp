@@ -173,7 +173,6 @@ static int set_redblack_tree_key(uint64_t header_vaddr, uint64_t blocksize)
 static rbtree_node_interface i_node = 
 {
     .construct_node = NULL,
-    .destruct_node = &destruct_node,
     .compare_nodes = &compare_nodes,
     .is_null_node = &is_null_node,
     .get_parent = &get_redblack_tree_parent,
@@ -186,8 +185,6 @@ static rbtree_node_interface i_node =
     .set_color = &set_redblack_tree_color,
     .get_key = &get_redblack_tree_key,
     .set_key = &set_redblack_tree_key,
-    .get_value = &get_redblack_tree_value,
-    .set_value = &set_redblack_tree_value,
 };
 
 /* ------------------------------------- */
@@ -230,7 +227,7 @@ static void redblack_tree_insert(uint64_t node_ptr)
 static void redblack_tree_delete(uint64_t node_ptr)
 {
     // BST for now
-    bst_internal_delete(&rbt, &i_node, node_ptr);
+    bst_internal_delete(&rbt, &i_node, node_ptr, 0);
 }
 
 static uint64_t redblack_tree_search(uint32_t size)

@@ -233,7 +233,7 @@ static void test_get_next_prev()
 
 static void test_malloc_free()
 {
-    printf("Testing implicit list malloc & free ...\n");
+    printf("Testing malloc & free ...\n");
 
     heap_init();
     check_heap_correctness();
@@ -243,8 +243,9 @@ static void test_malloc_free()
     // collection for the pointers
     linkedlist_t *ptrs = linkedlist_construct();
 
-    for (int i = 0; i < 100000; ++ i)
+    for (int i = 0; i < 50000; ++ i)
     {
+        printf("%d\n", i);
         if ((rand() & 0x1) == 0)
         {
             // malloc

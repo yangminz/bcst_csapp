@@ -19,6 +19,7 @@
 rb_tree_t *bst_construct_keystr(char *str);
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
 void bst_print(rb_tree_t *tree);
+void bst_validate(rb_tree_t *tree);
 
 static void test_build()
 {
@@ -134,9 +135,11 @@ static void test_insert()
             "(2,(1,#,#),(7,(5,#,#),(8,#,#))),"
             "(14,#,(15,#,#)))"
     );
+    bst_validate(r);
 
     // test insert
     bst_add(r, 4);
+    bst_validate(r);
 
     // check
     rb_tree_t *a = bst_construct_keystr(
@@ -159,6 +162,7 @@ static void test_insert()
 
     // test insert
     bst_add(r, 8);
+    bst_validate(r);
 
     // check
     a = bst_construct_keystr(
@@ -182,6 +186,7 @@ static void test_insert()
 
     // test insert
     bst_add(r, 7);
+    bst_validate(r);
 
     // check
     a = bst_construct_keystr(
@@ -363,6 +368,7 @@ static void test_delete()
 
     // case 1: leaf node - parent's left child
     bst_remove(r, 1);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -383,6 +389,7 @@ static void test_delete()
 
     // case 2: leaf node - parent's right child
     bst_remove(r, 3);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -403,6 +410,7 @@ static void test_delete()
 
     // case 3: right NULL
     bst_remove(r, 6);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -423,6 +431,7 @@ static void test_delete()
 
     // case 4: left NULL
     bst_remove(r, 8);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -443,6 +452,7 @@ static void test_delete()
 
     // case 5: right child's left NULL
     bst_remove(r, 12);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -463,6 +473,7 @@ static void test_delete()
 
     // case 6: right child's left not NULL
     bst_remove(r, 19);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(10,"
             "(4,"
@@ -482,6 +493,7 @@ static void test_delete()
 
     // case 7: delete root
     bst_remove(r, 10);
+    bst_validate(r);
     a = bst_construct_keystr(
         "(11,"
             "(4,"
@@ -506,11 +518,58 @@ static void test_delete()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
+static void test_insert_delete()
+{
+    printf("Testing Binary Search Tree insertion and deletion ...\n");
+
+    rb_tree_t *tree = bst_construct();
+    
+    // insert
+    int loops = 50000;
+    uint64_t *array = malloc(loops * sizeof(uint64_t));
+    for (int i = 0; i < loops; ++ i)
+    {
+        uint64_t key = rand() % 1000000;
+        bst_add(tree, key);
+        bst_validate(tree);
+        array[i] = key;
+    }
+
+    // mark
+    for (int i = 0; i < loops; ++ i)
+    {
+        int index = rand() % loops;
+
+        bst_remove(tree, array[index]);
+        bst_validate(tree);
+        array[index] = 0xFFFFFFFFFFFFFFFF;
+    }
+
+    // sweep
+    for (int i = 0; i < loops; ++ i)
+    {
+        if (array[i] != 0xFFFFFFFFFFFFFFFF)
+        {
+            bst_remove(tree, array[i]);
+            bst_validate(tree);
+        }
+    }
+
+    assert(tree->root == 0);
+
+    free(array);
+    bst_free(tree);
+
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
 int main()
 {
+    srand(123456);
     test_build();
     test_insert();
     test_find();
     test_delete();
+    test_insert_delete();
     return 0;
 }

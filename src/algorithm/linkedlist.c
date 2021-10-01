@@ -92,7 +92,6 @@ int linkedlist_internal_delete(linkedlist_internal_t *list,
     }
     assert(list->update_head != NULL);
     assert(i_node != NULL);
-    assert(i_node->destruct_node != NULL);
     assert(i_node->compare_nodes != NULL);
     assert(i_node->is_null_node != NULL);
     assert(i_node->get_node_prev != NULL);
@@ -120,9 +119,6 @@ int linkedlist_internal_delete(linkedlist_internal_t *list,
     {
         list->update_head(list, next);
     }
-
-    // free the node managed by the list
-    i_node->destruct_node(node);
 
     // reset the linked list status
     list->count --;
@@ -359,6 +355,7 @@ void linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node)
         &i_node,
         (uint64_t)node
     );
+    free(node);
 }
 
 linkedlist_node_t *linkedlist_next(linkedlist_t *list)
