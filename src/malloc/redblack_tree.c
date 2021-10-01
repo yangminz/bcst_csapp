@@ -323,7 +323,8 @@ static uint64_t internal_malloc(uint32_t size)
     // not thread safe
 
     // best fit from binary search tree
-    uint64_t b = redblack_tree_search(request_blocksize);
+    // make sure it can be splitted
+    uint64_t b = redblack_tree_search(request_blocksize + MIN_REDBLACK_TREE_BLOCKSIZE);
 
     if (b != NIL)
     {
