@@ -16,18 +16,72 @@
 #include "headers/algorithm.h"
 #include "headers/common.h"
 
+void rbt_validate_interface(rbtree_node_interface *i_node,
+    uint64_t flags)
+{
+    assert(i_node != NULL);
+
+    if ((flags & IRBT_CONSTRUCT) != 0)
+    {
+        assert(i_node->construct_node != NULL);
+    }
+
+    if ((flags & IRBT_DESTRUCT) != 0)
+    {
+        assert(i_node->destruct_node != NULL);
+    }
+
+    if ((flags & IRBT_CHECKNULL) != 0)
+    {
+        assert(i_node->is_null_node != NULL);
+    }
+
+    if ((flags & IRBT_COMPARE) != 0)
+    {
+        assert(i_node->compare_nodes != NULL);
+    }
+
+    if ((flags & IRBT_PARENT) != 0)
+    {
+        assert(i_node->get_parent != NULL);
+        assert(i_node->set_parent != NULL);
+    }
+
+    if ((flags & IRBT_LEFT) != 0)
+    {
+        assert(i_node->get_leftchild != NULL);
+        assert(i_node->set_leftchild != NULL);
+    }
+
+    if ((flags & IRBT_RIGHT) != 0)
+    {
+        assert(i_node->get_rightchild != NULL);
+        assert(i_node->set_rightchild != NULL);
+    }
+
+    if ((flags & IRBT_COLOR) != 0)
+    {
+        assert(i_node->get_color != NULL);
+        assert(i_node->set_color != NULL);
+    }
+
+    if ((flags & IRBT_KEY) != 0)
+    {
+        assert(i_node->get_key != NULL);
+        assert(i_node->set_key != NULL);
+    }
+}
+
 void bst_internal_setchild(uint64_t parent, uint64_t child,
     child_t direction,
     rbtree_node_interface *i_node)
 {
-    assert(i_node != NULL);
-    assert(i_node->is_null_node != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_COMPARE | IRBT_LEFT | IRBT_RIGHT);
 
-    assert(i_node->is_null_node(parent) == 0);
     switch (direction)
     {
         case LEFT_CHILD:
-            assert(i_node->set_leftchild != NULL);
             i_node->set_leftchild(parent, child);
             if (i_node->is_null_node(child) == 0)
             {
@@ -35,7 +89,6 @@ void bst_internal_setchild(uint64_t parent, uint64_t child,
             }
             break;
         case RIGHT_CHILD:
-            assert(i_node->set_rightchild != NULL);
             i_node->set_rightchild(parent, child);
             if (i_node->is_null_node(child) == 0)
             {
@@ -51,12 +104,8 @@ void bst_internal_replace(uint64_t victim, uint64_t node,
     rbtree_internal_t *tree,
     rbtree_node_interface *i_node)
 {
-    assert(i_node != NULL);
-    assert(i_node->compare_nodes != NULL);
-    assert(i_node->get_parent != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_COMPARE | IRBT_CHECKNULL | IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT);
 
     assert(i_node->is_null_node(victim) == 0);
     assert(i_node->is_null_node(tree->root) == 0);
@@ -104,17 +153,8 @@ void bst_internal_insert(rbtree_internal_t *tree,
         return;
     }
     assert(tree->update_root != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->set_parent != NULL);
-    assert(i_node->set_leftchild != NULL);
-    assert(i_node->set_rightchild != NULL);
-    assert(i_node->set_color != NULL);
-    assert(i_node->set_key != NULL);
-    assert(i_node->get_parent != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_color != NULL);
-    assert(i_node->get_key != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
 
     assert(i_node->is_null_node(node_id) == 0);
 
@@ -179,17 +219,8 @@ void bst_internal_delete(rbtree_internal_t *tree,
         return;
     }
     assert(tree->update_root != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->set_parent != NULL);
-    assert(i_node->set_leftchild != NULL);
-    assert(i_node->set_rightchild != NULL);
-    assert(i_node->set_color != NULL);
-    assert(i_node->set_key != NULL);
-    assert(i_node->get_parent != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_color != NULL);
-    assert(i_node->get_key != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
 
     if (i_node->is_null_node(tree->root) == 1)
     {
@@ -310,10 +341,8 @@ uint64_t bst_internal_find(rbtree_internal_t *tree,
     {
         return NULL_ID;
     }
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_key != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_LEFT | IRBT_RIGHT | IRBT_KEY);
 
     if (i_node->is_null_node(tree->root) == 1)
     {
@@ -354,10 +383,8 @@ uint64_t bst_internal_find_succ(rbtree_internal_t *tree,
     {
         return NULL_ID;
     }
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_key != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_LEFT | IRBT_RIGHT | IRBT_KEY);
 
     if (i_node->is_null_node(tree->root) == 1)
     {
@@ -405,12 +432,8 @@ uint64_t bst_internal_find_succ(rbtree_internal_t *tree,
 
 static void tree_print_dfs(uint64_t node, rbtree_node_interface *i_node, int depth)
 {
-    assert(i_node != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_key != NULL);
-    assert(i_node->get_color != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_LEFT | IRBT_RIGHT | IRBT_KEY | IRBT_COLOR);
 
     if (depth >= 10)
     {
@@ -443,7 +466,7 @@ void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
 {
     if (tree != NULL)
     {
-        assert(i_node != NULL);
+        rbt_validate_interface(i_node, 0);
         tree_print_dfs(tree->root, i_node, 0);
     }
     printf("\n");
@@ -455,22 +478,11 @@ void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node)
 // 2. (root node key, left tree key, right tree key)
 void internal_tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interface *i_node, char *str)
 {
-    assert(i_node != NULL);
     assert(tree != NULL);
     assert(tree->update_root != NULL);
-    assert(i_node->is_null_node != NULL);
-    assert(i_node->compare_nodes != NULL);
-    assert(i_node->construct_node != NULL);
-    assert(i_node->get_parent != NULL);
-    assert(i_node->get_leftchild != NULL);
-    assert(i_node->get_rightchild != NULL);
-    assert(i_node->get_key != NULL);
-    assert(i_node->get_color != NULL);
-    assert(i_node->set_parent != NULL);
-    assert(i_node->set_leftchild != NULL);
-    assert(i_node->set_rightchild != NULL);
-    assert(i_node->set_key != NULL);
-    assert(i_node->set_color != NULL);
+    rbt_validate_interface(i_node,
+        IRBT_CHECKNULL | IRBT_COMPARE | IRBT_CONSTRUCT | 
+        IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT | IRBT_KEY | IRBT_COLOR);
 
     // a node on STACK, a LOCAL variable!
     // this is the sentinel to mark the unprocessed sub-tree
@@ -614,8 +626,8 @@ void internal_tree_construct_keystr(rbtree_internal_t *tree, rbtree_node_interfa
 // a and b are node ids
 int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node, int is_rbt)
 {
-    assert(i_node != NULL);
-    assert(i_node->is_null_node != NULL);
+    rbt_validate_interface(i_node, 
+        IRBT_CHECKNULL | IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
 
     int is_a_null = i_node->is_null_node(a);
     int is_b_null = i_node->is_null_node(b);
@@ -675,60 +687,101 @@ int internal_tree_compare(uint64_t a, uint64_t b, rbtree_node_interface *i_node,
     return 0;
 }
 
-static void bst_internal_inorder_dfs(uint64_t node, rbtree_node_interface *i_node,
-    uint64_t *key_min, uint64_t *key_max)
+static void rbt_verify_dfs(uint64_t p, 
+    uint64_t *black_height, 
+    uint64_t *key_min, uint64_t *key_max,
+    rbtree_node_interface *i_node,
+    int is_rbt)
 {
-    assert(i_node != NULL);
+    rbt_validate_interface(i_node, 
+        IRBT_CHECKNULL | IRBT_COMPARE | IRBT_PARENT | IRBT_LEFT | IRBT_RIGHT | IRBT_COLOR | IRBT_KEY);
 
-    if (i_node->is_null_node(node) == 1)
+    if (i_node->is_null_node(p) == 1)
     {
+        *black_height = 0;
         *key_min = 0xFFFFFFFFFFFFFFFF;
-        *key_max = 0xFFFFFFFFFFFFFFFF;
+        *key_max = 0;
         return;
     }
 
-    uint64_t nkey = i_node->get_key(node);
+    uint64_t p_left = i_node->get_leftchild(p);
+    uint64_t p_right = i_node->get_rightchild(p);
+    rb_color_t p_color = i_node->get_color(p);
+    uint64_t p_key = i_node->get_key(p);
 
-    uint64_t nleft = i_node->get_leftchild(node);
-    uint64_t nright = i_node->get_rightchild(node);
+    uint64_t p_left_bh = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_left_key_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_left_key_max = 0xFFFFFFFFFFFFFFFF;
+    rbt_verify_dfs(p_left, &p_left_bh, &p_left_key_min, &p_left_key_max, i_node, is_rbt);
 
-    if (i_node->is_null_node(nleft) == 0)
+    uint64_t p_right_bh = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_right_key_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t p_right_key_max = 0xFFFFFFFFFFFFFFFF;
+    rbt_verify_dfs(p_right, &p_right_bh, &p_right_key_min, &p_right_key_max, i_node, is_rbt);
+
+    if (is_rbt == 1)
     {
-        uint64_t lmin, lmax;
-        bst_internal_inorder_dfs(nleft, i_node, &lmin, &lmax);
-        assert(lmin <= lmax);
-        assert(lmax <= nkey);
-        *key_min = lmin;
-    }
-    else
-    {
-        *key_min = nkey;
+        // check color and black height - RBT only
+        assert(p_left_bh == p_right_bh);
+        if (p_color == COLOR_RED)
+        {
+            assert(i_node->get_color(p_left) == COLOR_BLACK);
+            assert(i_node->get_color(p_right) == COLOR_BLACK);
+            *black_height = p_left_bh;
+        }
+        else if (p_color == COLOR_BLACK)
+        {
+            *black_height = p_left_bh + 1;
+        }
+        else
+        {
+            assert(0);
+        }
     }
 
-    if (i_node->is_null_node(nright) == 0)
+    // check key - BST & RBT
+    *key_min = p_key;
+    *key_max = p_key;
+    if (i_node->is_null_node(p_left) == 0)
     {
-        uint64_t rmin, rmax;
-        bst_internal_inorder_dfs(nright, i_node, &rmin, &rmax);
-        assert(rmin <= rmax);
-        assert(nkey <= rmin);
-        *key_max = rmax;
+        assert(p_left_key_max <= p_key);
+        *key_min = p_left_key_min;
     }
-    else
+
+    if (i_node->is_null_node(p_right) == 0)
     {
-        *key_max = nkey;
+        assert(p_key <= p_right_key_min);
+        *key_max = p_right_key_max;
     }
 }
 
-void internal_check_inorder(rbtree_internal_t *tree, rbtree_node_interface *i_node)
+void rbt_internal_verify(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, int is_rbt)
 {
-    if (tree == NULL || i_node == NULL)
+    if (tree == NULL)
     {
         return;
     }
+    rbt_validate_interface(i_node, 
+        IRBT_CHECKNULL | IRBT_COLOR);
 
-    uint64_t r_min, r_max;
-    bst_internal_inorder_dfs(tree->root, i_node, &r_min, &r_max);
-    assert(r_min <= r_max);
+    uint64_t root = tree->root;
+    if (i_node->is_null_node(root) == 1)
+    {
+        // empty tree
+        return;
+    }
+
+    if (is_rbt == 1)
+    {
+        // assert root is black
+        assert(i_node->get_color(root) == COLOR_BLACK);
+    }
+
+    uint64_t tree_bh = 0;
+    uint64_t tree_min = 0xFFFFFFFFFFFFFFFF;
+    uint64_t tree_max = 0;
+    rbt_verify_dfs(root, &tree_bh, &tree_min, &tree_max, i_node, is_rbt);
 }
 
 /*======================================*/
@@ -1057,5 +1110,5 @@ int bst_compare(rb_tree_t *a, rb_tree_t *b)
 
 void bst_validate(rb_tree_t *tree)
 {
-    internal_check_inorder(&tree->base, &default_i_rbt_node);
+    rbt_internal_verify(&tree->base, &default_i_rbt_node, 0);
 }

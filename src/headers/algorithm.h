@@ -127,6 +127,16 @@ typedef struct
     int (*set_node_value)(uint64_t, uint64_t);
 } linkedlist_node_interface;
 
+#define ILLIST_CONSTRUCT (1 << 0)
+#define ILLIST_DESTRUCT (1 << 1)
+#define ILLIST_CHECKNULL (1 << 2)
+#define ILLIST_COMPARE (1 << 3)
+#define ILLIST_PREV (1 << 4)
+#define ILLIST_NEXT (1 << 5)
+#define ILLIST_VALUE (1 << 6)
+void linkedlist_validate_interface(linkedlist_node_interface *i_node,
+    uint64_t flags);
+
 // internal class of the linked list
 typedef struct LINKEDLIST_INTERNAL_STRUCT
 {
@@ -258,6 +268,19 @@ typedef struct
     // return <int>: 1 if the setting is successful
     int (*set_value)(uint64_t, uint64_t);
 } rbtree_node_interface;
+
+#define IRBT_CONSTRUCT (1 << 0)
+#define IRBT_DESTRUCT (1 << 1)
+#define IRBT_CHECKNULL (1 << 2)
+#define IRBT_COMPARE (1 << 3)
+#define IRBT_PARENT (1 << 4)
+#define IRBT_LEFT (1 << 5)
+#define IRBT_RIGHT (1 << 6)
+#define IRBT_COLOR (1 << 7)
+#define IRBT_KEY (1 << 8)
+#define IRBT_VALUE (1 << 9)
+void rbt_validate_interface(rbtree_node_interface *i_node,
+    uint64_t flags);
 
 // internal class of the red-black tree
 typedef struct RBTREE_INTERNAL_STRUCT
