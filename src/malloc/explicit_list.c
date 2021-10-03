@@ -246,27 +246,27 @@ static int internal_heap_init()
 
     // set the prologue block
     uint64_t prologue_header = get_prologue();
-    set_blocksize(prologue_header, 8);
     set_allocated(prologue_header, ALLOCATED);
+    set_blocksize(prologue_header, 8);
 
     uint64_t prologue_footer = prologue_header + 4;
-    set_blocksize(prologue_footer, 8);
     set_allocated(prologue_footer, ALLOCATED);
+    set_blocksize(prologue_footer, 8);
 
     // set the epilogue block
     // it's a footer only
     uint64_t epilogue = get_epilogue();
-    set_blocksize(epilogue, 0);
     set_allocated(epilogue, ALLOCATED);
+    set_blocksize(epilogue, 0);
 
     // set the block size & allocated of the only regular block
     uint64_t first_header = get_firstblock();
-    set_blocksize(first_header, 4096 - 4 - 8 - 4);
     set_allocated(first_header, FREE);
+    set_blocksize(first_header, 4096 - 4 - 8 - 4);
 
     uint64_t first_footer = get_footer(first_header);
-    set_blocksize(first_footer, 4096 - 4 - 8 - 4);
     set_allocated(first_footer, FREE);
+    set_blocksize(first_footer, 4096 - 4 - 8 - 4);
 
 #ifdef DEBUG_MALLOC
     // like a try-catch

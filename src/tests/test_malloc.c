@@ -60,7 +60,7 @@ static void test_get_blocksize_allocated()
 
     heap_init();
 
-    for (int i = get_prologue(); i <= get_epilogue(); i += 4)
+    for (int i = get_prologue() + 16; i <= get_epilogue(); i += 4)
     {
         *(uint32_t *)&heap[i] = 0x1234abc0;
         assert(get_blocksize(i) == 0x1234abc0);
@@ -88,7 +88,7 @@ static void test_set_blocksize_allocated()
 
     heap_init();
 
-    for (int i = get_prologue(); i <= get_epilogue(); i += 4)
+    for (int i = get_firstblock() + 16; i < get_epilogue(); i += 4)
     {
         set_blocksize(i, 0x1234abc0);
         set_allocated(i, FREE);
@@ -188,12 +188,12 @@ static void test_get_next_prev()
         collection_headeraddr[counter] = h;
         counter += 1;
 
-        set_blocksize(h, blocksize);
         set_allocated(h, allocated);
+        set_blocksize(h, blocksize);
 
         f = h + blocksize - 4;
-        set_blocksize(f, blocksize);
         set_allocated(f, allocated);
+        set_blocksize(f, blocksize);
 
         h = h + blocksize;
     }

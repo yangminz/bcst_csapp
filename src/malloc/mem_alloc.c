@@ -60,6 +60,27 @@ uint64_t round_up(uint64_t x, uint64_t n)
 /*  Block Operations                     */
 /* ------------------------------------- */
 
+#define AF_BIT (0)
+#define P8_BIT (1)
+#define B8_BIT (2)
+
+static int set_bit(uint32_t value, int bit_offset)
+{
+    uint32_t vector = 1 << bit_offset;
+    return value | vector;
+}
+
+static int reset_bit(uint32_t value, int bit_offset)
+{
+    uint32_t vector = 1 << bit_offset;
+    return value & (~vector);
+}
+
+static int is_bit_set(uint32_t value, int bit_offset)
+{
+    return (value >> bit_offset) & 1;
+}
+
 // applicapable for both header & footer
 uint32_t get_blocksize(uint64_t header_vaddr)
 {
@@ -72,7 +93,20 @@ uint32_t get_blocksize(uint64_t header_vaddr)
     assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
 
     uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    return (header_value & 0xFFFFFFF8);
+
+    if (is_bit_set(header_value, B8_BIT) == 1)
+    {
+        if (get_allocated(header_vaddr) == ALLOCATED)
+        {
+            assert((header_value & 0xFFFFFFF8) == 8);
+        }
+        return 8;
+    }
+    else
+    {
+        // B8 is unset - an ordinary block
+        return (header_value & 0xFFFFFFF8);
+    }
 }
 
 // applicapable for both header & footer
@@ -90,11 +124,54 @@ void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
     // we imagine there is a footer in another physical page
     // but it actually does not exist
 
-    *(uint32_t *)&heap[header_vaddr] &= 0x00000007;
-    *(uint32_t *)&heap[header_vaddr] |= blocksize;
+    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
+    uint64_t next_header_vaddr = header_vaddr + blocksize;
+    if (blocksize == 8)
+    {
+        // small block is special
+        if (header_vaddr % 8 == 0)
+        {
+            // do not set footer of small block
+            // reset to header
+            header_vaddr = header_vaddr - 4;
+            header_value = *(uint32_t *)&heap[header_vaddr];
+        }
+
+        // we set header only. small block does not have footer
+        header_value = set_bit(header_value, B8_BIT);
+
+        // set P8 of the next block
+        if (next_header_vaddr <= get_epilogue())
+        {
+            uint32_t next_header_value = *(uint32_t *)&heap[next_header_vaddr];
+            *(uint32_t *)&heap[next_header_vaddr] = set_bit(next_header_value, P8_BIT);
+        }
+
+        if (get_allocated(header_vaddr) == FREE)
+        {
+            // free 8-byte does not set block size
+            goto SET_VALUE;
+        }
+        // else, set header blocksize 8
+    }
+    else
+    {
+        header_value = reset_bit(header_value, B8_BIT);
+        if (next_header_vaddr <= get_epilogue())
+        {
+            uint32_t next_header_value = *(uint32_t *)&heap[next_header_vaddr];
+            *(uint32_t *)&heap[next_header_vaddr] = reset_bit(next_header_value, P8_BIT);
+        }
+    }
+
+    header_value &= 0x00000007; // reset size
+    header_value |= blocksize;  // set size
+SET_VALUE:
+    *(uint32_t *)&heap[header_vaddr] = header_value;
 }
 
-// applicapable for both header & footer
+// applicapable for both header & footer for ordinary blocks
+// header only for small block 8-Byte
 uint32_t get_allocated(uint64_t header_vaddr)
 {
     if (header_vaddr == NIL)
@@ -107,7 +184,7 @@ uint32_t get_allocated(uint64_t header_vaddr)
     assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
 
     uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    return (header_value & 0x1);    
+    return (header_value & 0x1);
 }
 
 // applicapable for both header & footer
@@ -148,17 +225,14 @@ uint64_t get_header(uint64_t vaddr)
     {
         return NIL;
     }    
-    assert(get_firstblock() <= vaddr && vaddr < get_epilogue());
+    assert(get_prologue() <= vaddr && vaddr <= get_epilogue());
 
     // vaddr can be:
     // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
+    // 2. starting address of the payload (8 * n + 8)
     assert((vaddr & 0x3) == 0);
-
-    uint64_t payload_vaddr = get_payload(vaddr);
-
-    // NULL block does not have header
-    return payload_vaddr == NIL ? NIL : payload_vaddr - 4;
+    
+    return round_up(vaddr, 8) - 4;
 }
 
 uint64_t get_footer(uint64_t vaddr)
@@ -167,7 +241,7 @@ uint64_t get_footer(uint64_t vaddr)
     {
         return NIL;
     }    
-    assert(get_firstblock() <= vaddr && vaddr < get_epilogue());
+    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
 
     // vaddr can be:
     // 1. starting address of the block (8 * n + 4)
@@ -187,12 +261,12 @@ uint64_t get_footer(uint64_t vaddr)
 
 uint64_t get_nextheader(uint64_t vaddr)
 {
-    if (vaddr == NIL || is_lastblock(vaddr))
+    if (vaddr == NIL || vaddr == get_epilogue())
     {
         return NIL;
     }
 
-    assert(get_firstblock() <= vaddr && vaddr < get_lastblock());
+    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
 
     // vaddr can be:
     // 1. starting address of the block (8 * n + 4)
@@ -202,32 +276,51 @@ uint64_t get_nextheader(uint64_t vaddr)
 
     uint64_t next_header_vaddr = header_vaddr + block_size;
     assert(get_firstblock() < next_header_vaddr &&
-        next_header_vaddr <= get_lastblock());
+        next_header_vaddr <= get_epilogue());
     
     return next_header_vaddr;
 }
 
 uint64_t get_prevheader(uint64_t vaddr)
 {
-    if (vaddr == NIL || is_firstblock(vaddr))
+    if (vaddr == NIL || vaddr == get_prologue())
     {
         return NIL;
     }
     
-    assert(get_firstblock() < vaddr && vaddr <= get_lastblock());
+    assert(get_firstblock() <= vaddr && vaddr <= get_epilogue());
 
     uint64_t header_vaddr = get_header(vaddr);
+    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
+    uint64_t prev_header_vaddr;
 
-    uint64_t prev_footer_vaddr = header_vaddr - 4;
-    uint32_t prev_blocksize = get_blocksize(prev_footer_vaddr);
+    // check P8 bit 0010
+    if (is_bit_set(header_value, P8_BIT) == 1)
+    {
+        // previous block is 8-byte block
+        prev_header_vaddr = header_vaddr - 8;
+        assert(get_blocksize(prev_header_vaddr) == 8);
+        
+        // check B8 bit
+        uint32_t prev_header_value = *(uint32_t *)&heap[prev_header_vaddr];
+        assert(is_bit_set(prev_header_vaddr, B8_BIT) == 1);
 
-    uint64_t prev_header_vaddr = header_vaddr - prev_blocksize;
-    assert(get_firstblock() <= prev_header_vaddr &&
-        prev_header_vaddr <= get_lastblock());
-    assert(get_blocksize(prev_header_vaddr) == get_blocksize(prev_footer_vaddr));
-    assert(get_allocated(prev_header_vaddr) == get_allocated(prev_footer_vaddr));
-    
-    return prev_header_vaddr;
+        return prev_header_vaddr;
+    }
+    else
+    {
+        // previous block is bigger than 8 bytes
+        uint64_t prev_footer_vaddr = header_vaddr - 4;
+        uint32_t prev_blocksize = get_blocksize(prev_footer_vaddr);
+
+        prev_header_vaddr = header_vaddr - prev_blocksize;
+        assert(get_prologue() <= prev_header_vaddr &&
+            prev_header_vaddr < get_epilogue());
+        assert(get_blocksize(prev_header_vaddr) == get_blocksize(prev_footer_vaddr));
+        assert(get_allocated(prev_header_vaddr) == get_allocated(prev_footer_vaddr));
+        
+        return prev_header_vaddr;
+    }
 }
 
 uint64_t get_firstblock()
@@ -248,14 +341,7 @@ uint64_t get_lastblock()
     assert(heap_start_vaddr % 4096 == 0);
 
     uint64_t epilogue_header = get_epilogue();
-    uint64_t last_footer = epilogue_header - 4;
-    uint32_t last_blocksize = get_blocksize(last_footer);
-
-    uint64_t last_header = epilogue_header - last_blocksize;
-
-    assert(get_firstblock() <= last_header);
-
-    return last_header;
+    return get_prevheader(epilogue_header);
 }
 
 uint64_t get_prologue()
@@ -552,8 +638,12 @@ void check_heap_correctness()
         assert(get_firstblock() <= p && p <= get_lastblock());
 
         uint64_t f = get_footer(p);
-        assert(get_blocksize(p) == get_blocksize(f));
-        assert(get_allocated(p) == get_allocated(f));
+        uint32_t blocksize = get_blocksize(p);
+        if (blocksize != 8)
+        {
+            assert(get_blocksize(p) == get_blocksize(f));
+            assert(get_allocated(p) == get_allocated(f));
+        }
 
         // rule 1: block[0] ==> A/F
         // rule 2: block[-1] ==> A/F

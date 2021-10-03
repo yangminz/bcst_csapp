@@ -111,9 +111,11 @@ static rb_color_t get_redblack_tree_color(uint64_t header_vaddr)
     assert(get_prologue() <= header_vaddr && 
         header_vaddr <= get_epilogue());
     assert((header_vaddr & 0x3) == 0x0);
+    assert(get_blocksize(header_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
 
-    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    return (rb_color_t)((header_value >> 1) & 0x1);
+    uint64_t footer_vaddr = get_footer(header_vaddr);
+    uint32_t footer_value = *(uint32_t *)&heap[footer_vaddr];
+    return (rb_color_t)((footer_value >> 1) & 0x1);
 }
 
 static uint64_t get_redblack_tree_key(uint64_t header_vaddr)
@@ -157,9 +159,11 @@ static int set_redblack_tree_color(uint64_t header_vaddr, rb_color_t color)
     assert(get_prologue() <= header_vaddr && 
         header_vaddr <= get_epilogue());
     assert((header_vaddr & 0x3) == 0x0);
+    assert(get_blocksize(header_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
 
-    *(uint32_t *)&heap[header_vaddr] &= 0xFFFFFFFD;
-    *(uint32_t *)&heap[header_vaddr] |= ((color & 0x1) << 1);
+    uint64_t footer_vaddr = get_footer(header_vaddr);
+    *(uint32_t *)&heap[footer_vaddr] &= 0xFFFFFFFD;
+    *(uint32_t *)&heap[footer_vaddr] |= ((color & 0x1) << 1);
 
     return 1;
 }
