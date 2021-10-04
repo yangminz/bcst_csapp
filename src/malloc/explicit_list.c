@@ -12,59 +12,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <signal.h>
 #include "headers/allocator.h"
 #include "headers/algorithm.h"
 
-static int internal_heap_init();
-static uint64_t internal_malloc(uint32_t size);
-static void internal_free(uint64_t payload_vaddr);
+// block8.c
+// Manage small blocks
+void block8_list_init();
+void block8_list_insert(uint64_t free_header);
+void block8_list_delete(uint64_t free_header);
+linkedlist_internal_t block8_list;
 
-/* ------------------------------------- */
-/*  Implementation of the Interfaces     */
-/* ------------------------------------- */
-
-#ifdef EXPLICIT_FREE_LIST
-
-int heap_init()
-{
-    return internal_heap_init();
-}
-
-uint64_t mem_alloc(uint32_t size)
-{
-    return internal_malloc(size);
-}
-
-void mem_free(uint64_t payload_vaddr)
-{
-    internal_free(payload_vaddr);
-}
-
-#endif
-
-/* ------------------------------------- */
-/*  Explicit Free List                   */
-/* ------------------------------------- */
-
-/*  Allocated block:
-
-    ff ff ff f9/f1  [8n + 24] - footer
-    ?? ?? ?? ??     [8n + 20] - padding
-    xx xx ?? ??     [8n + 16] - payload & padding
-    xx xx xx xx     [8n + 12] - payload
-    xx xx xx xx     [8n + 8] - payload
-    hh hh hh h9/h1  [8n + 4] - header
-
-    Free block:
-
-    ff ff ff f8/f0  [8n + 24] - footer
-    ?? ?? ?? ??     [8n + 20]
-    ?? ?? ?? ??     [8n + 16]
-    nn nn nn nn     [8n + 12] - next free block address
-    pp pp pp pp     [8n + 8] - previous free block address
-    hh hh hh h8/h0  [8n + 4] - header
-*/
 #define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
 
 /* ------------------------------------- */
@@ -161,6 +118,8 @@ static void explicit_list_delete(uint64_t free_header)
     // assert(get_allocated(free_header) == FREE);
 
     linkedlist_internal_delete(&explicit_list, &i_free_block, free_header);
+    set_prevfree(free_header, NIL);
+    set_nextfree(free_header, NIL);
 }
 
 /* ------------------------------------- */
@@ -179,37 +138,142 @@ static void explicit_list_print()
     printf("\n");
 }
 
-#if defined(DEBUG_MALLOC) && defined(EXPLICIT_FREE_LIST)
-void on_sigabrt(int signum)
+/* ------------------------------------- */
+/*  Implementation                       */
+/* ------------------------------------- */
+
+#ifdef EXPLICIT_FREE_LIST
+
+int initialize_free_block()
 {
-    // like a try-catch for the asserts
-    printf("%s\n", debug_message);
-    print_heap();
-    explicit_list_print();
-    exit(0);
+    uint64_t first_header = get_firstblock();
+    
+    set_prevfree(first_header, first_header);
+    set_nextfree(first_header, first_header);
+
+    explist_list_init();
+    explicit_list_insert(first_header);
+
+    // init small block list
+    block8_list_init();
+
+    return 1;
 }
-#endif
 
-static void check_explicit_list_correctness()
+uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
-    uint32_t free_counter = 0;
-    uint64_t p = get_firstblock();
-    while (p != NIL && p <= get_lastblock())
+    // search 8-byte block list
+    if (payload_size <= 4 && block8_list.count != 0)
     {
-        if (get_allocated(p) == FREE)
-        {
-            free_counter += 1;
-
-            assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-            assert(get_allocated(get_prevfree(p)) == FREE);
-            assert(get_allocated(get_nextfree(p)) == FREE);
-        }
-
-        p = get_nextheader(p);
+        // a small block and 8-byte list is not empty
+        *alloc_blocksize = 8;
+        return block8_list.head;
     }
-    assert(free_counter == explicit_list.count);
+    
+    uint32_t free_blocksize = round_up(payload_size, 8) + 4 + 4;
+    free_blocksize = free_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
+        MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : free_blocksize;
+    *alloc_blocksize = free_blocksize;
 
-    p = explicit_list.head;
+    // search explicit free list
+    uint64_t b = explicit_list.head;
+    uint32_t counter_copy = explicit_list.count;
+    for (int i = 0; i < counter_copy; ++ i)
+    {
+        uint32_t b_blocksize = get_blocksize(b);
+        uint32_t b_allocated = get_allocated(b);
+
+        if (b_allocated == FREE && free_blocksize <= b_blocksize)
+        {
+            return b;
+        }
+        else
+        {
+            b = get_nextfree(b);
+        }
+    }
+
+    return NIL;
+}
+
+int insert_free_block(uint64_t free_header)
+{
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            block8_list_insert(free_header);
+            break;
+        
+        default:
+            explicit_list_insert(free_header);
+            break;
+    }
+
+    return 1;
+}
+
+int delete_free_block(uint64_t free_header)
+{
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            block8_list_delete(free_header);
+            break;
+        
+        default:
+            explicit_list_delete(free_header);
+            break;
+    }
+
+    return 1;
+}
+
+void check_freeblock_correctness()
+{
+    uint32_t explicit_list_counter = 0;
+    uint64_t b = get_firstblock(); 
+    int head_exists = 0;
+    while(b <= get_lastblock())
+    {
+        if (get_allocated(b) == FREE && get_blocksize(b) > 8)
+        {
+            uint64_t prev = get_prevfree(b);
+            uint64_t next = get_nextfree(b);
+
+            assert(get_allocated(prev) == FREE);
+            assert(get_allocated(next) == FREE);
+            assert(get_nextfree(prev) == b);
+            assert(get_prevfree(next) == b);
+
+            if (b == explicit_list.head)
+            {
+                head_exists = 1;
+            }
+
+            explicit_list_counter += 1;
+        }
+        b = get_nextheader(b);
+    }
+    assert(head_exists == 1);
+    assert(explicit_list_counter == explicit_list.count);
+
+    uint64_t p = explicit_list.head;
     uint64_t n = explicit_list.head;
     for (int i = 0; i < explicit_list.count; ++ i)
     {
@@ -225,222 +289,4 @@ static void check_explicit_list_correctness()
     assert(p == explicit_list.head);
     assert(n == explicit_list.head);
 }
-
-/* ------------------------------------- */
-/*  Implementation                       */
-/* ------------------------------------- */
-
-static int internal_heap_init()
-{
-    // reset all to 0
-    for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
-    {
-        *(uint64_t *)&heap[i] = 0;
-    }
-
-    // heap_start_vaddr is the starting address of the first block
-    // the payload of the first block is 8B aligned ([8])
-    // so the header address of the first block is [8] - 4 = [4]
-    heap_start_vaddr = 0;
-    heap_end_vaddr = 4096;
-
-    // set the prologue block
-    uint64_t prologue_header = get_prologue();
-    set_blocksize(prologue_header, 8);
-    set_allocated(prologue_header, ALLOCATED);
-
-    uint64_t prologue_footer = prologue_header + 4;
-    set_blocksize(prologue_footer, 8);
-    set_allocated(prologue_footer, ALLOCATED);
-
-    // set the epilogue block
-    // it's a footer only
-    uint64_t epilogue = get_epilogue();
-    set_blocksize(epilogue, 0);
-    set_allocated(epilogue, ALLOCATED);
-
-    // set the block size & allocated of the only regular block
-    uint64_t first_header = get_firstblock();
-    set_blocksize(first_header, 4096 - 4 - 8 - 4);
-    set_allocated(first_header, FREE);
-
-    uint64_t first_footer = get_footer(first_header);
-    set_blocksize(first_footer, 4096 - 4 - 8 - 4);
-    set_allocated(first_footer, FREE);
-
-#ifdef DEBUG_MALLOC
-    // like a try-catch
-    signal(SIGABRT, &on_sigabrt);
 #endif
-
-    set_prevfree(first_header, first_header);
-    set_nextfree(first_header, first_header);
-
-    explist_list_init();
-    explicit_list_insert(first_header);
-
-    return 1;
-}
-
-static uint64_t internal_malloc(uint32_t size)
-{
-    assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
-
-    uint64_t payload_vaddr = NIL;
-    
-    uint32_t request_blocksize = round_up(size, 8) + 4 + 4;
-    request_blocksize = request_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
-        MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : request_blocksize;
-
-    uint64_t b = explicit_list.head;
-
-    // not thread safe
-    uint32_t counter_copy = explicit_list.count;
-    // T(explicit) <= 1/2 * T(implicit)
-    // much more fast when the heap is nearly full
-    for (int i = 0; i < counter_copy; ++ i)
-    {
-        uint32_t b_old_blocksize = get_blocksize(b);
-        payload_vaddr = try_alloc_with_splitting(b, request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-        if (payload_vaddr != NIL)
-        {
-            uint32_t b_new_blocksize = get_blocksize(b);
-            assert(b_new_blocksize <= b_old_blocksize);
-            explicit_list_delete(b);
-
-            if (b_old_blocksize > b_new_blocksize)
-            {
-                // b has been splitted
-                uint64_t a = get_nextheader(b);
-                assert(get_allocated(a) == FREE);
-                assert(get_blocksize(a) == b_old_blocksize - b_new_blocksize);
-                explicit_list_insert(a);
-            }
-
-#ifdef DEBUG_MALLOC
-            check_heap_correctness();
-            check_explicit_list_correctness();
-#endif
-            return payload_vaddr;
-        }
-        else
-        {
-            // go to next block
-            b = get_nextfree(b);
-        }
-    }
-
-    // when no enough free block for current heap
-    // request a new free physical & virtual page from OS
-    uint64_t old_last = get_lastblock();
-    if (get_allocated(old_last) == FREE)
-    {
-        explicit_list_delete(old_last);
-    }
-
-    payload_vaddr = try_extend_heap_to_alloc(request_blocksize, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-    uint64_t new_last = get_lastblock();
-    if (get_allocated(new_last) == FREE)
-    {
-        explicit_list_insert(new_last);
-    }
-
-#ifdef DEBUG_MALLOC
-    check_heap_correctness();
-    check_explicit_list_correctness();
-#endif
-
-    return payload_vaddr;
-}
-
-static void internal_free(uint64_t payload_vaddr)
-{
-    if (payload_vaddr == NIL)
-    {
-        return;
-    }
-
-    assert(get_firstblock() < payload_vaddr && payload_vaddr < get_epilogue());
-    assert((payload_vaddr & 0x7) == 0x0);
-
-    // request can be first or last block
-    uint64_t req = get_header(payload_vaddr);
-    uint64_t req_footer = get_footer(req); // for last block, it's 0
-
-    uint32_t req_allocated = get_allocated(req);
-    uint32_t req_blocksize = get_blocksize(req);
-    assert(req_allocated == ALLOCATED); // otherwise it's free twice
-
-    // block starting address of next & prev blocks
-    uint64_t next = get_nextheader(req);    // for req last block, it's 0
-    uint64_t prev = get_prevheader(req);    // for req first block, it's 0
-
-    uint32_t next_allocated = get_allocated(next);  // for req last, 1
-    uint32_t prev_allocated = get_allocated(prev);  // for req first, 1
-
-    if (next_allocated == ALLOCATED && prev_allocated == ALLOCATED)
-    {
-        // case 1: *A(A->F)A*
-        // ==> *AFA*
-        set_allocated(req, FREE);
-        set_allocated(req_footer, FREE);
-
-        explicit_list_insert(req);
-#ifdef DEBUG_MALLOC
-        check_heap_correctness();
-        check_explicit_list_correctness();
-#endif
-    }
-    else if (next_allocated == FREE && prev_allocated == ALLOCATED)
-    {
-        // case 2: *A(A->F)FA
-        // ==> *AFFA ==> *A[FF]A merge current and next
-        explicit_list_delete(next);
-
-        uint64_t one_free  = merge_blocks_as_free(req, next);
-        
-        explicit_list_insert(one_free);
-#ifdef DEBUG_MALLOC
-        check_heap_correctness();
-        check_explicit_list_correctness();
-#endif
-    }
-    else if (next_allocated == ALLOCATED && prev_allocated == FREE)
-    {
-        // case 3: AF(A->F)A*
-        // ==> AFFA* ==> A[FF]A* merge current and prev
-        explicit_list_delete(prev);
-
-        uint64_t one_free  = merge_blocks_as_free(prev, req);
-        
-        explicit_list_insert(one_free);
-#ifdef DEBUG_MALLOC
-        check_heap_correctness();
-        check_explicit_list_correctness();
-#endif
-    }
-    else if (next_allocated == FREE && prev_allocated == FREE)
-    {
-        // case 4: AF(A->F)FA
-        // ==> AFFFA ==> A[FFF]A merge current and prev and next
-        explicit_list_delete(prev);
-        explicit_list_delete(next);
-
-        uint64_t one_free = merge_blocks_as_free(merge_blocks_as_free(prev, req), next);
-        
-        explicit_list_insert(one_free);
-#ifdef DEBUG_MALLOC
-        check_heap_correctness();
-        check_explicit_list_correctness();
-#endif
-    }
-    else
-    {
-#ifdef DEBUG_MALLOC
-        printf("exception for free\n");
-        exit(0);
-#endif
-    }
-}
