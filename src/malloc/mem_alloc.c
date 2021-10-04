@@ -46,427 +46,11 @@ uint32_t extend_heap(uint32_t size)
     return size;
 }
 
-// Round up to next multiple of n:
-// if (x == k * n)
-// return x
-// else, x = k * n + m and m < n
-// return (k + 1) * n
-uint64_t round_up(uint64_t x, uint64_t n)
-{
-    return n * ((x + n - 1) / n);
-}
-
-/* ------------------------------------- */
-/*  Block Operations                     */
-/* ------------------------------------- */
-
-#define AF_BIT (0)
-#define P8_BIT (1)
-#define B8_BIT (2)
-
-static int set_bit(uint32_t value, int bit_offset)
-{
-    uint32_t vector = 1 << bit_offset;
-    return value | vector;
-}
-
-static int reset_bit(uint32_t value, int bit_offset)
-{
-    uint32_t vector = 1 << bit_offset;
-    return value & (~vector);
-}
-
-static int is_bit_set(uint32_t value, int bit_offset)
-{
-    return (value >> bit_offset) & 1;
-}
-
-// applicapable for both header & footer
-uint32_t get_blocksize(uint64_t header_vaddr)
-{
-    if (header_vaddr == NIL)
-    {
-        return 0;
-    }
-
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
-
-    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-
-    if (is_bit_set(header_value, B8_BIT) == 1)
-    {
-        if (get_allocated(header_vaddr) == ALLOCATED)
-        {
-            assert((header_value & 0xFFFFFFF8) == 8);
-        }
-        return 8;
-    }
-    else
-    {
-        // B8 is unset - an ordinary block
-        return (header_value & 0xFFFFFFF8);
-    }
-}
-
-// applicapable for both header & footer
-void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
-{
-    if (header_vaddr == NIL)
-    {
-        return;
-    }
-
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
-    assert((blocksize & 0x7) == 0x0);   // block size should be 8 bytes aligned
-    // for last block, the virtual block size is still 8n
-    // we imagine there is a footer in another physical page
-    // but it actually does not exist
-
-    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    uint64_t next_header_vaddr = header_vaddr + blocksize;
-    if (blocksize == 8)
-    {
-        // small block is special
-        if (header_vaddr % 8 == 0)
-        {
-            // do not set footer of small block
-            // reset to header
-            header_vaddr = header_vaddr - 4;
-            header_value = *(uint32_t *)&heap[header_vaddr];
-        }
-
-        // we set header only. small block does not have footer
-        header_value = set_bit(header_value, B8_BIT);
-
-        // set P8 of the next block
-        if (next_header_vaddr <= get_epilogue())
-        {
-            uint32_t next_header_value = *(uint32_t *)&heap[next_header_vaddr];
-            *(uint32_t *)&heap[next_header_vaddr] = set_bit(next_header_value, P8_BIT);
-        }
-
-        if (get_allocated(header_vaddr) == FREE)
-        {
-            // free 8-byte does not set block size
-            goto SET_VALUE;
-        }
-        // else, set header blocksize 8
-    }
-    else
-    {
-        header_value = reset_bit(header_value, B8_BIT);
-        if (next_header_vaddr <= get_epilogue())
-        {
-            uint32_t next_header_value = *(uint32_t *)&heap[next_header_vaddr];
-            *(uint32_t *)&heap[next_header_vaddr] = reset_bit(next_header_value, P8_BIT);
-        }
-    }
-
-    header_value &= 0x00000007; // reset size
-    header_value |= blocksize;  // set size
-SET_VALUE:
-    *(uint32_t *)&heap[header_vaddr] = header_value;
-}
-
-// applicapable for both header & footer for ordinary blocks
-// header only for small block 8-Byte
-uint32_t get_allocated(uint64_t header_vaddr)
-{
-    if (header_vaddr == NIL)
-    {
-        // NULL can be considered as allocated
-        return ALLOCATED;
-    }
-
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
-
-    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    return (header_value & 0x1);
-}
-
-// applicapable for both header & footer
-void set_allocated(uint64_t header_vaddr, uint32_t allocated)
-{
-    if (header_vaddr == NIL)
-    {
-        return;
-    }
-
-    assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
-
-    *(uint32_t *)&heap[header_vaddr] &= 0xFFFFFFFE;
-    *(uint32_t *)&heap[header_vaddr] |= (allocated & 0x1);
-}
-
-uint64_t get_payload(uint64_t vaddr)
-{
-    if (vaddr == NIL)
-    {
-        return NIL;
-    }    
-    assert(get_firstblock() <= vaddr && vaddr < get_epilogue());
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
-    assert((vaddr & 0x3) == 0);
-
-    // this round up will handle `vaddr == NIL` situation
-    return round_up(vaddr, 8);
-}
-
-uint64_t get_header(uint64_t vaddr)
-{
-    if (vaddr == NIL)
-    {
-        return NIL;
-    }    
-    assert(get_prologue() <= vaddr && vaddr <= get_epilogue());
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * n + 8)
-    assert((vaddr & 0x3) == 0);
-    
-    return round_up(vaddr, 8) - 4;
-}
-
-uint64_t get_footer(uint64_t vaddr)
-{
-    if (vaddr == NIL)
-    {
-        return NIL;
-    }    
-    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
-    assert((vaddr & 0x3) == 0);
-
-    uint64_t header_vaddr = get_header(vaddr);
-    uint64_t footer_vaddr = header_vaddr + get_blocksize(header_vaddr) - 4;
-
-    assert(get_firstblock() < footer_vaddr && footer_vaddr < get_epilogue());
-    return footer_vaddr;
-}
-
-/* ------------------------------------- */
-/*  Heap Operations                      */
-/* ------------------------------------- */
-
-uint64_t get_nextheader(uint64_t vaddr)
-{
-    if (vaddr == NIL || vaddr == get_epilogue())
-    {
-        return NIL;
-    }
-
-    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
-    uint64_t header_vaddr = get_header(vaddr);
-    uint32_t block_size = get_blocksize(header_vaddr);
-
-    uint64_t next_header_vaddr = header_vaddr + block_size;
-    assert(get_firstblock() < next_header_vaddr &&
-        next_header_vaddr <= get_epilogue());
-    
-    return next_header_vaddr;
-}
-
-uint64_t get_prevheader(uint64_t vaddr)
-{
-    if (vaddr == NIL || vaddr == get_prologue())
-    {
-        return NIL;
-    }
-    
-    assert(get_firstblock() <= vaddr && vaddr <= get_epilogue());
-
-    uint64_t header_vaddr = get_header(vaddr);
-    uint32_t header_value = *(uint32_t *)&heap[header_vaddr];
-    uint64_t prev_header_vaddr;
-
-    // check P8 bit 0010
-    if (is_bit_set(header_value, P8_BIT) == 1)
-    {
-        // previous block is 8-byte block
-        prev_header_vaddr = header_vaddr - 8;
-        assert(get_blocksize(prev_header_vaddr) == 8);
-        
-        // check B8 bit
-        uint32_t prev_header_value = *(uint32_t *)&heap[prev_header_vaddr];
-        assert(is_bit_set(prev_header_vaddr, B8_BIT) == 1);
-
-        return prev_header_vaddr;
-    }
-    else
-    {
-        // previous block is bigger than 8 bytes
-        uint64_t prev_footer_vaddr = header_vaddr - 4;
-        uint32_t prev_blocksize = get_blocksize(prev_footer_vaddr);
-
-        prev_header_vaddr = header_vaddr - prev_blocksize;
-        assert(get_prologue() <= prev_header_vaddr &&
-            prev_header_vaddr < get_epilogue());
-        assert(get_blocksize(prev_header_vaddr) == get_blocksize(prev_footer_vaddr));
-        assert(get_allocated(prev_header_vaddr) == get_allocated(prev_footer_vaddr));
-        
-        return prev_header_vaddr;
-    }
-}
-
-uint64_t get_firstblock()
-{
-    assert(heap_end_vaddr > heap_start_vaddr);
-    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
-    assert(heap_start_vaddr % 4096 == 0);
-
-    // 4 for the not in use
-    // 8 for the prologue block
-    return get_prologue() + 8;
-}
-
-uint64_t get_lastblock()
-{
-    assert(heap_end_vaddr > heap_start_vaddr);
-    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
-    assert(heap_start_vaddr % 4096 == 0);
-
-    uint64_t epilogue_header = get_epilogue();
-    return get_prevheader(epilogue_header);
-}
-
-uint64_t get_prologue()
-{
-    assert(heap_end_vaddr > heap_start_vaddr);
-    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
-    assert(heap_start_vaddr % 4096 == 0);
-
-    // 4 for the not in use
-    return heap_start_vaddr + 4;
-}
-
-uint64_t get_epilogue()
-{
-    assert(heap_end_vaddr > heap_start_vaddr);
-    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
-    assert(heap_start_vaddr % 4096 == 0);
-
-    // epilogue block is having header only
-    return heap_end_vaddr - 4;
-}
-
-int is_firstblock(uint64_t vaddr)
-{
-    if (vaddr == NIL)
-    {
-        return 0;
-    }
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
-    assert(get_firstblock() <= vaddr && vaddr < get_epilogue());
-    assert((vaddr & 0x3) == 0x0);
-
-    uint64_t header_vaddr = get_header(vaddr);
-    
-    if (header_vaddr == get_firstblock())
-    {
-        // it is the last block
-        // it does not have any footer
-        return 1;
-    }
-
-    // no, it's not the last block
-    // it should have footer
-    return 0;
-}
-
-int is_lastblock(uint64_t vaddr)
-{
-    if (vaddr == NIL)
-    {
-        return 0;
-    }
-
-    // vaddr can be:
-    // 1. starting address of the block (8 * n + 4)
-    // 2. starting address of the payload (8 * m)
-    assert(get_firstblock() <= vaddr && vaddr < get_epilogue());
-    assert((vaddr & 0x3) == 0x0);
-
-    uint64_t header_vaddr = get_header(vaddr);
-    uint32_t blocksize = get_blocksize(header_vaddr);
-
-    if (header_vaddr + blocksize == get_epilogue())
-    {
-        // it is the last block
-        // it does not have any footer
-        return 1;
-    }
-
-    // no, it's not the last block
-    // it should have footer
-    return 0;
-}
-
-/* ------------------------------------- */
-/*  Free Block as Data Structure         */
-/* ------------------------------------- */
-
-uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, uint32_t offset)
-{
-    if (header_vaddr == NIL)
-    {
-        return NIL;
-    }
-
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= min_blocksize);
-
-    assert(offset % 4 == 0);
-
-    uint32_t vaddr_32 = *(uint32_t *)&heap[header_vaddr + offset];
-    return (uint64_t)vaddr_32;
-}
-
-void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset)
-{
-    if (header_vaddr == NIL)
-    {
-        return;
-    }
-    
-    assert(get_firstblock() <= header_vaddr && header_vaddr <= get_lastblock());
-    assert(header_vaddr % 8 == 4);
-    assert(get_blocksize(header_vaddr) >= min_blocksize);
-
-    assert(block_ptr == NIL || (get_firstblock() <= block_ptr && block_ptr <= get_lastblock()));
-    assert(block_ptr == NIL || block_ptr % 8 == 4);
-    assert(block_ptr == NIL || get_blocksize(block_ptr) >= min_blocksize);
-
-    assert(offset % 4 == 0);
-
-    // actually a 32-bit pointer
-    assert((block_ptr >> 32) == 0);
-    *(uint32_t *)&heap[header_vaddr + offset] = (uint32_t)(block_ptr & 0xFFFFFFFF);
-}
-
 /* ------------------------------------- */
 /*  Malloc and Free                      */
 /* ------------------------------------- */
 
-uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
+static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
 {
     assert(low % 8 == 4);
     assert(high % 8 == 4);
@@ -488,9 +72,9 @@ uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
     return low;
 }
 
-uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksize, uint32_t min_blocksize)
+static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksize)
 {
-    if (request_blocksize < min_blocksize)
+    if (request_blocksize < 8)
     {
         return NIL;
     }
@@ -503,52 +87,38 @@ uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksi
     if (b_allocated == FREE && b_blocksize >= request_blocksize)
     {
         // allocate this block
-        if (b_blocksize - request_blocksize >= min_blocksize)
+        delete_free_block(b);
+        uint64_t old_b_footer = get_footer(b);
+
+        set_allocated(b, ALLOCATED);
+        set_blocksize(b, request_blocksize);
+
+        uint64_t b_footer = get_footer(b);
+        set_allocated(b_footer, ALLOCATED);
+        set_blocksize(b_footer, request_blocksize);
+
+        if (b_blocksize - request_blocksize >= 8)
         {
             // split this block `b`
             // b_blocksize - request_blocksize >= 8
-            uint64_t next_footer = get_footer(b);
-            set_allocated(next_footer, FREE);
-            set_blocksize(next_footer, b_blocksize - request_blocksize);
+            uint64_t left_header = get_nextheader(b);
+            set_allocated(left_header, FREE);
+            set_blocksize(left_header, b_blocksize - request_blocksize);
 
-            set_allocated(b, ALLOCATED);
-            set_blocksize(b, request_blocksize);
+            uint64_t left_footer = get_footer(left_header);
+            set_allocated(left_footer, FREE);
+            set_blocksize(left_footer, b_blocksize - request_blocksize);
 
-            uint64_t b_footer = get_footer(b);
-            set_allocated(b_footer, ALLOCATED);
-            set_blocksize(b_footer, request_blocksize);
-
-            // set the left splitted block
-            // in the extreme situation, next block size == 8
-            // which makes the whole block of next to be:
-            // [0x00000008, 0x00000008]
-            uint64_t next_header = get_nextheader(b);
-            set_allocated(next_header, FREE);
-            set_blocksize(next_header, b_blocksize - request_blocksize);
-
-            assert(get_footer(next_header) == next_footer);
-
-            return get_payload(b);
+            assert(old_b_footer == left_footer);
+            insert_free_block(left_header);
         }
-        else if (b_blocksize - request_blocksize < min_blocksize)
-        {
-            /*
-            // TODO: potential optimization: reduce the fragmentation
-            // no need to split this block
-            // set_blocksize(b, request_blocksize);
-            set_allocated(b, ALLOCATED);
-            uint64_t b_footer = get_footer(b);
-            set_allocated(b_footer, ALLOCATED);
-            return get_payload(b);
-            */
-            return NIL;
-        }
+        return get_payload(b);
     }
 
     return NIL;
 }
 
-uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize)
+static uint64_t try_extend_heap_to_alloc(uint32_t size)
 {
     // get the size to be added
     uint64_t old_last = get_lastblock();
@@ -587,6 +157,7 @@ uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize)
             uint64_t new_last_footer = get_footer(new_last);
             set_allocated(new_last_footer, FREE);
             set_blocksize(new_last_footer, os_allocated_size);
+            insert_free_block(new_last);
 
             payload_header = new_last;
         }
@@ -604,7 +175,7 @@ uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize)
         }
 
         // try to allocate
-        uint64_t payload_vaddr = try_alloc_with_splitting(payload_header, size, min_blocksize);
+        uint64_t payload_vaddr = try_alloc_with_splitting(payload_header, size);
 
         if (payload_vaddr != NIL)
         {
@@ -622,6 +193,165 @@ uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize)
 #endif
 
     return NIL;
+}
+
+int heap_init()
+{
+    // reset all to 0
+    for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
+    {
+        *(uint64_t *)&heap[i] = 0;
+    }
+
+    // heap_start_vaddr is the starting address of the first block
+    // the payload of the first block is 8B aligned ([8])
+    // so the header address of the first block is [8] - 4 = [4]
+    heap_start_vaddr = 0;
+    heap_end_vaddr = 4096;
+
+    // set the prologue block
+    uint64_t prologue_header = get_prologue();
+    set_allocated(prologue_header, ALLOCATED);
+    set_blocksize(prologue_header, 8);
+
+    uint64_t prologue_footer = prologue_header + 4;
+    set_allocated(prologue_footer, ALLOCATED);
+    set_blocksize(prologue_footer, 8);
+
+    // set the epilogue block
+    // it's a footer only
+    uint64_t epilogue = get_epilogue();
+    set_allocated(epilogue, ALLOCATED);
+    set_blocksize(epilogue, 0);
+
+    // set the block size & allocated of the only regular block
+    uint64_t first_header = get_firstblock();
+    set_allocated(first_header, FREE);
+    set_blocksize(first_header, 4096 - 4 - 8 - 4);
+
+    uint64_t first_footer = get_footer(first_header);
+    set_allocated(first_footer, FREE);
+    set_blocksize(first_footer, 4096 - 4 - 8 - 4);
+
+    initialize_free_block();
+
+    return 1;
+}
+
+uint64_t mem_alloc(uint32_t size)
+{
+    assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
+
+    uint32_t alloc_blocksize = 0;
+    uint64_t payload_header = search_free_block(size, &alloc_blocksize);
+    uint64_t payload_vaddr = NIL;
+
+    if (payload_header != NIL)
+    {
+        payload_vaddr = try_alloc_with_splitting(payload_header, alloc_blocksize);
+        assert(payload_vaddr != NIL);
+    }
+    else
+    {
+        payload_vaddr = try_extend_heap_to_alloc(alloc_blocksize);
+    }
+
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+    check_freeblock_correctness();
+#endif
+
+    return payload_vaddr;
+}
+
+void mem_free(uint64_t payload_vaddr)
+{
+    if (payload_vaddr == NIL)
+    {
+        return;
+    }
+
+    assert(get_firstblock() < payload_vaddr && payload_vaddr < get_epilogue());
+    assert((payload_vaddr & 0x7) == 0x0);
+
+    // request can be first or last block
+    uint64_t req = get_header(payload_vaddr);
+    uint64_t req_footer = get_footer(req); // for last block, it's 0
+
+    uint32_t req_allocated = get_allocated(req);
+    uint32_t req_blocksize = get_blocksize(req);
+    assert(req_allocated == ALLOCATED); // otherwise it's free twice
+
+    // block starting address of next & prev blocks
+    uint64_t next = get_nextheader(req);
+    uint64_t prev = get_prevheader(req);
+
+    uint32_t next_allocated = get_allocated(next);
+    uint32_t prev_allocated = get_allocated(prev);
+
+    if (next_allocated == ALLOCATED && prev_allocated == ALLOCATED)
+    {
+        // case 1: *A(A->F)A*
+        // ==> *AFA*
+        set_allocated(req, FREE);
+        set_allocated(req_footer, FREE);
+
+        insert_free_block(req);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_freeblock_correctness();
+#endif
+    }
+    else if (next_allocated == FREE && prev_allocated == ALLOCATED)
+    {
+        // case 2: *A(A->F)FA
+        // ==> *AFFA ==> *A[FF]A merge current and next
+        delete_free_block(next);
+
+        uint64_t one_free  = merge_blocks_as_free(req, next);
+        
+        insert_free_block(one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_freeblock_correctness();
+#endif
+    }
+    else if (next_allocated == ALLOCATED && prev_allocated == FREE)
+    {
+        // case 3: AF(A->F)A*
+        // ==> AFFA* ==> A[FF]A* merge current and prev
+        delete_free_block(prev);
+
+        uint64_t one_free  = merge_blocks_as_free(prev, req);
+        
+        insert_free_block(one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_freeblock_correctness();
+#endif
+    }
+    else if (next_allocated == FREE && prev_allocated == FREE)
+    {
+        // case 4: AF(A->F)FA
+        // ==> AFFFA ==> A[FFF]A merge current and prev and next
+        delete_free_block(prev);
+        delete_free_block(next);
+
+        uint64_t one_free = merge_blocks_as_free(merge_blocks_as_free(prev, req), next);
+        
+        insert_free_block(one_free);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        check_freeblock_correctness();
+#endif
+    }
+    else
+    {
+#ifdef DEBUG_MALLOC
+        printf("exception for free\n");
+        exit(0);
+#endif
+    }
 }
 
 /* ------------------------------------- */
@@ -666,7 +396,7 @@ void check_heap_correctness()
     }
 }
 
-void print_heap()
+static void print_heap()
 {
     printf("============\nheap blocks:\n");
     uint64_t h = get_firstblock();

@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <signal.h>
 #include "headers/allocator.h"
 #include "headers/algorithm.h"
 
@@ -231,6 +230,19 @@ static void test_get_next_prev()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
+// collection for the pointers
+linkedlist_t *ptrs;
+
+static void print_pointers()
+{
+    for (int i = 0; i < ptrs->count; ++ i)
+    {
+        linkedlist_node_t *p = linkedlist_next(ptrs);
+        printf("%lu ", p->value);
+    }
+    printf("\n");
+}
+
 static void test_malloc_free()
 {
     printf("Testing malloc & free ...\n");
@@ -239,19 +251,14 @@ static void test_malloc_free()
     check_heap_correctness();
 
     srand(123456);
+    ptrs = linkedlist_construct();
     
-    // collection for the pointers
-    linkedlist_t *ptrs = linkedlist_construct();
-
     for (int i = 0; i < 50000; ++ i)
     {
         if ((rand() & 0x1) == 0)
         {
             // malloc
             uint32_t size = rand() % 1024 + 1;  // a non zero value
-#ifdef DEBUG_MALLOC
-            sprintf(debug_message, "[%d] mem_malloc(%u)", i, size);
-#endif
             uint64_t p = mem_alloc(size);
 
             if (p != NIL)
@@ -265,9 +272,7 @@ static void test_malloc_free()
             // randomly select one to free
             int random_index = rand() % ptrs->count;
             linkedlist_node_t *t = linkedlist_index(ptrs, random_index);
-#ifdef DEBUG_MALLOC
-            sprintf(debug_message, "[%d] mem_free(%lu)", i, t->value);
-#endif
+
             mem_free(t->value);
             linkedlist_delete(ptrs, t);
         }

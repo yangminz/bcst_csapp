@@ -67,19 +67,15 @@ int is_firstblock(uint64_t vaddr);
 uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, uint32_t offset);
 void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset);
 
-// common operations for malloc and free
-uint64_t merge_blocks_as_free(uint64_t low, uint64_t high);
-uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_blocksize, uint32_t min_blocksize);
-uint64_t try_extend_heap_to_alloc(uint32_t size, uint32_t min_blocksize);
-
 // for debugging
 void check_heap_correctness();
-void print_heap();
+void check_freeblock_correctness();
 
-#ifdef DEBUG_MALLOC
-char debug_message[1000];
-void on_sigabrt(int signum);
-#endif
+// implemented by different strategy
+int initialize_free_block();
+uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize);
+int insert_free_block(uint64_t free_header);
+int delete_free_block(uint64_t free_header);
 
 // interface
 int heap_init();
