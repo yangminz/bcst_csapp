@@ -22,8 +22,6 @@ void block8_list_insert(uint64_t free_header);
 void block8_list_delete(uint64_t free_header);
 linkedlist_internal_t block8_list;
 
-#define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
-
 /* ------------------------------------- */
 /*  Operations for List Block Structure  */
 /* ------------------------------------- */
@@ -43,7 +41,10 @@ static uint64_t get_prevfree(uint64_t header_vaddr)
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
 }
 
-static uint64_t get_nextfree(uint64_t header_vaddr)
+#ifndef REDBLACK_TREE
+static
+#endif
+uint64_t get_nextfree(uint64_t header_vaddr)
 {
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
 }
@@ -91,16 +92,25 @@ static int update_head(linkedlist_internal_t *this, uint64_t block_vaddr)
 }
 
 // The explicit free linked list
-static linkedlist_internal_t explicit_list;
+#ifndef REDBLACK_TREE
+static
+#endif
+linkedlist_internal_t explicit_list;
 
-static void explist_list_init()
+#ifndef REDBLACK_TREE
+static
+#endif
+void explist_list_init()
 {
     explicit_list.head = NULL_ID;
     explicit_list.count = 0;
     explicit_list.update_head = &update_head;
 }
 
-static void explicit_list_insert(uint64_t free_header)
+#ifndef REDBLACK_TREE
+static
+#endif
+void explicit_list_insert(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
     assert(free_header % 8 == 4);
@@ -110,7 +120,10 @@ static void explicit_list_insert(uint64_t free_header)
     linkedlist_internal_insert(&explicit_list, &i_free_block, free_header);
 }
 
-static void explicit_list_delete(uint64_t free_header)
+#ifndef REDBLACK_TREE
+static
+#endif
+void explicit_list_delete(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
     assert(free_header % 8 == 4);

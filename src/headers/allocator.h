@@ -31,6 +31,9 @@ uint8_t heap[HEAP_MAX_SIZE];
 #define ALLOCATED (1)
 #define NIL (0)
 
+#define MIN_EXPLICIT_FREE_LIST_BLOCKSIZE (16)
+#define MIN_REDBLACK_TREE_BLOCKSIZE (24)
+
 // to allocate one physical page for heap
 uint32_t extend_heap(uint32_t size);
 void os_syscall_brk();

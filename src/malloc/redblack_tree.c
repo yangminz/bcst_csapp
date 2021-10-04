@@ -15,22 +15,20 @@
 #include "headers/allocator.h"
 #include "headers/algorithm.h"
 
-static int internal_heap_init();
+// Manage small blocks - 8 Bytes
+void block8_list_init();
+void block8_list_insert(uint64_t free_header);
+void block8_list_delete(uint64_t free_header);
+linkedlist_internal_t block8_list;
+
+// Manage small blocks - 16 Bytes
+void explist_list_init();
+void explicit_list_insert(uint64_t free_header);
+void explicit_list_delete(uint64_t free_header);
+linkedlist_internal_t explicit_list;
+uint64_t get_nextfree(uint64_t header_vaddr);
+
 void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node);
-
-/* ------------------------------------- */
-/*  Implementation of the Interfaces     */
-/* ------------------------------------- */
-
-#ifdef REDBLACK_TREE
-
-int heap_init()
-{
-    return internal_heap_init();
-}
-#endif
-
-#define MIN_REDBLACK_TREE_BLOCKSIZE (24)
 
 /* ------------------------------------- */
 /*  Operations for Tree Block Structure  */
@@ -86,7 +84,7 @@ static rb_color_t get_redblack_tree_color(uint64_t header_vaddr)
 
     assert(get_prologue() <= header_vaddr && 
         header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);
+    assert(header_vaddr % 8 == 4);
     assert(get_blocksize(header_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
 
     uint64_t footer_vaddr = get_footer(header_vaddr);
@@ -134,7 +132,7 @@ static int set_redblack_tree_color(uint64_t header_vaddr, rb_color_t color)
     assert(color == COLOR_BLACK || color == COLOR_RED);
     assert(get_prologue() <= header_vaddr && 
         header_vaddr <= get_epilogue());
-    assert((header_vaddr & 0x3) == 0x0);
+    assert(header_vaddr % 8 == 4);
     assert(get_blocksize(header_vaddr) >= MIN_REDBLACK_TREE_BLOCKSIZE);
 
     uint64_t footer_vaddr = get_footer(header_vaddr);
@@ -227,60 +225,127 @@ static uint64_t redblack_tree_search(uint32_t size)
 }
 
 /* ------------------------------------- */
-/*  For Debugging                        */
-/* ------------------------------------- */
-
-
-/* ------------------------------------- */
 /*  Implementation                       */
 /* ------------------------------------- */
 
-static int internal_heap_init()
+#ifdef REDBLACK_TREE
+
+int initialize_free_block()
 {
-    // reset all to 0
-    for (int i = 0; i < HEAP_MAX_SIZE / 8; i += 8)
-    {
-        *(uint64_t *)&heap[i] = 0;
-    }
-
-    // heap_start_vaddr is the starting address of the first block
-    // the payload of the first block is 8B aligned ([8])
-    // so the header address of the first block is [8] - 4 = [4]
-    heap_start_vaddr = 0;
-    heap_end_vaddr = 4096;
-
-    // set the prologue block
-    uint64_t prologue_header = get_prologue();
-    set_blocksize(prologue_header, 8);
-    set_allocated(prologue_header, ALLOCATED);
-
-    uint64_t prologue_footer = prologue_header + 4;
-    set_blocksize(prologue_footer, 8);
-    set_allocated(prologue_footer, ALLOCATED);
-
-    // set the epilogue block
-    // it's a footer only
-    uint64_t epilogue = get_epilogue();
-    set_blocksize(epilogue, 0);
-    set_allocated(epilogue, ALLOCATED);
-
-    // set the block size & allocated of the only regular block
     uint64_t first_header = get_firstblock();
-    set_blocksize(first_header, 4096 - 4 - 8 - 4);
-    set_allocated(first_header, FREE);
-    set_redblack_tree_color(first_header, COLOR_BLACK);
-
-    uint64_t first_footer = get_footer(first_header);
-    set_blocksize(first_footer, 4096 - 4 - 8 - 4);
-    set_allocated(first_footer, FREE);
-    set_redblack_tree_color(first_footer, COLOR_BLACK);
-
-    set_redblack_tree_parent(first_header, NULL_ID);
-    set_redblack_tree_left(first_header, NULL_ID);
-    set_redblack_tree_right(first_header, NULL_ID);
-
+    
+    // init rbt for block >= 24
     redblack_tree_init();
+    set_redblack_tree_parent(first_header, NIL);
+    set_redblack_tree_left(first_header, NIL);
+    set_redblack_tree_right(first_header, NIL);
     redblack_tree_insert(first_header);
+
+    // init list for small block size == 16
+    explist_list_init();
+
+    // init small block list size == 8
+    block8_list_init();
 
     return 1;
 }
+
+uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
+{
+    // search 8-byte block list
+    if (payload_size <= 4 && block8_list.count != 0)
+    {
+        // a small block and 8-byte list is not empty
+        *alloc_blocksize = 8;
+        return block8_list.head;
+    }
+    
+    uint32_t free_blocksize = round_up(payload_size, 8) + 4 + 4;
+    free_blocksize = free_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
+        MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : free_blocksize;
+    *alloc_blocksize = free_blocksize;
+
+    // search explicit free list
+    if (free_blocksize == 16)
+    {
+        uint64_t b = explicit_list.head;
+        uint32_t counter_copy = explicit_list.count;
+        for (int i = 0; i < counter_copy; ++ i)
+        {
+            uint32_t b_blocksize = get_blocksize(b);
+            uint32_t b_allocated = get_allocated(b);
+
+            if (b_allocated == FREE && free_blocksize <= b_blocksize)
+            {
+                return b;
+            }
+            else
+            {
+                b = get_nextfree(b);
+            }
+        }
+    }
+
+    // search RBT
+    return redblack_tree_search(free_blocksize);
+}
+
+int insert_free_block(uint64_t free_header)
+{
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            block8_list_insert(free_header);
+            break;
+
+        case 16:
+            explicit_list_insert(free_header);
+            break;
+        
+        default:
+            redblack_tree_insert(free_header);
+            break;
+    }
+
+    return 1;
+}
+
+int delete_free_block(uint64_t free_header)
+{
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            block8_list_delete(free_header);
+            break;
+
+        case 16:
+            explicit_list_delete(free_header);
+            break;
+        
+        default:
+            redblack_tree_delete(free_header);
+            break;
+    }
+
+    return 1;
+}
+
+void check_freeblock_correctness()
+{}
+#endif
