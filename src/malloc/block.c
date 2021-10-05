@@ -61,6 +61,84 @@ static int is_bit_set(uint64_t vaddr, int bit_offset)
     return (*(uint32_t *)&heap[vaddr] >> bit_offset) & 1;
 }
 
+static void check_block8_correctness(uint64_t vaddr)
+{
+    if (vaddr == NIL)
+    {
+        return;
+    }
+    assert(vaddr % 4 == 0);
+    assert(get_prologue() <= vaddr && vaddr <= get_epilogue());
+
+    if (vaddr % 8 == 4)
+    {
+        // header
+        assert(is_bit_set(vaddr, B8_BIT) == 1);
+
+        uint64_t next_header = vaddr + 8;
+        // B8 cannot be epilogue
+        assert(next_header <= get_epilogue());
+        assert(is_bit_set(next_header, P8_BIT) == 1);
+        
+        if (get_allocated(vaddr) == ALLOCATED)
+        {
+            assert((*(uint32_t *)&heap[vaddr] & 0xFFFFFFF8) == 8);
+        }
+    }
+    else if (vaddr % 8 == 0)
+    {
+        // footer
+        uint64_t next_header = vaddr + 4;
+        assert(next_header <= get_epilogue());
+        assert(is_bit_set(next_header, P8_BIT) == 1);
+        vaddr -= 4;
+        assert(is_bit_set(vaddr, B8_BIT) == 1);
+        
+        if (get_allocated(vaddr) == ALLOCATED)
+        {
+            assert((*(uint32_t *)&heap[vaddr] & 0xFFFFFFF8) == 8);
+        }
+    }
+    else
+    {
+        assert(0);
+    }
+}
+
+static int is_block8(uint64_t vaddr)
+{
+    if (vaddr == NIL || vaddr == get_epilogue())
+    {
+        return 0;
+    }
+    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
+
+    if (vaddr % 8 == 4)
+    {
+        // header
+        if (is_bit_set(vaddr, B8_BIT) == 1)
+        {    
+#ifdef DEBUG_MALLOC
+            check_block8_correctness(vaddr);
+#endif
+            return 1;
+        }
+    }
+    else if (vaddr % 8 == 0)
+    {
+        // footer
+        uint64_t next_header = vaddr + 4;
+        if (is_bit_set(next_header, P8_BIT) == 1)
+        {
+#ifdef DEBUG_MALLOC
+            check_block8_correctness(vaddr - 4);
+#endif
+            return 1;
+        }
+    }
+    return 0;
+}
+
 // applicapable for both header & footer
 uint32_t get_blocksize(uint64_t header_vaddr)
 {
@@ -72,12 +150,11 @@ uint32_t get_blocksize(uint64_t header_vaddr)
     assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
     assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
 
-    if (is_bit_set(header_vaddr, B8_BIT) == 1)
+    if (is_block8(header_vaddr) == 1)
     {
-        if (get_allocated(header_vaddr) == ALLOCATED)
-        {
-            assert((*(uint32_t *)&heap[header_vaddr] & 0xFFFFFFF8) == 8);
-        }
+#ifdef DEBUG_MALLOC
+        check_block8_correctness(header_vaddr);
+#endif
         return 8;
     }
     else
@@ -102,7 +179,7 @@ void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
     // we imagine there is a footer in another physical page
     // but it actually does not exist
 
-    uint64_t next_header_vaddr = header_vaddr + blocksize;
+    uint64_t next_header_vaddr;
     if (blocksize == 8)
     {
         // small block is special
@@ -112,6 +189,7 @@ void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
             // reset to header
             header_vaddr = header_vaddr - 4;
         }
+        next_header_vaddr = header_vaddr + 8;
 
         set_bit(header_vaddr, B8_BIT);
         if (next_header_vaddr <= get_epilogue())
@@ -128,6 +206,16 @@ void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
     }
     else
     {
+        if (header_vaddr % 8 == 4)
+        {
+            // header
+            next_header_vaddr = header_vaddr + blocksize;
+        }
+        else
+        {
+            next_header_vaddr = header_vaddr + 4;
+        }
+
         reset_bit(header_vaddr, B8_BIT);
         if (next_header_vaddr <= get_epilogue())
         {
@@ -137,6 +225,13 @@ void set_blocksize(uint64_t header_vaddr, uint32_t blocksize)
 
     *(uint32_t *)&heap[header_vaddr] &= 0x00000007; // reset size
     *(uint32_t *)&heap[header_vaddr] |= blocksize;  // set size
+
+#ifdef DEBUG_MALLOC
+    if (blocksize == 8)
+    {
+        check_block8_correctness(header_vaddr);
+    }
+#endif
 }
 
 // applicapable for both header & footer for ordinary blocks
@@ -152,18 +247,21 @@ uint32_t get_allocated(uint64_t header_vaddr)
     assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
     assert((header_vaddr & 0x3) == 0x0);
 
-    if (header_vaddr %8 == 0)
+    if (header_vaddr % 8 == 0)
     {
         // footer
         // check if 8-byte small block
-        uint64_t next_header_vaddr = header_vaddr - 4;
+        uint64_t next_header_vaddr = header_vaddr + 4;
         if (next_header_vaddr <= get_epilogue())
         {
             // check P8 bit of next
             if (is_bit_set(next_header_vaddr, P8_BIT) == 1)
             {
                 // current block is 8-byte, no footer. check header instead
-                header_vaddr -= 4;
+                header_vaddr -= 4;          
+#ifdef DEBUG_MALLOC
+                check_block8_correctness(header_vaddr);
+#endif
             }
             // else, current block has footer
         }
@@ -193,7 +291,7 @@ void set_allocated(uint64_t header_vaddr, uint32_t allocated)
     {
         // footer
         // check if 8-byte small block
-        uint64_t next_header_vaddr = header_vaddr - 4;
+        uint64_t next_header_vaddr = header_vaddr+- 4;
         if (next_header_vaddr <= get_epilogue())
         {
             // check P8 bit of next
@@ -201,6 +299,9 @@ void set_allocated(uint64_t header_vaddr, uint32_t allocated)
             {
                 // current block is 8-byte, no footer. check header instead
                 header_vaddr -= 4;
+#ifdef DEBUG_MALLOC
+                check_block8_correctness(header_vaddr);
+#endif
             }
             // else, current block has footer
         }
@@ -313,11 +414,9 @@ uint64_t get_prevheader(uint64_t vaddr)
     {
         // previous block is 8-byte block
         prev_header_vaddr = header_vaddr - 8;
-        assert(get_blocksize(prev_header_vaddr) == 8);
-        
-        // check B8 bit
-        assert(is_bit_set(prev_header_vaddr, B8_BIT) == 1);
-
+#ifdef DEBUG_MALLOC
+        check_block8_correctness(prev_header_vaddr);
+#endif
         return prev_header_vaddr;
     }
     else

@@ -65,7 +65,7 @@ static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
     set_blocksize(low, blocksize);
     set_allocated(low, FREE);
 
-    uint64_t footer = get_footer(high);
+    uint64_t footer = get_footer(low);
     set_blocksize(footer, blocksize);
     set_allocated(footer, FREE);
 
@@ -88,12 +88,12 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
     {
         // allocate this block
         delete_free_block(b);
-        uint64_t old_b_footer = get_footer(b);
+        uint64_t left_footer = get_footer(b);
 
         set_allocated(b, ALLOCATED);
         set_blocksize(b, request_blocksize);
 
-        uint64_t b_footer = get_footer(b);
+        uint64_t b_footer = b + request_blocksize - 4;
         set_allocated(b_footer, ALLOCATED);
         set_blocksize(b_footer, request_blocksize);
 
@@ -105,11 +105,10 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
             set_allocated(left_header, FREE);
             set_blocksize(left_header, b_blocksize - request_blocksize);
 
-            uint64_t left_footer = get_footer(left_header);
             set_allocated(left_footer, FREE);
             set_blocksize(left_footer, b_blocksize - request_blocksize);
 
-            assert(old_b_footer == left_footer);
+            assert(get_footer(left_header) == left_footer);
             insert_free_block(left_header);
         }
         return get_payload(b);
