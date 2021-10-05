@@ -17,10 +17,10 @@
 
 // block8.c
 // Manage small blocks
-void block8_list_init();
-void block8_list_insert(uint64_t free_header);
-void block8_list_delete(uint64_t free_header);
-linkedlist_internal_t block8_list;
+void small_list_init();
+void small_list_insert(uint64_t free_header);
+void small_list_delete(uint64_t free_header);
+linkedlist_internal_t small_list;
 
 /* ------------------------------------- */
 /*  Operations for List Block Structure  */
@@ -168,7 +168,7 @@ int initialize_free_block()
     explicit_list_insert(first_header);
 
     // init small block list
-    block8_list_init();
+    small_list_init();
 
     return 1;
 }
@@ -176,11 +176,11 @@ int initialize_free_block()
 uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
     // search 8-byte block list
-    if (payload_size <= 4 && block8_list.count != 0)
+    if (payload_size <= 4 && small_list.count != 0)
     {
         // a small block and 8-byte list is not empty
         *alloc_blocksize = 8;
-        return block8_list.head;
+        return small_list.head;
     }
     
     uint32_t free_blocksize = round_up(payload_size, 8) + 4 + 4;
@@ -222,7 +222,7 @@ int insert_free_block(uint64_t free_header)
     switch (blocksize)
     {
         case 8:
-            block8_list_insert(free_header);
+            small_list_insert(free_header);
             break;
         
         default:
@@ -246,7 +246,7 @@ int delete_free_block(uint64_t free_header)
     switch (blocksize)
     {
         case 8:
-            block8_list_delete(free_header);
+            small_list_delete(free_header);
             break;
         
         default:

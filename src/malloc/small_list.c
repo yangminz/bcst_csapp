@@ -101,30 +101,30 @@ static int update_head(linkedlist_internal_t *this, uint64_t block_vaddr)
     return 1;
 }
 
-linkedlist_internal_t block8_list;
+linkedlist_internal_t small_list;
 
-void block8_list_init()
+void small_list_init()
 {
-    block8_list.head = NULL_ID;
-    block8_list.count = 0;
-    block8_list.update_head = &update_head;
+    small_list.head = NULL_ID;
+    small_list.count = 0;
+    small_list.update_head = &update_head;
 }
 
-void block8_list_insert(uint64_t free_header)
+void small_list_insert(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
     assert(free_header % 8 == 4);
     assert(get_blocksize(free_header) == 8);
     assert(get_allocated(free_header) == FREE);
 
-    linkedlist_internal_insert(&block8_list, &i_block8, free_header);
+    linkedlist_internal_insert(&small_list, &i_block8, free_header);
 }
 
-void block8_list_delete(uint64_t free_header)
+void small_list_delete(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
     assert(free_header % 8 == 4);
     assert(get_blocksize(free_header) == 8);
 
-    linkedlist_internal_delete(&block8_list, &i_block8, free_header);
+    linkedlist_internal_delete(&small_list, &i_block8, free_header);
 }

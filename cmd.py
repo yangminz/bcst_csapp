@@ -324,7 +324,7 @@ def build(key):
                     "./src/algorithm/bst.c",
                     "./src/algorithm/rbt.c",
                     "./src/malloc/block.c", 
-                    "./src/malloc/block8_list.c", 
+                    "./src/malloc/small_list.c", 
                     "./src/malloc/implicit_list.c", 
                     "./src/malloc/explicit_list.c", 
                     "./src/malloc/segregated_list.c", 
