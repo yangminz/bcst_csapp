@@ -287,11 +287,11 @@ void set_allocated(uint64_t header_vaddr, uint32_t allocated)
     assert(get_prologue() <= header_vaddr && header_vaddr <= get_epilogue());
     assert((header_vaddr & 0x3) == 0x0);  // header & footer should be 4 bytes alignment
 
-    if (header_vaddr %8 == 0)
+    if (header_vaddr % 8 == 0)
     {
         // footer
         // check if 8-byte small block
-        uint64_t next_header_vaddr = header_vaddr+- 4;
+        uint64_t next_header_vaddr = header_vaddr + 4;
         if (next_header_vaddr <= get_epilogue())
         {
             // check P8 bit of next
