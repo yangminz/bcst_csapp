@@ -122,6 +122,7 @@ static void lazy_initialize_trie()
     operator_mapping= trie_insert(operator_mapping, "cmpq",   INST_CMP    );
     operator_mapping= trie_insert(operator_mapping, "jne",    INST_JNE    );
     operator_mapping= trie_insert(operator_mapping, "jmp",    INST_JMP    );
+    operator_mapping= trie_insert(operator_mapping, "lea",    INST_LEA    );
 
     // add the cleanup events
     add_cleanup_event(&trie_cleanup);
@@ -471,6 +472,7 @@ static void sub_handler             (od_t *src_od, od_t *dst_od);
 static void cmp_handler             (od_t *src_od, od_t *dst_od);
 static void jne_handler             (od_t *src_od, od_t *dst_od);
 static void jmp_handler             (od_t *src_od, od_t *dst_od);
+static void lea_handler             (od_t *src_od, od_t *dst_od);
 
 // handler table storing the handlers to different instruction types
 typedef void (*handler_t)(od_t *, od_t *);
@@ -487,6 +489,7 @@ static handler_t handler_table[NUM_INSTRTYPE] = {
     &cmp_handler,               // 8
     &jne_handler,               // 9
     &jmp_handler,               // 10
+    &lea_handler,               // 11
 };
 
 // update the rip pointer to the next instruction sequentially
@@ -751,6 +754,22 @@ static void jmp_handler(od_t *src_od, od_t *dst_od)
     uint64_t src = compute_operand(src_od);
     cpu_pc.rip = src;
     cpu_flags.__flags_value = 0;
+}
+
+static void lea_handler(od_t *src_od, od_t *dst_od)
+{
+    uint64_t src = compute_operand(src_od);
+    uint64_t dst = compute_operand(dst_od);
+
+    if (src_od->type >= OD_MEM_IMM && dst_od->type == OD_REG)
+    {
+        // src: virtual address - The effective address computed from instruction
+        // dst: register - The register to load the effective address
+        *(uint64_t *)dst = src;
+        increase_pc();
+        cpu_flags.__flags_value = 0;
+        return;
+    }
 }
 
 // instruction cycle is implemented in CPU
