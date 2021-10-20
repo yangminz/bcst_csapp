@@ -33,6 +33,7 @@ typedef enum INST_OPERATOR
     INST_CMP,           // 8
     INST_JNE,           // 9
     INST_JMP,           // 10
+    INST_LEA,           // 11
 } op_t;
 
 typedef enum OPERAND_TYPE
