@@ -178,6 +178,47 @@ void rbt_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
 {
+
+    uint64_t db;
+    uint64_t p;
+    uint64_t s;
+    uint64_t n;
+    uint64_t f;
+
+    while (1)
+    {
+        // rebalance the double black node
+
+        rb_color_t p_color = i_node->get_color(p);
+        rb_color_t s_color = i_node->get_color(s);
+        rb_color_t n_color = i_node->get_color(n);
+        rb_color_t f_color = i_node->get_color(f);
+
+        int psnf_color = ((p_color == COLOR_RED) ? 0 : (1 << 3)) |
+            ((s_color == COLOR_RED) ? 0 : (1 << 2)) |
+            ((n_color == COLOR_RED) ? 0 : (1 << 1)) |
+            ((f_color == COLOR_RED) ? 0 : (1 << 1));
+        
+        switch (psnf_color)
+        {
+            case 0xF:
+                break;
+            case 0xB:
+                break;
+            case 0x7:
+                break;
+            case 0x4:
+            case 0x5:
+            case 0x6:
+            case 0xC:
+            case 0xD:
+            case 0xE:
+                break;
+            default:
+                assert(0);
+                break;
+        }
+    }
 }
 
 /*======================================*/
