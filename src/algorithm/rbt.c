@@ -174,20 +174,88 @@ void rbt_internal_insert(rbtree_internal_t *tree,
     }
 }
 
+static void rbt_get_psnf(rbtree_internal_t *tree,
+    rbtree_node_interface *i_node, 
+    uint64_t db,
+    uint64_t *p, uint64_t *s, uint64_t *n, uint64_t *f)
+{
+    if (i_node->is_null_node(db) == 1)
+    {
+        if (i_node->is_null_node(*p) == 1)
+        {
+            return;
+        }
+        // parent use the old value
+    }
+    else
+    {
+        *p = i_node->get_parent(db);
+    }
+    
+    if (*p == NULL_ID)
+    {
+        // current double black node is the root of tree
+        assert(i_node->compare_nodes(db, tree->root) == 0);
+        *p = NULL_ID;
+        *s = NULL_ID;
+        *n = NULL_ID;
+        *f = NULL_ID;
+        return;
+    }
+    
+    uint64_t p_left = i_node->get_leftchild(*p);
+    uint64_t p_right = i_node->get_rightchild(*p);
+    child_t p_db = LEFT_CHILD;
+    if (i_node->compare_nodes(db, p_left))
+    {
+        *s = p_right;
+        p_db = LEFT_CHILD;
+    }
+    else
+    {
+        *s = p_left;
+        p_db = RIGHT_CHILD;
+    }
+
+    assert(i_node->is_null_node(*s) == 0);
+
+    uint64_t s_left = i_node->get_leftchild(*s);
+    uint64_t s_right = i_node->get_rightchild(*s);
+    if (p_db == LEFT_CHILD)
+    {
+        *n = s_left;
+        *f = s_right;
+    }
+    else
+    {
+        *n = s_right;
+        *f = s_right;
+    }
+}
+
 void rbt_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
     uint64_t node_id)
 {
-
-    uint64_t db;
+    // db starts from NULL
+    uint64_t db = NULL_ID;
     uint64_t p;
     uint64_t s;
     uint64_t n;
     uint64_t f;
 
-    while (1)
+    bst_internal_delete(tree, i_node, node_id, 1,
+        &p);
+
+    if (i_node->is_null_node(p) == 1)
     {
-        // rebalance the double black node
+        return;
+    }
+
+    // rebalance the double black node
+    while (i_node->compare_nodes(db, tree->root) != 0)
+    {
+        rbt_get_psnf(tree, i_node, db, &p, &s, &n, &f);
 
         rb_color_t p_color = i_node->get_color(p);
         rb_color_t s_color = i_node->get_color(s);
@@ -197,28 +265,53 @@ void rbt_internal_delete(rbtree_internal_t *tree,
         int psnf_color = ((p_color == COLOR_RED) ? 0 : (1 << 3)) |
             ((s_color == COLOR_RED) ? 0 : (1 << 2)) |
             ((n_color == COLOR_RED) ? 0 : (1 << 1)) |
-            ((f_color == COLOR_RED) ? 0 : (1 << 1));
+            ((f_color == COLOR_RED) ? 0 : 1);
         
         switch (psnf_color)
         {
             case 0xF:
+                // parent, sibling, sibling's childs are all black nodes
+                db = p;
+                i_node->set_color(s, COLOR_RED);
                 break;
             case 0xB:
+                rbt_internal_rotate(f, s, p, tree, i_node);
+                i_node->set_color(s, COLOR_BLACK);
+                i_node->set_color(p, COLOR_RED);
+                // TODO: double black is null
                 break;
             case 0x7:
-                break;
+                i_node->set_color(p, COLOR_BLACK);
+                i_node->set_color(s, COLOR_RED);
+                goto REBALANCED;
             case 0x4:
             case 0x5:
             case 0x6:
             case 0xC:
             case 0xD:
             case 0xE:
-                break;
+                uint64_t sub_root = NULL_ID;
+                if (n_color == COLOR_RED)
+                {
+                    rbt_internal_rotate(n, s, p, tree, i_node);
+                    i_node->set_color(n, p_color);
+                    i_node->set_color(p, COLOR_BLACK);
+                }
+                else if (f_color == COLOR_RED)
+                {
+                    rbt_internal_rotate(f, s, p, tree, i_node);
+                    i_node->set_color(s, p_color);
+                    i_node->set_color(f, COLOR_BLACK);
+                }
+                goto REBALANCED;
             default:
                 assert(0);
                 break;
         }
     }
+
+REBALANCED:
+
 }
 
 /*======================================*/

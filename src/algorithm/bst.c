@@ -212,7 +212,8 @@ void bst_internal_insert(rbtree_internal_t *tree,
 
 void bst_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
-    uint64_t node_id, int is_rbt)
+    uint64_t node_id, int is_rbt,
+    uint64_t *db_parent)
 {
     if (tree == NULL)
     {
@@ -243,6 +244,20 @@ void bst_internal_delete(rbtree_internal_t *tree,
     if (is_n_left_null == 1 && is_n_right_null == 1)
     {
         // case 1: leaf node: (n,#,#)
+        if (is_rbt == 1)
+        {
+            // check the color of the deleted node
+            rb_color_t node_color = i_node->get_color(node_id);
+
+            if (node_color == COLOR_BLACK)
+            {
+                // null is double black
+                // report double black node to RBT
+                uint64_t parent = i_node->get_parent(node_id);
+                *db_parent = parent;
+            }
+        }
+
         bst_internal_replace(node_id, NULL_ID, tree, i_node);
         return;
     }
@@ -250,6 +265,10 @@ void bst_internal_delete(rbtree_internal_t *tree,
     {
         // case 2: only one null child
         // (n,A,#) or (n,#,A)
+        if (is_rbt == 1)
+        {
+            assert(i_node->get_color(node_id) == COLOR_BLACK);
+        }
 
         // the only non-null sub-tree
         uint64_t x = NULL_ID;
@@ -257,10 +276,26 @@ void bst_internal_delete(rbtree_internal_t *tree,
         if (is_n_left_null == 0)
         {
             x = n_left;
+            if (is_rbt == 1)
+            {
+                // right child should be the red leaf node
+                assert(i_node->get_color(x) == COLOR_RED);
+                assert(i_node->is_null_node(i_node->get_leftchild(x)) == 1);
+                assert(i_node->is_null_node(i_node->get_rightchild(x)) == 1);
+                i_node->set_color(x, COLOR_BLACK);
+            }
         }
         else if (is_n_right_null == 0)
         {
             x = n_right;
+            if (is_rbt == 1)
+            {
+                // left child should be the red leaf node
+                assert(i_node->get_color(x) == COLOR_RED);
+                assert(i_node->is_null_node(i_node->get_leftchild(x)) == 1);
+                assert(i_node->is_null_node(i_node->get_rightchild(x)) == 1);
+                i_node->set_color(x, COLOR_BLACK);
+            }
         }
         else
         {
@@ -277,58 +312,89 @@ void bst_internal_delete(rbtree_internal_t *tree,
         uint64_t n_right_left = i_node->get_leftchild(n_right);
         int is_n_right_left_null = i_node->is_null_node(n_right_left);
 
+        uint64_t successor = NULL_ID;
+
         if (is_n_right_left_null == 1)
         {
             // 3.1: a simple remove will do the job
             // (n,A,(r,#,C)) ==> (r,A,C)
-            bst_internal_setchild(n_right, n_left, LEFT_CHILD, i_node);
-            bst_internal_replace(node_id, n_right, tree, i_node);
+            successor = n_right;
+            bst_internal_setchild(successor, n_left, LEFT_CHILD, i_node);
+            bst_internal_replace(node_id, successor, tree, i_node);
+
+            if (is_rbt == 1)
+            {
+                // check double black
+                uint64_t successor_right = i_node->get_rightchild(successor);
+                if (i_node->is_null_node(successor_right) == 1)
+                {
+                    // roll back to case 1
+                    if (i_node->get_color(successor) == COLOR_BLACK)
+                    {
+                        // double black
+                        *db_parent = successor;
+                    }
+                }
+                else
+                {
+                    // roll back to case 2
+                    assert(i_node->get_color(successor_right) == COLOR_RED);
+                    assert(i_node->is_null_node(i_node->get_leftchild(successor_right)) == 1);
+                    assert(i_node->is_null_node(i_node->get_rightchild(successor_right)) == 1);
+                    assert(i_node->get_color(successor) == COLOR_BLACK);
+                }
+
+                // swap color
+                i_node->set_color(successor, i_node->get_color(node_id));
+            }
             return;
         }
         else
         {
             // 3.2: float up the upper bound
             // as root of the sub-tree of node_id
-            uint64_t q = n_right;
-            uint64_t q_left = i_node->get_leftchild(q);
-            while (i_node->is_null_node(q_left) == 0)
+            successor = n_right;
+            uint64_t successor_left = i_node->get_leftchild(successor);
+            while (i_node->is_null_node(successor_left) == 0)
             {
-                q = q_left;
-                q_left = i_node->get_leftchild(q);
+                successor = successor_left;
+                successor_left = i_node->get_leftchild(successor);
             }
 
-            // q is the upper bound of node_id
-            // (p,(q,#,X),Y) ==> (p,X,Y)
-            uint64_t q_right = i_node->get_rightchild(q);
-            uint64_t q_parent = i_node->get_parent(q);
-            assert(i_node->is_null_node(q_parent) == 0);
+            // (p,(successor,#,X),Y) ==> (p,X,Y)
+            uint64_t successor_right = i_node->get_rightchild(successor);
+            uint64_t successor_parent = i_node->get_parent(successor);
+            assert(i_node->is_null_node(successor_parent) == 0);
+
+            bst_internal_replace(node_id, successor, tree, i_node);
+            bst_internal_setchild(successor, n_left, LEFT_CHILD, i_node);
+            bst_internal_setchild(successor, n_right, RIGHT_CHILD, i_node);
+            bst_internal_setchild(successor_parent, successor_right, LEFT_CHILD, i_node);
 
             // Red-Black Tree check
             if (is_rbt == 1)
             {
-                rb_color_t q_color = i_node->get_color(q);
-
-                // RBT: X ==> T0 ==> # | (R,#,#)
-                if (i_node->is_null_node(q_right) == 0)
+                if (i_node->is_null_node(successor_right) == 1)
                 {
-                    // X = (R,#,#) ==> q black, T1
-                    // (p,(q,#,X),Y) = (p,T1,Y) = (p,(B,#,#),Y)
-                    assert(i_node->get_color(q_right) == COLOR_RED);
-                    assert(q_color == COLOR_BLACK);
-                    assert(i_node->is_null_node(i_node->get_leftchild(q_right)) == 1);
-                    assert(i_node->is_null_node(i_node->get_rightchild(q_right)) == 1);
-                    i_node->set_color(q_right, COLOR_BLACK);
-                    bst_internal_setchild(q_parent, q_right, LEFT_CHILD, i_node);
+                    // roll back to case 1
+                    if (i_node->get_color(successor) == COLOR_BLACK)
+                    {
+                        // double black node
+                        *db_parent = successor_parent;
+                    }
+                }
+                else
+                {
+                    // roll back to case 2
+                    assert(i_node->get_color(successor_right) == COLOR_RED);
+                    assert(i_node->is_null_node(i_node->get_leftchild(successor_right)) == 1);
+                    assert(i_node->is_null_node(i_node->get_rightchild(successor_right)) == 1);
+                    assert(i_node->get_color(successor) == COLOR_BLACK);
                 }
 
                 // copy node's color to q so it will not break the color constraint
-                i_node->set_color(q, i_node->get_color(node_id));
+                i_node->set_color(successor, i_node->get_color(node_id));
             }
-
-            bst_internal_replace(node_id, q, tree, i_node);
-            bst_internal_setchild(q, n_left, LEFT_CHILD, i_node);
-            bst_internal_setchild(q, n_right, RIGHT_CHILD, i_node);
-            bst_internal_setchild(q_parent, q_right, LEFT_CHILD, i_node);
         }
     }
 }
@@ -1067,7 +1133,8 @@ void bst_remove(rb_tree_t *tree, uint64_t key)
 
 void bst_delete(rb_tree_t *tree, rb_node_t *node)
 {
-    bst_internal_delete(&(tree->base), &default_i_rbt_node, (uint64_t)node, 0);
+    uint64_t db_parent;
+    bst_internal_delete(&(tree->base), &default_i_rbt_node, (uint64_t)node, 0, &db_parent);
 }
 
 rb_node_t *bst_find(rb_tree_t *tree, uint64_t key)

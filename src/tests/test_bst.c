@@ -526,9 +526,15 @@ static void test_insert_delete()
     
     // insert
     int loops = 50000;
+    int iteration = 1000;
+
     uint64_t *array = malloc(loops * sizeof(uint64_t));
     for (int i = 0; i < loops; ++ i)
     {
+        if (i % iteration == 0)
+        {
+            printf("%d / %d\n", i, loops);
+        }
         uint64_t key = rand() % 1000000;
         bst_add(tree, key);
         bst_validate(tree);

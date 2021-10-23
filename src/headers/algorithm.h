@@ -364,7 +364,8 @@ void bst_internal_insert(rbtree_internal_t *tree,
     uint64_t node_id);
 void bst_internal_delete(rbtree_internal_t *tree,
     rbtree_node_interface *i_node, 
-    uint64_t node_id, int is_rbt);
+    uint64_t node_id, int is_rbt,
+    uint64_t *db_parent);
 uint64_t bst_internal_find(rbtree_internal_t *tree, 
     rbtree_node_interface *i_node, 
     uint64_t key);
