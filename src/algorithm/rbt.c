@@ -310,6 +310,7 @@ void rbt_internal_delete(rbtree_internal_t *tree,
                 // continue to next iteration (0x4, 0x5, 0x6, 0x7)
                 continue;
             case 0x7:
+                // parent is the only red node among p, s, n, f
                 i_node->set_color(p, COLOR_BLACK);
                 i_node->set_color(s, COLOR_RED);
                 break;
@@ -319,10 +320,10 @@ void rbt_internal_delete(rbtree_internal_t *tree,
             case 0xC:
             case 0xD:
             case 0xE:
+                // n or f is red (or both)
                 if (n_color == COLOR_RED)
                 {
                     rbt_internal_rotate(n, s, p, tree, i_node);
-                    i_node->set_color(db, COLOR_BLACK);
                     i_node->set_color(p, COLOR_BLACK);
                     i_node->set_color(s, COLOR_BLACK);
                     i_node->set_color(n, p_color);
@@ -330,7 +331,6 @@ void rbt_internal_delete(rbtree_internal_t *tree,
                 else if (f_color == COLOR_RED)
                 {
                     rbt_internal_rotate(f, s, p, tree, i_node);
-                    i_node->set_color(db, COLOR_BLACK);
                     i_node->set_color(p, COLOR_BLACK);
                     i_node->set_color(s, p_color);
                     i_node->set_color(f, COLOR_BLACK);
