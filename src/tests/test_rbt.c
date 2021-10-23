@@ -22,7 +22,7 @@ void rbt_rotate(rb_node_t *n, rb_node_t *p, rb_node_t *g, rb_tree_t *tree);
 void rbt_verify(rb_tree_t *tree);
 
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
-void bst_print(rb_tree_t *tree);
+void bst_print(rb_node_t *node);
 
 static void test_delete()
 {
@@ -400,7 +400,7 @@ static void test_delete()
     bst_free(a);
 
     // delete 20 - root double black
-    assert(((rb_node_t *)(r->root))->left->value == 20);
+    assert(((rb_node_t *)(r->root))->left->key == 20);
     rbt_remove(r, 20);
     a = rbt_construct_keystr(
         "(50,"
@@ -415,7 +415,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 90 - red node
-    assert(((rb_node_t *)(r->root))->right->right->right->value == 90);
+    assert(((rb_node_t *)(r->root))->right->right->right->key == 90);
     rbt_remove(r, 90);
     a = rbt_construct_keystr(
         "(50,"
@@ -430,7 +430,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 80 - sibling black, near child red, far child black
-    assert(((rb_node_t *)(r->root))->right->right->value == 80);
+    assert(((rb_node_t *)(r->root))->right->right->key == 80);
     rbt_remove(r, 80);
     a = rbt_construct_keystr(
         "(50,"
@@ -445,7 +445,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 50 - root, and having 1B 1R childs, no parent nor sibling
-    assert(((rb_node_t *)(r->root))->value == 50);
+    assert(((rb_node_t *)(r->root))->key == 50);
     rbt_remove(r, 50);
     a = rbt_construct_keystr(
         "(65,"
@@ -458,7 +458,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 35 - having red child
-    assert(((rb_node_t *)(r->root))->left->value == 35);
+    assert(((rb_node_t *)(r->root))->left->key == 35);
     rbt_remove(r, 35);
     a = rbt_construct_keystr(
         "(65,"
@@ -471,7 +471,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 15 - far child red sibling black
-    assert(((rb_node_t *)(r->root))->left->value == 15);
+    assert(((rb_node_t *)(r->root))->left->key == 15);
     rbt_remove(r, 15);
     a = rbt_construct_keystr(
         "(68,(65,#,#),(70,#,#))",
@@ -480,7 +480,7 @@ static void test_delete()
     bst_free(a);
     
     // delete 65 - both s-childs black
-    assert(((rb_node_t *)(r->root))->left->value == 65);
+    assert(((rb_node_t *)(r->root))->left->key == 65);
     rbt_remove(r, 65);
     a = rbt_construct_keystr(
         "(68,#,(70,#,#))",
@@ -537,8 +537,16 @@ static void test_insert()
     assert(rbt_compare(r, ans) == 1);
 
     // randomly insert values
-    for (int i = 0; i < 50000; ++ i)
+    int loops = 50000;
+    int iteration = 1000;
+
+    for (int i = 0; i < loops; ++ i)
     {
+        if (i % iteration == 0)
+        {
+            printf("insert %d / %d\n", i, loops);
+        }
+
         uint64_t key = rand() % 1000000;
         rbt_add(r, key);
         rbt_verify(r);
@@ -662,11 +670,68 @@ static void test_rotate()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
+static void test_insert_delete()
+{
+    printf("Testing Red-Black Tree insertion and deletion ...\n");
+
+    rb_tree_t *tree = rbt_construct();
+    
+    // insert
+    int loops = 50000;
+    int iteration = 1000;
+
+    uint64_t *array = malloc(loops * sizeof(uint64_t));
+    for (int i = 0; i < loops; ++ i)
+    {
+        if (i % iteration == 0)
+        {
+            printf("insert %d / %d\n", i, loops);
+        }
+        uint64_t key = rand() % 1000000;
+        rbt_add(tree, key);
+        rbt_verify(tree);
+        array[i] = key;
+    }
+
+    // mark
+    for (int i = 0; i < loops; ++ i)
+    {
+        if (i % iteration == 0)
+        {
+            printf("delete %d / %d\n", i, loops);
+        }
+
+        int index = rand() % loops;
+
+        rbt_remove(tree, array[index]);
+        rbt_verify(tree);
+        array[index] = 0xFFFFFFFFFFFFFFFF;
+    }
+
+    // sweep
+    for (int i = 0; i < loops; ++ i)
+    {
+        if (array[i] != 0xFFFFFFFFFFFFFFFF)
+        {
+            rbt_remove(tree, array[i]);
+            rbt_verify(tree);
+        }
+    }
+
+    assert(tree->root == 0);
+
+    free(array);
+    rbt_free(tree);
+
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
 int main()
 {
     srand(123456);
 
-    test_rotate();
-    test_insert();
-    test_delete();
+    //test_rotate();
+    //test_delete();
+    //test_insert();
+    test_insert_delete();
 }

@@ -274,7 +274,7 @@ def build(key):
                     "-o", "./bin/false_sharing"
                 ],
             ],
-        "rb" : [
+        "rbt" : [
                 [
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
@@ -284,7 +284,7 @@ def build(key):
                     "./src/algorithm/bst.c",
                     "./src/algorithm/rbt.c",
                     "./src/tests/test_rbt.c",
-                    "-o", "./bin/rb"
+                    "-o", "./bin/rbt"
                 ],
             ],
         "trie" : [
@@ -361,7 +361,7 @@ def run(key):
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
         "false_sharing" : ["./bin/false_sharing"],
-        "rb" : ["./bin/rb"],
+        "rbt" : ["./bin/rbt"],
         "trie" : ["./bin/trie"],
         "bst" : ["./bin/bst"],
         "malloc" : ["./bin/malloc"],
@@ -380,7 +380,7 @@ def debug(key):
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
         "malloc" : [gdb, "./bin/malloc"],
         "bst" : [gdb, "./bin/bst"],
-        "rb" : [gdb, "./bin/rb"],
+        "rbt" : [gdb, "./bin/rbt"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

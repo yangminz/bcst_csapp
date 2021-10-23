@@ -296,6 +296,7 @@ typedef struct RBTREE_INTERNAL_STRUCT
 
 typedef enum
 {
+    NO_CHILD = -1,
     LEFT_CHILD = 0,
     RIGHT_CHILD = 1,
 } child_t;

@@ -18,7 +18,7 @@
 
 rb_tree_t *bst_construct_keystr(char *str);
 int bst_compare(rb_tree_t *a, rb_tree_t *b);
-void bst_print(rb_tree_t *tree);
+void bst_print(rb_node_t *node);
 void bst_validate(rb_tree_t *tree);
 
 static void test_build()
@@ -533,7 +533,7 @@ static void test_insert_delete()
     {
         if (i % iteration == 0)
         {
-            printf("%d / %d\n", i, loops);
+            printf("insert %d / %d\n", i, loops);
         }
         uint64_t key = rand() % 1000000;
         bst_add(tree, key);
@@ -544,6 +544,11 @@ static void test_insert_delete()
     // mark
     for (int i = 0; i < loops; ++ i)
     {
+        if (i % iteration == 0)
+        {
+            printf("delete %d / %d\n", i, loops);
+        }
+
         int index = rand() % loops;
 
         bst_remove(tree, array[index]);
