@@ -99,6 +99,29 @@ void explist_list_init()
     explicit_list.update_head = &update_head;
 }
 
+uint64_t explicit_list_search(uint32_t free_blocksize)
+{
+    // search explicit free list
+    uint64_t b = explicit_list.head;
+    uint32_t counter_copy = explicit_list.count;
+    for (int i = 0; i < counter_copy; ++ i)
+    {
+        uint32_t b_blocksize = get_blocksize(b);
+        uint32_t b_allocated = get_allocated(b);
+
+        if (b_allocated == FREE && free_blocksize <= b_blocksize)
+        {
+            return b;
+        }
+        else
+        {
+            b = get_nextfree(b);
+        }
+    }
+
+    return NIL;
+}
+
 void explicit_list_insert(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -183,24 +206,7 @@ uint64_t explicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_
     *alloc_blocksize = free_blocksize;
 
     // search explicit free list
-    uint64_t b = explicit_list.head;
-    uint32_t counter_copy = explicit_list.count;
-    for (int i = 0; i < counter_copy; ++ i)
-    {
-        uint32_t b_blocksize = get_blocksize(b);
-        uint32_t b_allocated = get_allocated(b);
-
-        if (b_allocated == FREE && free_blocksize <= b_blocksize)
-        {
-            return b;
-        }
-        else
-        {
-            b = get_nextfree(b);
-        }
-    }
-
-    return NIL;
+    return explicit_list_search(free_blocksize);
 }
 
 int explicit_list_insert_free_block(uint64_t free_header)

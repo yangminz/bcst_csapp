@@ -24,6 +24,7 @@ void small_list_check_free_blocks();
 
 // Manage small blocks - 16 Bytes
 void explist_list_init();
+uint64_t explicit_list_search(uint64_t free_blocksize);
 void explicit_list_insert(uint64_t free_header);
 void explicit_list_delete(uint64_t free_header);
 linkedlist_internal_t explicit_list;
@@ -266,21 +267,13 @@ uint64_t redblack_tree_search_free_block(uint32_t payload_size, uint32_t *alloc_
     // search explicit free list
     if (free_blocksize == 16)
     {
-        uint64_t b = explicit_list.head;
-        uint32_t counter_copy = explicit_list.count;
-        for (int i = 0; i < counter_copy; ++ i)
+        // This search is O(1) search since the list is fixed with size 16
+        // if the list is empty, return NIL
+        // else, return list head
+        uint64_t b16 = explicit_list_search(free_blocksize);
+        if (b16 != NIL)
         {
-            uint32_t b_blocksize = get_blocksize(b);
-            uint32_t b_allocated = get_allocated(b);
-
-            if (b_allocated == FREE && free_blocksize <= b_blocksize)
-            {
-                return b;
-            }
-            else
-            {
-                b = get_nextfree(b);
-            }
+            return b16;
         }
     }
 
