@@ -20,6 +20,7 @@ void small_list_init();
 void small_list_insert(uint64_t free_header);
 void small_list_delete(uint64_t free_header);
 linkedlist_internal_t small_list;
+void small_list_check_free_blocks();
 
 // Manage small blocks - 16 Bytes
 void explist_list_init();
@@ -27,18 +28,13 @@ void explicit_list_insert(uint64_t free_header);
 void explicit_list_delete(uint64_t free_header);
 linkedlist_internal_t explicit_list;
 uint64_t get_nextfree(uint64_t header_vaddr);
+void check_block16_correctness();
 
-void tree_internal_print(rbtree_internal_t *tree, rbtree_node_interface *i_node);
+void bst_internal_print(uint64_t node, rbtree_node_interface *i_node);
 
 /* ------------------------------------- */
 /*  Operations for Tree Block Structure  */
 /* ------------------------------------- */
-
-static int destruct_node(uint64_t header_vaddr) 
-{
-    // do nothing here
-    return 1;
-}
 
 static int compare_nodes(uint64_t first, uint64_t second)
 {
@@ -152,6 +148,7 @@ static int set_redblack_tree_key(uint64_t header_vaddr, uint64_t blocksize)
 static rbtree_node_interface i_node = 
 {
     .construct_node = NULL,
+    .destruct_node = NULL,
     .compare_nodes = &compare_nodes,
     .is_null_node = &is_null_node,
     .get_parent = &get_redblack_tree_parent,
@@ -188,7 +185,7 @@ static int update_root(rbtree_internal_t *this, uint64_t block_vaddr)
     return 1;
 }
 
-// The explicit free linked list
+// The red-black tree
 static rbtree_internal_t rbt;
 
 static void redblack_tree_init()
@@ -197,21 +194,24 @@ static void redblack_tree_init()
     rbt.update_root = &update_root;
 }
 
+static void redblack_tree_print()
+{
+    bst_internal_print(rbt.root, &i_node);
+}
+
 static void redblack_tree_insert(uint64_t node_ptr)
 {
-    // BST for now
     set_redblack_tree_parent(node_ptr, NIL);
     set_redblack_tree_left(node_ptr, NIL);
     set_redblack_tree_right(node_ptr, NIL);
     set_redblack_tree_color(node_ptr, COLOR_RED);
 
-    bst_internal_insert(&rbt, &i_node, node_ptr);
+    rbt_internal_insert(&rbt, &i_node, node_ptr);
 }
 
 static void redblack_tree_delete(uint64_t node_ptr)
 {
-    // BST for now
-    bst_internal_delete(&rbt, &i_node, node_ptr, 0);
+    rbt_internal_delete(&rbt, &i_node, node_ptr);
 
     set_redblack_tree_parent(node_ptr, NIL);
     set_redblack_tree_left(node_ptr, NIL);
@@ -220,7 +220,7 @@ static void redblack_tree_delete(uint64_t node_ptr)
 
 static uint64_t redblack_tree_search(uint32_t size)
 {
-    // BST for now
+    // search logic is the same: rbt & bst
     return bst_internal_find_succ(&rbt, &i_node, (uint64_t)size);
 }
 
@@ -228,9 +228,7 @@ static uint64_t redblack_tree_search(uint32_t size)
 /*  Implementation                       */
 /* ------------------------------------- */
 
-#ifdef REDBLACK_TREE
-
-int initialize_free_block()
+int redblack_tree_initialize_free_block()
 {
     uint64_t first_header = get_firstblock();
     
@@ -250,7 +248,7 @@ int initialize_free_block()
     return 1;
 }
 
-uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
+uint64_t redblack_tree_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
     // search 8-byte block list
     if (payload_size <= 4 && small_list.count != 0)
@@ -290,7 +288,7 @@ uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
     return redblack_tree_search(free_blocksize);
 }
 
-int insert_free_block(uint64_t free_header)
+int redblack_tree_insert_free_block(uint64_t free_header)
 {
     assert(free_header % 8 == 4);
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -318,7 +316,7 @@ int insert_free_block(uint64_t free_header)
     return 1;
 }
 
-int delete_free_block(uint64_t free_header)
+int redblack_tree_delete_free_block(uint64_t free_header)
 {
     assert(free_header % 8 == 4);
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -346,6 +344,8 @@ int delete_free_block(uint64_t free_header)
     return 1;
 }
 
-void check_freeblock_correctness()
-{}
-#endif
+void redblack_tree_check_free_block()
+{
+    small_list_check_free_blocks();
+    check_block16_correctness();
+}

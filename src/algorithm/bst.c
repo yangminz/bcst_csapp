@@ -464,7 +464,7 @@ uint64_t bst_internal_find_succ(rbtree_internal_t *tree,
     return successor;
 }
 
-static void tree_internal_print(uint64_t node, rbtree_node_interface *i_node, int depth)
+static void bst_internal_dfs_print(uint64_t node, rbtree_node_interface *i_node, int depth)
 {
     rbt_validate_interface(i_node,
         IRBT_CHECKNULL | IRBT_LEFT | IRBT_RIGHT | IRBT_KEY | IRBT_COLOR);
@@ -484,17 +484,23 @@ static void tree_internal_print(uint64_t node, rbtree_node_interface *i_node, in
 
     if (i_node->get_color(node) == COLOR_RED)
     {
-        printf("(\033[31m%lu\033[0m,", i_node->get_key(node));
+        printf("(0x%lx/%lu:\033[31m%lu\033[0m,", node, node, i_node->get_key(node));
     }
     else
     {
-        printf("(%lu,", i_node->get_key(node));
+        printf("(0x%lx/%lu:%lu,", node, node, i_node->get_key(node));
     }
 
-    tree_internal_print(i_node->get_leftchild(node), i_node, depth + 1);
+    bst_internal_dfs_print(i_node->get_leftchild(node), i_node, depth + 1);
     printf(",");
-    tree_internal_print(i_node->get_rightchild(node), i_node, depth + 1);
+    bst_internal_dfs_print(i_node->get_rightchild(node), i_node, depth + 1);
     printf(")");
+}
+
+void bst_internal_print(uint64_t node, rbtree_node_interface *i_node)
+{
+    bst_internal_dfs_print(node, i_node, 0);
+    printf("\n");
 }
 
 // For test use
@@ -1032,7 +1038,7 @@ rb_tree_t *bst_construct_keystr(char *str)
 
 void bst_print(rb_node_t *node)
 {
-    tree_internal_print((uint64_t)node, &default_i_rbt_node, 0);
+    bst_internal_print((uint64_t)node, &default_i_rbt_node);
 }
 
 static void bst_destruct_subtree(uint64_t root)

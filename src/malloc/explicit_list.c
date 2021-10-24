@@ -21,6 +21,7 @@ void small_list_init();
 void small_list_insert(uint64_t free_header);
 void small_list_delete(uint64_t free_header);
 linkedlist_internal_t small_list;
+void small_list_check_free_blocks();
 
 /* ------------------------------------- */
 /*  Operations for List Block Structure  */
@@ -41,9 +42,6 @@ static uint64_t get_prevfree(uint64_t header_vaddr)
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 4);
 }
 
-#ifndef REDBLACK_TREE
-static
-#endif
 uint64_t get_nextfree(uint64_t header_vaddr)
 {
     return get_field32_block_ptr(header_vaddr, MIN_EXPLICIT_FREE_LIST_BLOCKSIZE, 8);
@@ -92,14 +90,8 @@ static int update_head(linkedlist_internal_t *this, uint64_t block_vaddr)
 }
 
 // The explicit free linked list
-#ifndef REDBLACK_TREE
-static
-#endif
 linkedlist_internal_t explicit_list;
 
-#ifndef REDBLACK_TREE
-static
-#endif
 void explist_list_init()
 {
     explicit_list.head = NULL_ID;
@@ -107,9 +99,6 @@ void explist_list_init()
     explicit_list.update_head = &update_head;
 }
 
-#ifndef REDBLACK_TREE
-static
-#endif
 void explicit_list_insert(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -120,9 +109,6 @@ void explicit_list_insert(uint64_t free_header)
     linkedlist_internal_insert(&explicit_list, &i_free_block, free_header);
 }
 
-#ifndef REDBLACK_TREE
-static
-#endif
 void explicit_list_delete(uint64_t free_header)
 {
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -139,6 +125,11 @@ void explicit_list_delete(uint64_t free_header)
 /*  For Debugging                        */
 /* ------------------------------------- */
 
+// from segregated list
+extern void check_size_list_correctness(
+    linkedlist_internal_t *list, linkedlist_node_interface *i_node, 
+    uint32_t min_size, uint32_t max_size);
+
 static void explicit_list_print()
 {
     uint64_t p = explicit_list.head;
@@ -151,13 +142,16 @@ static void explicit_list_print()
     printf("\n");
 }
 
+void check_block16_correctness()
+{
+    check_size_list_correctness(&explicit_list, &i_free_block, 16, 16);
+}
+
 /* ------------------------------------- */
 /*  Implementation                       */
 /* ------------------------------------- */
 
-#ifdef EXPLICIT_FREE_LIST
-
-int initialize_free_block()
+int explicit_list_initialize_free_block()
 {
     uint64_t first_header = get_firstblock();
     
@@ -173,7 +167,7 @@ int initialize_free_block()
     return 1;
 }
 
-uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
+uint64_t explicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
     // search 8-byte block list
     if (payload_size <= 4 && small_list.count != 0)
@@ -209,7 +203,7 @@ uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
     return NIL;
 }
 
-int insert_free_block(uint64_t free_header)
+int explicit_list_insert_free_block(uint64_t free_header)
 {
     assert(free_header % 8 == 4);
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -233,7 +227,7 @@ int insert_free_block(uint64_t free_header)
     return 1;
 }
 
-int delete_free_block(uint64_t free_header)
+int explicit_list_delete_free_block(uint64_t free_header)
 {
     assert(free_header % 8 == 4);
     assert(get_firstblock() <= free_header && free_header <= get_lastblock());
@@ -257,49 +251,8 @@ int delete_free_block(uint64_t free_header)
     return 1;
 }
 
-void check_freeblock_correctness()
+void explicit_list_check_free_block()
 {
-    uint32_t explicit_list_counter = 0;
-    uint64_t b = get_firstblock(); 
-    int head_exists = 0;
-    while(b <= get_lastblock())
-    {
-        if (get_allocated(b) == FREE && get_blocksize(b) > 8)
-        {
-            uint64_t prev = get_prevfree(b);
-            uint64_t next = get_nextfree(b);
-
-            assert(get_allocated(prev) == FREE);
-            assert(get_allocated(next) == FREE);
-            assert(get_nextfree(prev) == b);
-            assert(get_prevfree(next) == b);
-
-            if (b == explicit_list.head)
-            {
-                head_exists = 1;
-            }
-
-            explicit_list_counter += 1;
-        }
-        b = get_nextheader(b);
-    }
-    assert(head_exists == 1);
-    assert(explicit_list_counter == explicit_list.count);
-
-    uint64_t p = explicit_list.head;
-    uint64_t n = explicit_list.head;
-    for (int i = 0; i < explicit_list.count; ++ i)
-    {
-        assert(get_allocated(p) == FREE);
-        assert(get_blocksize(p) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-        assert(get_allocated(n) == FREE);
-        assert(get_blocksize(n) >= MIN_EXPLICIT_FREE_LIST_BLOCKSIZE);
-
-        p = get_prevfree(p);
-        n = get_nextfree(n);
-    }
-    assert(p == explicit_list.head);
-    assert(n == explicit_list.head);
+    small_list_check_free_blocks();
+    check_size_list_correctness(&explicit_list, &i_free_block, 16, 0xFFFFFFFF);
 }
-#endif

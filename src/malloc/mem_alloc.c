@@ -47,8 +47,112 @@ uint32_t extend_heap(uint32_t size)
 }
 
 /* ------------------------------------- */
+/*  Free Block Management Implementation */
+/* ------------------------------------- */
+
+#ifdef IMPLICIT_FREE_LIST
+int implicit_list_initialize_free_block();
+uint64_t implicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize);
+int implicit_list_insert_free_block(uint64_t free_header);
+int implicit_list_delete_free_block(uint64_t free_header);
+void implicit_list_check_free_block();
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+int explicit_list_initialize_free_block();
+uint64_t explicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize);
+int explicit_list_insert_free_block(uint64_t free_header);
+int explicit_list_delete_free_block(uint64_t free_header);
+void explicit_list_check_free_block();
+#endif
+
+#ifdef REDBLACK_TREE
+int redblack_tree_initialize_free_block();
+uint64_t redblack_tree_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize);
+int redblack_tree_insert_free_block(uint64_t free_header);
+int redblack_tree_delete_free_block(uint64_t free_header);
+void redblack_tree_check_free_block();
+#endif
+
+static int initialize_free_block()
+{
+#ifdef IMPLICIT_FREE_LIST
+    return implicit_list_initialize_free_block();
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_list_initialize_free_block();
+#endif
+
+#ifdef REDBLACK_TREE
+    return redblack_tree_initialize_free_block();
+#endif
+}
+
+static uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
+{
+#ifdef IMPLICIT_FREE_LIST
+    return implicit_list_search_free_block(payload_size, alloc_blocksize);
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_list_search_free_block(payload_size, alloc_blocksize);
+#endif
+
+#ifdef REDBLACK_TREE
+    return redblack_tree_search_free_block(payload_size, alloc_blocksize);
+#endif
+}
+
+static int insert_free_block(uint64_t free_header)
+{
+#ifdef IMPLICIT_FREE_LIST
+    return implicit_list_insert_free_block(free_header);
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_list_insert_free_block(free_header);
+#endif
+
+#ifdef REDBLACK_TREE
+    return redblack_tree_insert_free_block(free_header);
+#endif
+}
+
+static int delete_free_block(uint64_t free_header)
+{
+#ifdef IMPLICIT_FREE_LIST
+    return implicit_list_delete_free_block(free_header);
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    return explicit_list_delete_free_block(free_header);
+#endif
+
+#ifdef REDBLACK_TREE
+    return redblack_tree_delete_free_block(free_header);
+#endif
+}
+
+static void check_free_block()
+{
+#ifdef IMPLICIT_FREE_LIST
+    implicit_list_check_free_block();
+#endif
+
+#ifdef EXPLICIT_FREE_LIST
+    explicit_list_check_free_block();
+#endif
+
+#ifdef REDBLACK_TREE
+    redblack_tree_check_free_block();
+#endif
+}
+
+/* ------------------------------------- */
 /*  Malloc and Free                      */
 /* ------------------------------------- */
+void check_heap_correctness();
 
 static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high)
 {
@@ -97,7 +201,8 @@ static uint64_t try_alloc_with_splitting(uint64_t block_vaddr, uint32_t request_
         set_allocated(b_footer, ALLOCATED);
         set_blocksize(b_footer, request_blocksize);
 
-        if (b_blocksize - request_blocksize >= 8)
+        uint32_t left_size = b_blocksize - request_blocksize;
+        if (left_size >= 8)
         {
             // split this block `b`
             // b_blocksize - request_blocksize >= 8
@@ -130,6 +235,7 @@ static uint64_t try_extend_heap_to_alloc(uint32_t size)
     {
         // last block can help the request
         to_request_from_OS -= last_blocksize;
+        delete_free_block(old_last);
     }
 
     uint64_t old_epilogue = get_epilogue();
@@ -170,6 +276,10 @@ static uint64_t try_extend_heap_to_alloc(uint32_t size)
             set_allocated(last_footer, FREE);
             set_blocksize(last_footer, last_blocksize + os_allocated_size);
 
+            // blocksize is different now
+            // consider the balanced tree index on blocksize, it must be reinserted
+            insert_free_block(old_last);
+
             payload_header = old_last;
         }
 
@@ -183,6 +293,12 @@ static uint64_t try_extend_heap_to_alloc(uint32_t size)
 #endif
             return payload_vaddr;
         }
+    }
+
+    if (last_allocated == FREE)
+    {
+        // insert the free last block back
+        insert_free_block(old_last);
     }
 
     // else, no page can be allocated
@@ -257,7 +373,7 @@ uint64_t mem_alloc(uint32_t size)
 
 #ifdef DEBUG_MALLOC
     check_heap_correctness();
-    check_freeblock_correctness();
+    check_free_block();
 #endif
 
     return payload_vaddr;
@@ -298,7 +414,7 @@ void mem_free(uint64_t payload_vaddr)
         insert_free_block(req);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
-        check_freeblock_correctness();
+        check_free_block();
 #endif
     }
     else if (next_allocated == FREE && prev_allocated == ALLOCATED)
@@ -312,7 +428,7 @@ void mem_free(uint64_t payload_vaddr)
         insert_free_block(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
-        check_freeblock_correctness();
+        check_free_block();
 #endif
     }
     else if (next_allocated == ALLOCATED && prev_allocated == FREE)
@@ -326,7 +442,7 @@ void mem_free(uint64_t payload_vaddr)
         insert_free_block(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
-        check_freeblock_correctness();
+        check_free_block();
 #endif
     }
     else if (next_allocated == FREE && prev_allocated == FREE)
@@ -341,7 +457,7 @@ void mem_free(uint64_t payload_vaddr)
         insert_free_block(one_free);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
-        check_freeblock_correctness();
+        check_free_block();
 #endif
     }
     else
@@ -395,25 +511,31 @@ void check_heap_correctness()
     }
 }
 
-static void print_heap()
+static void block_info_print(uint64_t h)
+{
+    uint32_t a = get_allocated(h);
+    uint32_t s = get_blocksize(h);
+    uint64_t f = get_footer(h);
+
+    uint32_t hv = *(uint32_t *)&heap[h];
+    uint32_t fv = *(uint32_t *)&heap[f];
+
+    uint32_t p8 = (hv >> 1) & 0x1;
+    uint32_t b8 = (hv >> 2) & 0x1;
+    uint32_t rb = (fv >> 1) & 0x1;
+
+    printf("H:%lu,\tF:%lu,\tS:%u,\t(A:%u,RB:%u,B8:%u,P8:%u)\n", h, f, s, a, rb, b8, p8);
+}
+
+static void heap_blocks_print()
 {
     printf("============\nheap blocks:\n");
     uint64_t h = get_firstblock();
     int i = 0;
     while (i < (HEAP_MAX_SIZE / 8) && h != NIL && h < get_epilogue())
     {
-        uint32_t a = get_allocated(h);
-        uint32_t s = get_blocksize(h);
-        uint64_t f = get_footer(h);
-
-        printf("[H:%lu,F:%lu,S:%u,A:%u]  ", h, f, s, a);
+        block_info_print(h);
         h = get_nextheader(h);
-
-        i += 1;
-        if (i % 5 == 0)
-        {
-            printf("\b\n");
-        }
     }
-    printf("\b\b\n============\n");
+    printf("============\n");
 }

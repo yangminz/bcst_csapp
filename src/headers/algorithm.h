@@ -141,7 +141,7 @@ void linkedlist_validate_interface(linkedlist_node_interface *i_node,
 typedef struct LINKEDLIST_INTERNAL_STRUCT
 {
     uint64_t    head;
-    uint64_t    count;
+    int64_t     count;
 
     // this: this pointer
     // <uint64_t> "node": the id of new head node
@@ -176,7 +176,7 @@ typedef union
     struct
     {
         uint64_t head;
-        uint64_t count;
+        int64_t  count;
     };
 } linkedlist_t;
 

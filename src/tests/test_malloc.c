@@ -15,6 +15,8 @@
 #include "headers/allocator.h"
 #include "headers/algorithm.h"
 
+void check_heap_correctness();
+
 /* ------------------------------------- */
 /*  Unit tests                           */
 /* ------------------------------------- */

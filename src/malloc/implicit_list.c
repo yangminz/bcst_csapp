@@ -21,12 +21,11 @@ void small_list_init();
 void small_list_insert(uint64_t free_header);
 void small_list_delete(uint64_t free_header);
 linkedlist_internal_t small_list;
+void small_list_check_free_blocks();
 
 #define MIN_IMPLICIT_FREE_LIST_BLOCKSIZE (8)
 
-#ifdef IMPLICIT_FREE_LIST
-
-int initialize_free_block()
+int implicit_list_initialize_free_block()
 {
     // init small block list
     small_list_init();
@@ -34,7 +33,7 @@ int initialize_free_block()
     return 1;
 }
 
-uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
+uint64_t implicit_list_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
     // search 8-byte block list
     if (payload_size <= 4 && small_list.count != 0)
@@ -67,17 +66,53 @@ uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
     return NIL;
 }
 
-int insert_free_block(uint64_t free_header)
+int implicit_list_insert_free_block(uint64_t free_header)
 {
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            small_list_insert(free_header);
+            break;
+        
+        default:
+            break;
+    }
+
     return 1;
 }
 
-int delete_free_block(uint64_t free_header)
+int implicit_list_delete_free_block(uint64_t free_header)
 {
+    assert(free_header % 8 == 4);
+    assert(get_firstblock() <= free_header && free_header <= get_lastblock());
+    assert(get_allocated(free_header) == FREE);
+
+    uint32_t blocksize = get_blocksize(free_header);
+    assert(blocksize % 8 == 0);
+    assert(blocksize >= 8);
+
+    switch (blocksize)
+    {
+        case 8:
+            small_list_delete(free_header);
+            break;
+        
+        default:
+            break;
+    }
+
     return 1;
 }
 
-void check_freeblock_correctness()
+void implicit_list_check_free_block()
 {
+    small_list_check_free_blocks();
 }
-#endif

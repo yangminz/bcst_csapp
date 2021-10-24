@@ -70,16 +70,6 @@ int is_firstblock(uint64_t vaddr);
 uint64_t get_field32_block_ptr(uint64_t header_vaddr, uint32_t min_blocksize, uint32_t offset);
 void set_field32_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t min_blocksize, uint32_t offset);
 
-// for debugging
-void check_heap_correctness();
-void check_freeblock_correctness();
-
-// implemented by different strategy
-int initialize_free_block();
-uint64_t search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize);
-int insert_free_block(uint64_t free_header);
-int delete_free_block(uint64_t free_header);
-
 // interface
 int heap_init();
 uint64_t mem_alloc(uint32_t size);

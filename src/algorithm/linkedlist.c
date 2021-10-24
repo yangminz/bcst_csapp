@@ -115,6 +115,7 @@ int linkedlist_internal_delete(linkedlist_internal_t *list,
         list->update_head(list, NULL_ID);
     }
 
+    assert(list->count >= 0);
     return 1;
 }
 
