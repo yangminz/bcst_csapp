@@ -275,6 +275,11 @@ static inst_parser_t *parse_instruction_next(inst_parser_t *p, char c)
             else if (c == '\n')
             {
                 // instruction ends without operand like: `NOP`, `RET`
+                assert(p->trie_node != NULL);
+                assert(p->trie_node->isvalue == 1);
+                // get operator
+                p->inst->op = (op_t)p->trie_node->value;
+                
                 p->inst_state = INST_PARSE_PARSED;
                 p->inst->src.type = OD_EMPTY;
                 p->inst->src.value = 0;
@@ -285,9 +290,9 @@ static inst_parser_t *parse_instruction_next(inst_parser_t *p, char c)
             assert(0);
         case INST_PARSE_SPACE_SRC_OPERAND:
             // spaces between operator and src operand
-            if (c == '$' ||                             // immediate number
-                c == '%' ||                             // register
-                (c == '(' || ('0' <= c && c <= '9'))    // effective address
+            if (c == '$' ||     // immediate number
+                c == '%' ||     // register
+                (c == '(' || ('0' <= c && c <= '9') || c == '-')    // effective address
             )
             {
                 // start parsing operand
@@ -336,9 +341,9 @@ static inst_parser_t *parse_instruction_next(inst_parser_t *p, char c)
             return p;
         case INST_PARSE_SPACE_DST_OPERAND:
             // spaces between operator and src operand
-            if (c == '$' ||                             // immediate number
-                c == '%' ||                             // register
-                (c == '(' || ('0' <= c && c <= '9'))    // effective address
+            if (c == '$' ||     // immediate number
+                c == '%' ||     // register
+                (c == '(' || ('0' <= c && c <= '9') || c == '-')    // effective address
             )
             {
                 // start parsing operand
@@ -515,7 +520,7 @@ static inst_parser_t *parse_effective_address_next(inst_parser_t *p, char c)
                 ('A' <= c && c <= 'F') || 
                 c == 'x' || c == 'X')
             {
-                p->num_state = string2uint_next(p->od_state, c, &(p->imm));
+                p->num_state = string2uint_next(p->num_state, c, &(p->imm));
                 if (p->num_state != STRING2UINT_FAILED)
                 {
                     return p;
@@ -524,7 +529,6 @@ static inst_parser_t *parse_effective_address_next(inst_parser_t *p, char c)
             else if (c == '(')
             {
                 // successfully parsed immediate number
-                p->imm = p->num_val;
                 p->mem_state = MEM_PARSE_LEFT_PARENTHESIS;
                 return p;
             }
