@@ -140,7 +140,7 @@ static void lazy_initialize_trie()
 
 typedef enum
 {
-    INST_PARSE_LEADING_SPACE,
+    INST_PARSE_START,
     
     // parsing operator
     INST_PARSE_OPERATOR,
@@ -198,8 +198,7 @@ typedef struct
     trie_node_t *trie_node;
 
     // parser for number
-    string2uint_state_t num_state;
-    uint64_t num_val;
+    string2uint_state_t imm_state;
 
     // parser state
     inst_parse_state_t inst_state;
@@ -236,7 +235,7 @@ static inst_parser_t *parse_instruction_next(inst_parser_t *p, char c)
 
     switch (p->inst_state)
     {
-        case INST_PARSE_LEADING_SPACE:
+        case INST_PARSE_START:
             if ('a' <= c && c <= 'z')
             {
                 // start parsing operator
@@ -279,7 +278,7 @@ static inst_parser_t *parse_instruction_next(inst_parser_t *p, char c)
                 assert(p->trie_node->isvalue == 1);
                 // get operator
                 p->inst->op = (op_t)p->trie_node->value;
-                
+
                 p->inst_state = INST_PARSE_PARSED;
                 p->inst->src.type = OD_EMPTY;
                 p->inst->src.value = 0;
@@ -400,8 +399,8 @@ static inst_parser_t *parse_operand_next(inst_parser_t *p, char c)
                 // immediate number
                 // start parsing immediate number
                 // DFA: string2uint_next
-                p->num_state = STRING2UINT_LEADING_SPACE;
-                p->num_val = 0;
+                p->imm_state = STRING2UINT_LEADING_SPACE;
+                p->imm = 0;
                 p->od_state = OPERAND_PARSE_IMM;
                 return p;
             }
@@ -435,8 +434,8 @@ static inst_parser_t *parse_operand_next(inst_parser_t *p, char c)
                 c == 'x' || c == 'X' || c == '-')
             {
                 // still immediate number
-                p->num_state = string2uint_next(p->num_state, c, &(p->num_val));
-                if (p->num_state != STRING2UINT_FAILED)
+                p->imm_state = string2uint_next(p->imm_state, c, &(p->imm));
+                if (p->imm_state != STRING2UINT_FAILED)
                 {
                     return p;
                 }
@@ -446,7 +445,7 @@ static inst_parser_t *parse_operand_next(inst_parser_t *p, char c)
                 // end of parsing this operand: imm
                 p->od_state = OPERAND_PARSE_PARSED;
                 p->operand.type = OD_IMM;
-                p->operand.value = p->num_val;
+                p->operand.value = p->imm;
                 return p;
             }
             assert(0);
@@ -497,9 +496,9 @@ static inst_parser_t *parse_effective_address_next(inst_parser_t *p, char c)
             if (('0' <= c && c <= '9') || c == '-')
             {
                 // prefix immediate number
-                p->num_state = STRING2UINT_LEADING_SPACE;
-                p->num_state = string2uint_next(p->num_state, c, &(p->imm));
-                if (p->num_state != STRING2UINT_FAILED)
+                p->imm_state = STRING2UINT_LEADING_SPACE;
+                p->imm_state = string2uint_next(p->imm_state, c, &(p->imm));
+                if (p->imm_state != STRING2UINT_FAILED)
                 {
                     p->mem_state = MEM_PARSE_IMM;
                     return p;
@@ -520,8 +519,8 @@ static inst_parser_t *parse_effective_address_next(inst_parser_t *p, char c)
                 ('A' <= c && c <= 'F') || 
                 c == 'x' || c == 'X')
             {
-                p->num_state = string2uint_next(p->num_state, c, &(p->imm));
-                if (p->num_state != STRING2UINT_FAILED)
+                p->imm_state = string2uint_next(p->imm_state, c, &(p->imm));
+                if (p->imm_state != STRING2UINT_FAILED)
                 {
                     return p;
                 }
