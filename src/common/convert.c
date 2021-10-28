@@ -21,22 +21,6 @@ uint64_t string2uint(const char *str)
     return string2uint_range(str, 0, -1);
 }
 
-inline uint64_t increase_digit(int64_t x, char c)
-{
-    // x - the current int64_t bitmap
-    // c - the char to be added at low digit
-    int64_t abs = x < 0 ? -1 * x : x;
-    abs = abs * 10 + c - '0';
-    if (x < 0)
-    {
-        return -1 * abs;
-    }
-    else
-    {
-        return abs;
-    }
-}
-
 string2uint_state_t string2uint_next(string2uint_state_t state, char c, uint64_t *bmap)
 {
     // state - parsing state. see the common.h marcos
