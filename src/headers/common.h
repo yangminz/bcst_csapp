@@ -34,6 +34,20 @@
 uint32_t uint2float(uint32_t u);
 
 // convert string dec or hex to the integer bitmap
+typedef enum
+{
+    STRING2UINT_LEADING_SPACE,
+    STRING2UINT_FIRST_ZERO,
+    STRING2UINT_POSITIVE_DEC,
+    STRING2UINT_POSITIVE_HEX,
+    STRING2UINT_NEGATIVE,
+    STRING2UINT_NEGATIVE_FIRST_ZERO,
+    STRING2UINT_NEGATIVE_DEC,
+    STRING2UINT_NEGATIVE_HEX,
+    STRING2UINT_ENDING_SPACE,
+    STRING2UINT_FAILED,
+} string2uint_state_t;
+string2uint_state_t string2uint_next(string2uint_state_t state, char c, uint64_t *bmap);
 uint64_t string2uint(const char *str);
 uint64_t string2uint_range(const char *str, int start, int end);
 

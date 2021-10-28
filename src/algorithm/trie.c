@@ -110,6 +110,33 @@ trie_node_t *trie_insert(trie_node_t *root, char *key, uint64_t value)
     return root;
 }
 
+trie_node_t *trie_next(trie_node_t *current, char input)
+{
+    if (current == NULL)
+    {
+        return NULL;
+    }
+
+    // go to next
+    if (current->next != NULL)
+    {
+        char hashkey[2];
+        hashkey[0] = input;
+        hashkey[1] = '\0';
+
+        uint64_t trie_node_addr;
+        if (hashtable_get(current->next, hashkey, &trie_node_addr) == 1)
+        {
+            // found next node
+            return (trie_node_t *)trie_node_addr;
+        }
+    }
+
+    // 1 - no mapping
+    // 2 - node does not exist in mapping
+    return NULL;
+}
+
 int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
 {
     trie_node_t *p = root;
@@ -120,35 +147,10 @@ int trie_get(trie_node_t *root, char *key, uint64_t *valptr)
             // not found
             return 0;
         }
-
-        // go to next
-        if (p->next != NULL)
-        {
-            char hashkey[2];
-            hashkey[0] = key[i];
-            hashkey[1] = '\0';
-
-            uint64_t trie_node_addr;
-            if (hashtable_get(p->next, hashkey, &trie_node_addr) == 1)
-            {
-                // found next node
-                p = (trie_node_t *)trie_node_addr;
-                continue;
-            }
-            else
-            {
-                // not found next node
-                return 0;
-            }
-        }
-        else
-        {
-            // should have mapping here 
-            return 0;
-        }
+        p = trie_next(p, key[i]);
     }
 
-    if (p->isvalue == 1)
+    if (p != NULL && p->isvalue == 1)
     {
         *valptr = p->value;
         return 1;
