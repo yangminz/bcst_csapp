@@ -72,6 +72,7 @@ trie_node_t * trie_construct();
 void trie_free(trie_node_t *root);
 trie_node_t *trie_insert(trie_node_t *root, char *key, uint64_t value);
 int trie_get(trie_node_t *root, char *key, uint64_t *valptr);
+trie_node_t *trie_next(trie_node_t *current, char input);
 
 //  The following data structures and algorithms
 //  are designed to be Generic. To use, the user

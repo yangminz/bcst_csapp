@@ -290,7 +290,9 @@ static void parse_instruction(const char *str, inst_t *inst)
 
     inst->op = (op_t)try_get_from_trie(&operator_mapping, op_str);
 
-    debug_printf(DEBUG_PARSEINST, "[%s (%d)] [%s (%d)] [%s (%d)]\n", op_str, inst->op, src_str, inst->src.type, dst_str, inst->dst.type);
+#ifdef DEBUG_PARSEINST
+    printf("[%s (%d)] [%s (%d)] [%s (%d)]\n", op_str, inst->op, src_str, inst->src.type, dst_str, inst->dst.type);
+#endif
 }
 
 // parse the string assembly operand to od_t instance
@@ -405,7 +407,9 @@ static void parse_operand(const char *str, od_t *od)
             od->scal = string2uint(scal);
             if (od->scal != 1 && od->scal != 2 && od->scal != 4 && od->scal != 8)
             {
-                debug_printf(DEBUG_PARSEINST, "parse operand %s\n    scale number %s must be 1,2,4,8\n", scal);
+#ifdef DEBUG_PARSEINST
+                printf("parse operand %s\n    scale number %s must be 1,2,4,8\n", str, scal);
+#endif
                 exit(0);
             }
         }

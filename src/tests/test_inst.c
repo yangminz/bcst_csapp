@@ -18,6 +18,10 @@
 #include "headers/algorithm.h"
 #include "headers/instruction.h"
 
+void parse_instruction(const char *str, inst_t *inst);
+void parse_operand(const char *str, od_t *od);
+uint64_t compute_operand(od_t *od);
+
 static int operand_equal(od_t *a, od_t *b)
 {
     if (a == NULL && b == NULL)

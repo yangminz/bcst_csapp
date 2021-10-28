@@ -8,6 +8,7 @@
  * without yangminz's permission.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -20,6 +21,153 @@ uint64_t string2uint(const char *str)
     return string2uint_range(str, 0, -1);
 }
 
+inline uint64_t increase_digit(int64_t x, char c)
+{
+    // x - the current int64_t bitmap
+    // c - the char to be added at low digit
+    int64_t abs = x < 0 ? -1 * x : x;
+    abs = abs * 10 + c - '0';
+    if (x < 0)
+    {
+        return -1 * abs;
+    }
+    else
+    {
+        return abs;
+    }
+}
+
+string2uint_state_t string2uint_next(string2uint_state_t state, char c, uint64_t *bmap)
+{
+    // state - parsing state. see the common.h marcos
+    // bmap - the bitmap of the value
+    // return value - next state
+    switch (state)
+    {
+        case LEADING_SPACE:
+            if (c == '0')
+            {
+                // 1. positive dec value with leading zeros
+                // 2. hex number (positive only)
+                *bmap = 0;
+                return FIRST_ZERO;
+            }
+            else if ('1' <= c && c <= '9')
+            {
+                // positive dec
+                *bmap = c - '0';
+                return POSITIVE_DEC;
+            }
+            else if (c == '-')
+            {
+                // signed negative value
+                return NEGATIVE_DEC;
+            }
+            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            {
+                // skip leading spaces
+                return LEADING_SPACE;
+            }
+            return FAILED_TRANSFER;
+        case FIRST_ZERO:
+            // check zero
+            if ('0' <= c && c <= '9')
+            {
+                // no overflow here
+                *bmap = (*bmap) * 10 + c - '0';
+                return POSITIVE_DEC;
+            }
+            else if (c == 'x' || c == 'X')
+            {
+                // we do not have negative value for hex
+                return POSITIVE_HEX;
+            }
+            else if (c == ' ')
+            {
+                // zero only
+                assert(*bmap == 0);
+                return ENDING_SPACE;
+            }
+            return FAILED_TRANSFER;
+        case POSITIVE_DEC:
+            // dec number
+            // signed or unsigned
+            if ('0' <= c && c <= '9')
+            {
+                uint64_t x = *bmap;
+                x = x * 10 + c - '0';
+                // check unsigned overflow
+                if (x < *bmap)
+                {
+                    // unsigned overflow
+                    return SIGNED_OVERFLOW;
+                }
+                *bmap = x;
+                return POSITIVE_DEC;
+            }
+            else if (c == ' ')
+            {
+                return ENDING_SPACE;
+            }
+            // fail
+            return FAILED_TRANSFER;
+        case NEGATIVE_DEC:
+            // negative
+            // set the bit map of the negative value till now
+            if ('0' <= c && c <= '9')
+            {
+                // negative value should not have leading zeros
+                // safe for negative multiplication
+                uint64_t bmap_2x = (*bmap) << 1;
+                uint64_t bmap_8x = (*bmap) << 3;
+                // this works for leading zeros: -0000...
+                uint64_t x = bmap_2x + bmap_8x + 1 + ~(c - '0');
+                if (((x >> 63) == 0) && ((*bmap >> 63) == 1))
+                {
+                    return SIGNED_OVERFLOW;
+                }
+                *bmap = x;
+                return NEGATIVE_DEC;
+            }
+            // fail
+            return FAILED_TRANSFER;
+        case POSITIVE_HEX:
+            // hex number
+            if ('0' <= c && c <= '9')
+            {
+                *bmap = (*bmap) * 16 + c - '0';
+                return POSITIVE_HEX;
+            }
+            else if ('a' <= c && c <= 'f')
+            {
+                *bmap = (*bmap) * 16 + c - 'a' + 10;
+                return POSITIVE_HEX;
+            }
+            else if ('A' <= c && c <= 'F')
+            {
+                *bmap = (*bmap) * 16 + c - 'A' + 10;
+                return POSITIVE_HEX;
+            }
+            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            {
+                return ENDING_SPACE;
+            }
+            // fail
+            return FAILED_TRANSFER;
+        case ENDING_SPACE:
+            if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            {
+                // skip tailing spaces
+                return ENDING_SPACE;
+            }
+            // fail
+            return FAILED_TRANSFER;
+        default:
+            // fail
+            return FAILED_TRANSFER;
+    }
+}
+
 uint64_t string2uint_range(const char *str, int start, int end)
 {
     // start: starting index inclusive
@@ -27,169 +175,38 @@ uint64_t string2uint_range(const char *str, int start, int end)
     end = (end == -1) ? strlen(str) - 1 : end;
 
     uint64_t uv = 0;
-    int sign_bit = 0; // 0 - positive; 1 - negative
 
     // DFA: deterministic finite automata to scan string and get value
-    int state = 0;
+    string2uint_state_t state = LEADING_SPACE;
 
     for (int i = start; i <= end; ++ i)
     {
         char c = str[i];
+        state = string2uint_next(state,c, &uv);
 
-        if (state == 0)
+        switch (state)
         {
-            if (c == '0')
-            {
-                state = 1;
-                uv = 0;
-                continue;
-            }
-            else if ('1' <= c && c <= '9')
-            {
-                state = 2;
-                uv = c - '0';
-                continue;
-            }
-            else if (c == '-')
-            {
-                state = 3;
-                sign_bit = 1;
-                continue;
-            }
-            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
-            {
-                // skip leading spaces
-                state = 0;
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 1)
-        {
-            // check zero
-            if ('0' <= c && c <= '9')
-            {
-                state = 2;
-                uv = uv * 10 + c - '0';
-                continue;
-            }
-            else if (c == 'x')
-            {
-                state = 4;
-                continue;
-            }
-            else if (c == ' ')
-            {
-                state = 6;
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 2)
-        {
-            // dec number
-            if ('0' <= c && c <= '9')
-            {
-                state = 2;
-                uint64_t pv = uv;
-                uv = uv * 10 + c - '0';
-                // maybe overflow
-                if (pv > uv)
-                {
-                    printf("(uint64_t)%s overflow: cannot convert\n", str);
-                    goto fail;
-                }
-                continue;
-            }
-            else if (c == ' ')
-            {
-                state = 6;
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 3)
-        {
-            // negative
-            if (c == '0')
-            {
-                state = 1;
-                continue;
-            }
-            else if ('1' <= c && c <= '9')
-            {
-                state = 2;
-                uv = c - '0';
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 4 || state == 5)
-        {
-            // hex number
-            if ('0' <= c && c <= '9')
-            {
-                state = 5;
-                uint64_t pv = uv;
-                uv = uv * 16 + c - '0';
-                // maybe overflow
-                if (pv > uv)
-                {
-                    printf("(uint64_t)%s overflow: cannot convert\n", str);
-                    goto fail;
-                }
-                continue;
-            }
-            else if ('a' <= c && c <= 'f')
-            {
-                state = 5;
-                uint64_t pv = uv;
-                uv = uv * 16 + c - 'a' + 10;
-                // maybe overflow
-                if (pv > uv)
-                {
-                    printf("(uint64_t)%s overflow: cannot convert\n", str);
-                    goto fail;
-                }
-                continue;
-            }
-            else if (state == 5 && (c == ' ' || c == '\t' || c == '\r' || c == '\n'))
-            {
-                state = 6;
-                continue;
-            }
-            else { goto fail; }
-        }
-        else if (state == 6)
-        {
-            if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
-            {
-                // skip tailing spaces
-                state = 6;
-                continue;
-            }
-            else { goto fail; }
+            case FAILED_TRANSFER:
+#ifdef DEBUG_STRING2UINT
+                printf("string2uint: failed to transfer: %s\n", str);
+#endif
+                exit(0);
+            case UNSIGNED_OVERFLOW:
+#ifdef DEBUG_STRING2UINT
+                printf("string2uint: unsigned overflow: %s\n", str);
+#endif
+                exit(0);
+            case SIGNED_OVERFLOW:
+#ifdef DEBUG_STRING2UINT
+                printf("string2uint: signed overflow: %s\n", str);
+#endif
+                exit(0);
+            default:
+                break;
         }
     }
 
-    if (sign_bit == 0)
-    {
-        return uv;
-    }
-    else if (sign_bit == 1)
-    {
-        if ((uv & 0x8000000000000000) != 0)
-        {
-            printf("(int64_t)%s: signed overflow: cannot convert\n", str);
-            exit(0);
-        }
-        int64_t sv = -1 * (int64_t)uv;
-        return *((uint64_t *)&sv);
-    }
-
-    fail:
-    printf("type converter: <%s> cannot be converted to integer\n", str);
-    exit(0);
+    return uv;
 }
 
 // convert uint32_t to its float

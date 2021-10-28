@@ -184,9 +184,11 @@ def build(key):
                     "./src/hardware/cpu/isa.c",
                     "./src/hardware/cpu/mmu.c",
                     "./src/hardware/memory/dram.c",
-                    "./src/tests/test_parse_isa.c",
-                    "-o", "./bin/parse_isa"
-                ],
+                    "./src/tests/test_run_isa.c",
+                    "-o", "./bin/run_isa"
+                ]
+            ],
+        "inst" : [
                 [
                     "/usr/bin/gcc-7", 
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
@@ -197,12 +199,10 @@ def build(key):
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
-                    "./src/hardware/cpu/isa.c",
-                    "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/memory/dram.c",
-                    "./src/tests/test_run_isa.c",
-                    "-o", "./bin/run_isa"
-                ]
+                    "./src/hardware/cpu/inst.c",
+                    "./src/tests/test_inst.c",
+                    "-o", "./bin/test_inst"
+                ],
             ],
         "link" : [
                 [
@@ -340,6 +340,7 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
                     "-DDEBUG_BST",
+                    "-DDEBUG_STRING2UINT",
                     "./src/common/convert.c",
                     "./src/tests/test_convert.c",
                     "-o", "./bin/convert"
@@ -356,7 +357,8 @@ def build(key):
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        "isa" : ["./bin/parse_isa", "./bin/run_isa"],
+        "inst" : ["./bin/test_inst"],
+        "isa" : ["./bin/run_isa"],
         "elf" : ["./bin/elf"],
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
@@ -381,6 +383,7 @@ def debug(key):
         "malloc" : [gdb, "./bin/malloc"],
         "bst" : [gdb, "./bin/bst"],
         "rbt" : [gdb, "./bin/rbt"],
+        "trie" : [gdb, "./bin/trie"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
