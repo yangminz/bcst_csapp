@@ -384,6 +384,7 @@ def debug(key):
         "bst" : [gdb, "./bin/bst"],
         "rbt" : [gdb, "./bin/rbt"],
         "trie" : [gdb, "./bin/trie"],
+        "inst" : [gdb, "./bin/test_inst"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

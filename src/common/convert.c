@@ -44,127 +44,170 @@ string2uint_state_t string2uint_next(string2uint_state_t state, char c, uint64_t
     // return value - next state
     switch (state)
     {
-        case LEADING_SPACE:
+        case STRING2UINT_LEADING_SPACE:
             if (c == '0')
             {
                 // 1. positive dec value with leading zeros
                 // 2. hex number (positive only)
                 *bmap = 0;
-                return FIRST_ZERO;
+                return STRING2UINT_FIRST_ZERO;
             }
             else if ('1' <= c && c <= '9')
             {
                 // positive dec
                 *bmap = c - '0';
-                return POSITIVE_DEC;
+                return STRING2UINT_POSITIVE_DEC;
             }
             else if (c == '-')
             {
                 // signed negative value
-                return NEGATIVE_DEC;
+                return STRING2UINT_NEGATIVE;
             }
             else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
             {
                 // skip leading spaces
-                return LEADING_SPACE;
+                return STRING2UINT_LEADING_SPACE;
             }
-            return FAILED_TRANSFER;
-        case FIRST_ZERO:
+            return STRING2UINT_FAILED;
+        case STRING2UINT_FIRST_ZERO:
             // check zero
             if ('0' <= c && c <= '9')
             {
                 // no overflow here
-                *bmap = (*bmap) * 10 + c - '0';
-                return POSITIVE_DEC;
+                *bmap = c - '0';
+                return STRING2UINT_POSITIVE_DEC;
             }
             else if (c == 'x' || c == 'X')
             {
                 // we do not have negative value for hex
-                return POSITIVE_HEX;
+                return STRING2UINT_POSITIVE_HEX;
             }
             else if (c == ' ')
             {
                 // zero only
                 assert(*bmap == 0);
-                return ENDING_SPACE;
+                return STRING2UINT_ENDING_SPACE;
             }
-            return FAILED_TRANSFER;
-        case POSITIVE_DEC:
+            return STRING2UINT_FAILED;
+        case STRING2UINT_POSITIVE_DEC:
             // dec number
             // signed or unsigned
             if ('0' <= c && c <= '9')
             {
-                uint64_t x = *bmap;
-                x = x * 10 + c - '0';
-                // check unsigned overflow
-                if (x < *bmap)
-                {
-                    // unsigned overflow
-                    return SIGNED_OVERFLOW;
-                }
-                *bmap = x;
-                return POSITIVE_DEC;
+                // positive value
+                *bmap = (*bmap << 1) + (*bmap << 3) + c - '0';
+                return STRING2UINT_POSITIVE_DEC;
             }
             else if (c == ' ')
             {
-                return ENDING_SPACE;
+                return STRING2UINT_ENDING_SPACE;
             }
             // fail
-            return FAILED_TRANSFER;
-        case NEGATIVE_DEC:
-            // negative
-            // set the bit map of the negative value till now
-            if ('0' <= c && c <= '9')
-            {
-                // negative value should not have leading zeros
-                // safe for negative multiplication
-                uint64_t bmap_2x = (*bmap) << 1;
-                uint64_t bmap_8x = (*bmap) << 3;
-                // this works for leading zeros: -0000...
-                uint64_t x = bmap_2x + bmap_8x + 1 + ~(c - '0');
-                if (((x >> 63) == 0) && ((*bmap >> 63) == 1))
-                {
-                    return SIGNED_OVERFLOW;
-                }
-                *bmap = x;
-                return NEGATIVE_DEC;
-            }
-            // fail
-            return FAILED_TRANSFER;
-        case POSITIVE_HEX:
+            return STRING2UINT_FAILED;
+        case STRING2UINT_POSITIVE_HEX:
             // hex number
             if ('0' <= c && c <= '9')
             {
-                *bmap = (*bmap) * 16 + c - '0';
-                return POSITIVE_HEX;
+                *bmap = ((*bmap) << 4) + c - '0';
+                return STRING2UINT_POSITIVE_HEX;
             }
             else if ('a' <= c && c <= 'f')
             {
-                *bmap = (*bmap) * 16 + c - 'a' + 10;
-                return POSITIVE_HEX;
+                *bmap = ((*bmap) << 4) + c - 'a' + 10;
+                return STRING2UINT_POSITIVE_HEX;
             }
             else if ('A' <= c && c <= 'F')
             {
-                *bmap = (*bmap) * 16 + c - 'A' + 10;
-                return POSITIVE_HEX;
+                *bmap = ((*bmap) << 4) + c - 'A' + 10;
+                return STRING2UINT_POSITIVE_HEX;
             }
             else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
             {
-                return ENDING_SPACE;
+                return STRING2UINT_ENDING_SPACE;
             }
             // fail
-            return FAILED_TRANSFER;
-        case ENDING_SPACE:
+            return STRING2UINT_FAILED;
+        case STRING2UINT_NEGATIVE:
+            // negative
+            // set the bit map of the negative value till now
+            if ('1' <= c && c <= '9')
+            {
+                *bmap = 1 + ~(c - '0');
+                return STRING2UINT_NEGATIVE_DEC;
+            }
+            else if (c == '0')
+            {
+                *bmap = 0;
+                return STRING2UINT_NEGATIVE_FIRST_ZERO;
+            }
+            // fail
+            return STRING2UINT_FAILED;
+        case STRING2UINT_NEGATIVE_FIRST_ZERO:
+            // check zero
+            if ('0' <= c && c <= '9')
+            {
+                // no overflow here
+                *bmap = 1 + ~(c - '0');
+                return STRING2UINT_NEGATIVE_DEC;
+            }
+            else if (c == 'x' || c == 'X')
+            {
+                return STRING2UINT_NEGATIVE_HEX;
+            }
+            else if (c == ' ')
+            {
+                // zero only
+                assert(*bmap == 0);
+                return STRING2UINT_ENDING_SPACE;
+            }
+            return STRING2UINT_FAILED;
+        case STRING2UINT_NEGATIVE_DEC:
+            // dec number
+            if ('0' <= c && c <= '9')
+            {
+                *bmap = (*bmap << 1) + (*bmap << 3) + 1 + ~(c - '0');
+                return STRING2UINT_NEGATIVE_DEC;
+            }
+            else if (c == ' ')
+            {
+                return STRING2UINT_ENDING_SPACE;
+            }
+            // fail
+            return STRING2UINT_FAILED;
+        case STRING2UINT_NEGATIVE_HEX:
+            // hex number
+            if ('0' <= c && c <= '9')
+            {
+                *bmap = ((*bmap) << 4) + 1 + ~(c - '0');
+                return STRING2UINT_NEGATIVE_HEX;
+            }
+            else if ('a' <= c && c <= 'f')
+            {
+                *bmap = ((*bmap) << 4) + 1 + ~(c - 'a' + 10);
+                return STRING2UINT_NEGATIVE_HEX;
+            }
+            else if ('A' <= c && c <= 'F')
+            {
+                *bmap = ((*bmap) << 4) + 1 + ~(c - 'A' + 10);
+                return STRING2UINT_NEGATIVE_HEX;
+            }
+            else if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
+            {
+                return STRING2UINT_ENDING_SPACE;
+            }
+            // fail
+            return STRING2UINT_FAILED;
+        case STRING2UINT_ENDING_SPACE:
             if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
             {
                 // skip tailing spaces
-                return ENDING_SPACE;
+                return STRING2UINT_ENDING_SPACE;
             }
             // fail
-            return FAILED_TRANSFER;
+            return STRING2UINT_FAILED;
         default:
             // fail
-            return FAILED_TRANSFER;
+            return STRING2UINT_FAILED;
     }
 }
 
@@ -177,7 +220,7 @@ uint64_t string2uint_range(const char *str, int start, int end)
     uint64_t uv = 0;
 
     // DFA: deterministic finite automata to scan string and get value
-    string2uint_state_t state = LEADING_SPACE;
+    string2uint_state_t state = STRING2UINT_LEADING_SPACE;
 
     for (int i = start; i <= end; ++ i)
     {
@@ -186,19 +229,9 @@ uint64_t string2uint_range(const char *str, int start, int end)
 
         switch (state)
         {
-            case FAILED_TRANSFER:
+            case STRING2UINT_FAILED:
 #ifdef DEBUG_STRING2UINT
                 printf("string2uint: failed to transfer: %s\n", str);
-#endif
-                exit(0);
-            case UNSIGNED_OVERFLOW:
-#ifdef DEBUG_STRING2UINT
-                printf("string2uint: unsigned overflow: %s\n", str);
-#endif
-                exit(0);
-            case SIGNED_OVERFLOW:
-#ifdef DEBUG_STRING2UINT
-                printf("string2uint: signed overflow: %s\n", str);
 #endif
                 exit(0);
             default:

@@ -18,6 +18,19 @@
 #include "headers/algorithm.h"
 #include "headers/instruction.h"
 
+void mov_handler             (od_t *src_od, od_t *dst_od) {};
+void push_handler            (od_t *src_od, od_t *dst_od) {};
+void pop_handler             (od_t *src_od, od_t *dst_od) {};
+void leave_handler           (od_t *src_od, od_t *dst_od) {};
+void call_handler            (od_t *src_od, od_t *dst_od) {};
+void ret_handler             (od_t *src_od, od_t *dst_od) {};
+void add_handler             (od_t *src_od, od_t *dst_od) {};
+void sub_handler             (od_t *src_od, od_t *dst_od) {};
+void cmp_handler             (od_t *src_od, od_t *dst_od) {};
+void jne_handler             (od_t *src_od, od_t *dst_od) {};
+void jmp_handler             (od_t *src_od, od_t *dst_od) {};
+void lea_handler             (od_t *src_od, od_t *dst_od) {};
+
 void parse_instruction(const char *str, inst_t *inst);
 void parse_operand(const char *str, od_t *od);
 uint64_t compute_operand(od_t *od);
@@ -36,10 +49,7 @@ static int operand_equal(od_t *a, od_t *b)
 
     int equal = 1;
     equal = equal && (a->type == b->type);
-    equal = equal && (a->imm == b->imm);
-    equal = equal && (a->scal == b->scal);
-    equal = equal && (a->reg1 == b->reg1);
-    equal = equal && (a->reg2 == b->reg2);
+    equal = equal && (a->value == b->value);
 
     return equal;
 }
@@ -89,272 +99,185 @@ static void TestParsingInstruction()
     inst_t std_inst[15] = {
         // push   %rbp
         {
-            .op = INST_PUSH,
+            .op = &push_handler,
             .src = 
                 {
                     .type = OD_REG,
-                    .imm = 0,
-                    .scal = 0,
-                    .reg1 = (uint64_t)(&cpu_reg.rbp),
-                    .reg2 = 0
+                    .value = (uint64_t)(&cpu_reg.rbp),
                 },
             .dst = 
                 {
                     .type = OD_EMPTY,
-                    .imm = 0,
-                    .scal = 0,
-                    .reg1 = 0,
-                    .reg2 = 0
+                    .value = 0,
                 }
         },        
         // mov    %rsp,%rbp
         {
-            .op = INST_MOV, 
+            .op = &mov_handler, 
             .src = {
                 .type = OD_REG, 
-                .imm = 0, 
-                .scal = 0, 
-                .reg1 = (uint64_t)(&cpu_reg.rsp), 
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rsp), 
             }, 
             .dst = {
                 .type = OD_REG,
-                .imm = 0, 
-                .scal = 0, 
-                .reg1 = (uint64_t)(&cpu_reg.rbp), 
-                .reg2 = 0}
+                .value = (uint64_t)(&cpu_reg.rbp), 
+            }
         },
         // mov    %rdi,-0x18(%rbp)
         {
-            .op = INST_MOV, 
+            .op = &mov_handler, 
             .src = {
-                .type = OD_REG, 
-                .imm = 0, 
-                .scal = 0, 
-                .reg1 = (uint64_t)(&cpu_reg.rdi), 
-                .reg2 = 0
+                .type = OD_REG,
+                .value = (uint64_t)(&cpu_reg.rdi), 
             }, 
             .dst = {
-                .type = OD_MEM_IMM_REG1, 
-                .imm = 0x1LL + (~0x18LL), 
-                .scal = 0, 
-                .reg1 = (uint64_t)(&cpu_reg.rbp), 
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x18,
             }
         },
         // mov    %rsi,-0x20(%rbp)
         {
-            .op = INST_MOV, 
+            .op = &mov_handler,
             .src = {
                 .type = OD_REG, 
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rsi),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rsi),
             }, 
             .dst = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x20LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x20,
             }
         },
         // mov    -0x18(%rbp),%rdx
         {
-            .op = INST_MOV, 
+            .op = &mov_handler, 
             .src = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x18LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x18,
             },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rdx),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rdx),
             }
         },
         // mov    -0x20(%rbp),%rax
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x20LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x20,
             },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             }
         },
         // add    %rdx,%rax
         {
-            .op = INST_ADD,
+            .op = &add_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rdx),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rdx),
             },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             }
         },
         // mov    %rax,-0x8(%rbp)
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             },
             .dst = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x8LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x8,
             }
         },
         // mov    -0x8(%rbp),%rax
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x8LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0},
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x8,
+            },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             }
         },
         // pop    %rbp
         {
-            .op = INST_POP,
+            .op = &pop_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rbp),
             },
             .dst = {
                 .type = OD_EMPTY,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = 0,
-                .reg2 = 0
+                .value = 0,
             }
         },
         // retq
         {
-            .op = INST_RET,
+            .op = &ret_handler,
             .src = {
                 .type = OD_EMPTY,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = 0,
-                .reg2 = 0
+                .value = 0,
             },
             .dst = {
                 .type = OD_EMPTY,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = 0,
-                .reg2 = 0
+                .value = 0,
             }
         },
         // mov    %rdx,%rsi
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rdx),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rdx),
             },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rsi),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rsi),
             }
         },
         // mov    %rax,%rdi
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             },
             .dst = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rdi),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rdi),
             }
         },
         // callq  0
         {
-            .op = INST_CALL,
+            .op = &call_handler,
             .src = {
-                .type = OD_MEM_IMM,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = 0,
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = 0,
+                .value = 0
             },
             .dst = {
                 .type = OD_EMPTY,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = 0,
-                .reg2 = 0
+                .value = 0,
             }
         },
         // mov    %rax,-0x8(%rbp)
         {
-            .op = INST_MOV,
+            .op = &mov_handler,
             .src = {
                 .type = OD_REG,
-                .imm = 0,
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rax),
-                .reg2 = 0
+                .value = (uint64_t)(&cpu_reg.rax),
             },
             .dst = {
-                .type = OD_MEM_IMM_REG1,
-                .imm = 0x1LL + (~0x8LL),
-                .scal = 0,
-                .reg1 = (uint64_t)(&cpu_reg.rbp),
-                .reg2 = 0
+                .type = OD_MEM,
+                .value = cpu_reg.rbp - 0x8,
             }
         },
     };
@@ -370,130 +293,8 @@ static void TestParsingInstruction()
     printf("\033[32;1m\tPass\033[0m\n");
 }
 
-static void TestParsingOperand()
-{
-    printf("Testing operand parsing ...\n");
-
-    const char *strs[11] = {
-        "$0x1234",
-        "%rax",
-        "0xabcd",
-        "(%rsp)",
-        "0xabcd(%rsp)",
-        "(%rsp,%rbx)",
-        "0xabcd(%rsp,%rbx)",
-        "(,%rbx,8)",
-        "0xabcd(,%rbx,8)",
-        "(%rsp,%rbx,8)",
-        "0xabcd(%rsp,%rbx,8)",
-    };
-    
-    od_t std_ods[11] = 
-    {
-        // $0x1234
-        {
-            .type   = OD_IMM,
-            .imm    = 0x1234,
-            .scal   = 0,
-            .reg1   = 0,
-            .reg2   = 0
-        },
-        // %rax
-        {
-            .type   = OD_REG,
-            .imm    = 0,
-            .scal   = 0,
-            .reg1   = (uint64_t)(&cpu_reg.rax),
-            .reg2   = 0
-        },
-        // 0xabcd
-        {
-            .type   = OD_MEM_IMM,
-            .imm    = 0xabcd,
-            .scal   = 0,
-            .reg1   = 0,
-            .reg2   = 0
-        },
-        // (%rsp)
-        {
-            .type   = OD_MEM_REG1,
-            .imm    = 0,
-            .scal   = 0,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = 0
-        },
-        // 0xabcd(%rsp)
-        {
-            .type   = OD_MEM_IMM_REG1,
-            .imm    = 0xabcd,
-            .scal   = 0,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = 0
-        },
-        // (%rsp,%rbx)
-        {
-            .type   = OD_MEM_REG1_REG2,
-            .imm    = 0,
-            .scal   = 0,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-        // 0xabcd(%rsp,%rbx)
-        {
-            .type   = OD_MEM_IMM_REG1_REG2,
-            .imm    = 0xabcd,
-            .scal   = 0,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-        // (,%rbx,8)
-        {
-            .type   = OD_MEM_REG2_SCAL,
-            .imm    = 0,
-            .scal   = 8,
-            .reg1   = 0,
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-        // 0xabcd(,%rbx,8)
-        {
-            .type   = OD_MEM_IMM_REG2_SCAL,
-            .imm    = 0xabcd,
-            .scal   = 8,
-            .reg1   = 0,
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-        // (%rsp,%rbx,8)
-        {
-            .type   = OD_MEM_REG1_REG2_SCAL,
-            .imm    = 0,
-            .scal   = 8,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-        // 0xabcd(%rsp,%rbx,8)
-        {
-            .type   = OD_MEM_IMM_REG1_REG2_SCAL,
-            .imm    = 0xabcd,
-            .scal   = 8,
-            .reg1   = (uint64_t)(&cpu_reg.rsp),
-            .reg2   = (uint64_t)(&cpu_reg.rbx)
-        },
-    };
-    
-    od_t od_parsed;
-
-    for (int i = 0; i < 11; ++ i)
-    {
-        parse_operand(strs[i], &od_parsed);
-        assert(operand_equal(&std_ods[i], &od_parsed) == 1);
-    }
-
-    printf("\033[32;1m\tPass\033[0m\n");
-}
-
 int main()
 {
-    TestParsingOperand();
     TestParsingInstruction();
 
     finally_cleanup();
