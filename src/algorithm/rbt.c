@@ -316,25 +316,21 @@ void rbt_internal_delete(rbtree_internal_t *tree,
                 break;
             case 0x4:
             case 0x5:
-            case 0x6:
             case 0xC:
             case 0xD:
+                // n is red (f may be red)
+                rbt_internal_rotate(n, s, p, tree, i_node);
+                i_node->set_color(p, COLOR_BLACK);
+                i_node->set_color(s, COLOR_BLACK);
+                i_node->set_color(n, p_color);
+                break;
+            case 0x6:
             case 0xE:
-                // n or f is red (or both)
-                if (n_color == COLOR_RED)
-                {
-                    rbt_internal_rotate(n, s, p, tree, i_node);
-                    i_node->set_color(p, COLOR_BLACK);
-                    i_node->set_color(s, COLOR_BLACK);
-                    i_node->set_color(n, p_color);
-                }
-                else if (f_color == COLOR_RED)
-                {
-                    rbt_internal_rotate(f, s, p, tree, i_node);
-                    i_node->set_color(p, COLOR_BLACK);
-                    i_node->set_color(s, p_color);
-                    i_node->set_color(f, COLOR_BLACK);
-                }
+                // n black and f red
+                rbt_internal_rotate(f, s, p, tree, i_node);
+                i_node->set_color(p, COLOR_BLACK);
+                i_node->set_color(s, p_color);
+                i_node->set_color(f, COLOR_BLACK);
                 break;
             default:
                 assert(0);
