@@ -252,25 +252,29 @@ int redblack_tree_initialize_free_block()
 uint64_t redblack_tree_search_free_block(uint32_t payload_size, uint32_t *alloc_blocksize)
 {
     // search 8-byte block list
-    if (payload_size <= 4 && small_list.count != 0)
+    if (payload_size <= 4)
     {
-        // a small block and 8-byte list is not empty
+        // a small block
         *alloc_blocksize = 8;
-        return small_list.head;
+
+        if (small_list.count != 0)
+        {
+            // 8-byte list is not empty
+            return small_list.head;
+        }
+    }
+    else
+    {
+        *alloc_blocksize = round_up(payload_size, 8) + 4 + 4;
     }
     
-    uint32_t free_blocksize = round_up(payload_size, 8) + 4 + 4;
-    free_blocksize = free_blocksize < MIN_EXPLICIT_FREE_LIST_BLOCKSIZE ?
-        MIN_EXPLICIT_FREE_LIST_BLOCKSIZE : free_blocksize;
-    *alloc_blocksize = free_blocksize;
-
     // search explicit free list
-    if (free_blocksize == 16)
+    if ((*alloc_blocksize) == 16)
     {
         // This search is O(1) search since the list is fixed with size 16
         // if the list is empty, return NIL
         // else, return list head
-        uint64_t b16 = explicit_list_search(free_blocksize);
+        uint64_t b16 = explicit_list_search(*alloc_blocksize);
         if (b16 != NIL)
         {
             return b16;
@@ -278,7 +282,7 @@ uint64_t redblack_tree_search_free_block(uint32_t payload_size, uint32_t *alloc_
     }
 
     // search RBT
-    return redblack_tree_search(free_blocksize);
+    return redblack_tree_search(*alloc_blocksize);
 }
 
 int redblack_tree_insert_free_block(uint64_t free_header)
