@@ -62,9 +62,9 @@ _不考虑8-Byte的Block，Block Header中最低位为Allocation Bit的情况。
 
 -   在`free`释放内存时，为什么需要Footer？
 
--   给的当前Block的指针，如何判断前一个Block（低地址方向）的Block Size以及Allocation Bit？
+-   给定当前Block的指针，如何判断前一个Block（低地址方向）的Block Size以及Allocation Bit？
 
--   给的当前Block的指针，如何判断后一个Block（高地址方向）的Block Size以及Allocation Bit？
+-   给定当前Block的指针，如何判断后一个Block（高地址方向）的Block Size以及Allocation Bit？
 
 -   同时存在Header与Footer的情况下，同时考虑Padding，一个Allocated Block，它的内存利用率最大与最小为多少？计算结果应当是与Block Size有关的函数。
 
@@ -80,9 +80,9 @@ _考虑8-Byte的Block，假定Header为：`High address ... P8, B8, Allocated/Fr
 
 -   考虑相邻的Allocated Block，它们的Block Size为：`Low address ... 32, 8, 16, 8, 8, 16, 1024, 8, 8`，它们的header是怎样的？
 
--   给的当前Block的指针，如何判断前一个Block（低地址方向）的Block Size？注意，当前Block与前一个Block的Block Size都可能是8 Bytes。
+-   给定当前Block的指针，如何判断前一个Block（低地址方向）的Block Size？注意，当前Block与前一个Block的Block Size都可能是8 Bytes。
 
--   给的当前Block的指针，如何判断后一个Block（高地址方向）的Block Size？注意，当前Block与前一个Block的Block Size都可能是8 Bytes。
+-   给定当前Block的指针，如何判断后一个Block（高地址方向）的Block Size？注意，当前Block与前一个Block的Block Size都可能是8 Bytes。
 
 -   8-Byte Allocated Block的内存利用率最大和最小为多少？计算结果应当是常数。
 
@@ -144,11 +144,13 @@ _以下情况**考虑**8-Byte Block。_
 
 -   仅考虑Red-Black Tree，`free`的时间复杂度是多少？
 
+-   为什么`free`需要合并前后的Free Block？
+
 -   哪些情况需要在`free`时需要合并（Coalescing）前后Block？
 
--   分析`AAA, AAF, FAA, FAF`四种情况，`free`以后的Block大小分别位多少？
+-   每一次完成`malloc`与`free`后，Heap上维护的不变关系（Invariant）是？
 
--   为什么`free`需要合并前后的Free Block？
+-   合并以后Block Size是？
 
 -   如果一个Block仅有Header，并且Header仅提供Block Size与Allocation Bit，是否能够与前一个Block（低地址方向）合并？
 
@@ -162,7 +164,7 @@ _以下情况**考虑**8-Byte Block。_
 
 -   对于请求序列R1, R2, ... 如何定义Heap的内存利用率（Utilization）？
 
--   对比内存碎片中，内部碎片（Internal Fragmentation）与外部碎片（External Fragmentation）分别由什么产生？
+-   对比内存碎片的类型，内部碎片（Internal Fragmentation）与外部碎片（External Fragmentation）分别由什么产生？
 
 -   内部碎片与外部碎片，哪一种更容易估算？
 
