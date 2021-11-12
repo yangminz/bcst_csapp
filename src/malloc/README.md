@@ -30,7 +30,7 @@
 
 -   在死循环`while(1)`中通过`malloc`分配内存，可能发生怎样的错误？
 
--   如果程序中不存在死循环，对于`malloc`分配的内存，不调用`free`进行释放。怎样评估这一程序在内存泄漏（Memory Leak）方面的风险？
+-   如果程序中不存在死循环，对于`malloc`分配的内存，不调用`free`进行释放，最后结束运行。怎样评估这一程序在内存泄漏（Memory Leak）方面的风险？
 
 ## Heap的基本结构
 
@@ -48,19 +48,17 @@
 
 -   由于对齐，Block的起始虚拟地址最低的三个Bit分别是？
 
--   我们用一个指针存放Block的起始地址：`block_t *ptr = &block;`。由于对齐，指针`ptr`存放的二进制数据中，我们可以确定哪些Bit？
-
--   由于对齐，Block Size的二进制编码中，我们可以确定哪些Bit？
+-   由于对齐，Block Size的二进制编码中，最低的三个Bit分别是？
 
 -   Payload的起始虚拟地址怎样对齐？
 
-_不考虑8-Byte的Block，Block Header中最低位为Allocation Bit的情况。_
+_不考虑8-Byte的Block的情况。假定Block Header中最低位为Allocation Bit。_
 
 -   假如Header的数值为`0x000abcd9`，它的Block Size与Allocation Bit分别为？
 
 -   假如Header的数值为`0x000abcd8`，它的Block Size与Allocation Bit分别为？
 
--   在`free`释放内存时，为什么需要Footer？
+-   为什么需要Footer？
 
 -   给定当前Block的指针，如何判断前一个Block（低地址方向）的Block Size以及Allocation Bit？
 
@@ -74,7 +72,7 @@ _不考虑8-Byte的Block，Block Header中最低位为Allocation Bit的情况。
 
 -   Red-Black Tree中，Block Size最小是多少？
 
-_考虑8-Byte的Block，假定Header为：`High address ... P8, B8, Allocated/Free`。_
+_考虑8-Byte的Block，且假定Header为：`High address ... P8, B8, Allocated/Free`。_
 
 -   最低三位`P8, B8, AF`的八种情况：`000, 001, 010, 011, 100, 101, 110, 111`，分别描述了什么？
 
@@ -98,9 +96,9 @@ _考虑8-Byte的Block，假定Header为：`High address ... P8, B8, Allocated/Fr
 
 -   对比Best Fit + Explicit Free List，Red-Black Tree的搜索时间如何？
 
-## Block分割
+## Free Block分割
 
--   假如发生分割，对比Explicit Free List与Red-Black Tree，哪一个需要更长的时间？
+-   假如Free Block发生分割，对比Explicit Free List与Red-Black Tree，哪一个需要更长的时间？
 
 _考虑8-Byte对齐，M<=N，均为正整数。适配到8M Bytes的Free Block，请求分配8N Bytes的Block。_
 
@@ -128,8 +126,6 @@ _以下情况**考虑**8-Byte Block。_
 
 -   `sbrk`或`brk`做了哪些工作？
 
--   进程需要怎样修改Virtual Memory Area，从而使得Heap扩张？
-
 -   假如Last Block为Allocated，扩张后，被分配的Block的起始虚拟地址是？
 
 -   假如Last Block为Free，扩张后，被分配的Block的起始虚拟地址是？
@@ -148,13 +144,13 @@ _以下情况**考虑**8-Byte Block。_
 
 -   哪些情况需要在`free`时需要合并（Coalescing）前后Block？
 
--   每一次完成`malloc`与`free`后，Heap上维护的不变关系（Invariant）是？
+-   每一次完成`malloc`与`free`后，Heap所维护Allocated与Free Block之间的不变关系（Invariant）是？
 
 -   合并以后Block Size是？
 
 -   如果一个Block仅有Header，并且Header仅提供Block Size与Allocation Bit，是否能够与前一个Block（低地址方向）合并？
 
--   如果一个Block仅有Header，如何设计Header的最低3位，使得它可以搜索到前一个Block（低地址方向）？注意，分为Allocated Block与Free Block两种情况讨论。
+-   如果一个Block仅有Header，如何设计Header的最低3位，使得它可以搜索到前一个Block（低地址方向）？注意，分为Allocated Block与Free Block两种情况讨论，不考虑8-Byte Block。
 
 ## 性能分析
 
