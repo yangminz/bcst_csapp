@@ -1,6 +1,6 @@
 ## Malloc练习题
 
-我们只考虑CSAPP第八章中的`malloc`与`free`，不考虑真实生产环境，例如`glibc`中的`malloc`。
+我们只考虑CSAPP中的`malloc`与`free`，不考虑真实生产环境，例如`glibc`中的`malloc`。
 
 ## 函数接口
 
