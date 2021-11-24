@@ -1,0 +1,19 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Build the source files and test the executable files
+        run: ./.github/scripts/run_tests.sh
+        shell: bash

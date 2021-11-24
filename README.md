@@ -128,6 +128,6 @@ Hello 观众朋友们大家好，这个Repo是我在做《深入理解计算机�
 
 **2021-08-08** Page Table被看作对disk的缓存，那么，我们可以再加一层缓存用来加速。这就是TLB(Translate Lookaside Buffer)的作用。TLB是CPU内的硬件模块，用来做地址翻译的硬件加速，缓存了虚拟地址与物理地址之间的映射关系。它在代码中的实现与我们之前实现的SRAM cache很相似。不同的是，TLB没有采用LRU的替换策略，而是随机选择一个受害者牺牲。[bilibili-video](https://www.bilibili.com/video/BV18L411E7vA/), [git-commit](https://github.com/yangminz/bcst_csapp/commit/dedc042abefdbceba4feb495371354258ce49ca5)
 
-**2021-08-21** 到此为止，我们已经大概讨论了内核中的内存管理。接着，我们简单讨论一下用户态中的动态内存管理。用户地址空间中，`.text`, `.data`, 以及stack，是不需要特别管理的。只有heap，也就是动态内存，需要我们特别维护，以免发生内存泄漏，这一点对服务器等长时间运行的程序尤为重要。用户态的Heap可以看作一个内存池，一个缓存，它一次性向内核申请若干物理页以供分配，然后按请求提供。我们将整个heap划分成若干block，用链表进行管理。这就是implicit free list，[bilibili-video](https://www.bilibili.com/video/BV1g64y1e7LW/)
+**2021-08-21** 到此为止，我们已经大概讨论了内核中的内存管理。接着，我们简单讨论一下用户态中的动态内存管理。用户地址空间中，`.text`, `.data`, 以及stack，是不需要特别管理的。只有heap，也就是动态内存，需要我们特别维护，以免发生内存泄漏，这一点对服务器等长时间运行的程序尤为重要。用户态的Heap可以看作一个内存池，一个缓存，它一次性向内核申请若干物理页以供分配，然后按请求提供。我们将整个heap划分成若干block，用链表进行管理。这就是implicit free list。[bilibili-video](https://www.bilibili.com/video/BV1g64y1e7LW/)
 
 **2021-08-28** 实现implicit free list，以及相应的`malloc()`与`free`。implicit free list的原理比较简单，但是很多细节，特别是地址对齐，非常容易搞错，所以要细心一些。[bilibili-video](https://www.bilibili.com/video/BV1tL4y1Y72y/), [git-commit](https://github.com/yangminz/bcst_csapp/commit/40a107a1bdd833aafa5b11868a93ce20918b7256)
