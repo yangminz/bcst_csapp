@@ -2,7 +2,7 @@
 
 *Copyright Declaration*
 
-This repository is a part of BCST project. BCST project contains the source code and videos produced by yangminz. The videos are published publicly on the bilibili by [yaaangmin](https://space.bilibili.com/4564101). The source code is published on github [yangminz](https://github.com/yangminz). Any repository or video under BCST project is exclusively owned by yangminz and shall not be used for commercial and profitting purpose without yangminz's permission.
+This repository is a part of BCST project. BCST project contains the source code and videos produced by yangminz. The videos are published publicly on the bilibili by [yaaangmin](https://space.bilibili.com/4564101). The source code is published on github [yangminz](https://github.com/yangminz). Any repository or video under BCST project is exclusively owned by yangminz and shall not be used for commercial and profiting purposes without yangminz's permission.
 
 **Build**
 
