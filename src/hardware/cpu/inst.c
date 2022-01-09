@@ -35,6 +35,7 @@ extern void cmp_handler             (od_t *src_od, od_t *dst_od);
 extern void jne_handler             (od_t *src_od, od_t *dst_od);
 extern void jmp_handler             (od_t *src_od, od_t *dst_od);
 extern void lea_handler             (od_t *src_od, od_t *dst_od);
+extern void int_handler             (od_t *src_od, od_t *dst_od);
 
 static trie_node_t *register_mapping = NULL;
 static trie_node_t *operator_mapping = NULL;
@@ -135,6 +136,7 @@ static void lazy_initialize_trie()
         operator_mapping = trie_insert(operator_mapping, "jne",    (uint64_t)&jne_handler    );
         operator_mapping = trie_insert(operator_mapping, "jmp",    (uint64_t)&jmp_handler    );
         operator_mapping = trie_insert(operator_mapping, "lea",    (uint64_t)&lea_handler    );
+        operator_mapping = trie_insert(operator_mapping, "int",    (uint64_t)&int_handler    );
     }
 }
 

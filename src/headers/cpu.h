@@ -252,6 +252,9 @@ typedef union
 } cpu_pc_t;
 cpu_pc_t cpu_pc;
 
+// pointing to Task-State Segment (in main memory) of the current process
+uint64_t cpu_task_register;
+
 // control registers
 typedef struct
 {

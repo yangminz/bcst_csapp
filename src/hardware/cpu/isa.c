@@ -17,6 +17,7 @@
 #include "headers/common.h"
 #include "headers/algorithm.h"
 #include "headers/instruction.h"
+#include "headers/interrupt.h"
 
 void mov_handler             (od_t *src_od, od_t *dst_od);
 void push_handler            (od_t *src_od, od_t *dst_od);
@@ -30,6 +31,7 @@ void cmp_handler             (od_t *src_od, od_t *dst_od);
 void jne_handler             (od_t *src_od, od_t *dst_od);
 void jmp_handler             (od_t *src_od, od_t *dst_od);
 void lea_handler             (od_t *src_od, od_t *dst_od);
+void int_handler             (od_t *src_od, od_t *dst_od);
 
 // update the rip pointer to the next instruction sequentially
 static inline void increase_pc()
@@ -311,6 +313,17 @@ static void lea_handler(od_t *src_od, od_t *dst_od)
     }
 }
 
+static void int_handler(od_t *src_od, od_t *dst_od)
+{
+    uint64_t src = compute_operand(src_od);
+
+    if (src_od->type == OD_IMM)
+    {
+        // src: interrupt vector
+        call_interrupt_stack_switching(src);
+    }
+}
+
 void parse_instruction(char *inst_str, inst_t *inst);
 
 // instruction cycle is implemented in CPU
@@ -332,4 +345,7 @@ void instruction_cycle()
     // EXECUTE: get the function pointer or handler by the operator
     // update CPU and memory according the instruction
     inst.op(&(inst.src), &(inst.dst));
+
+    // TODO: check interrupt from APIC
+    // TODOL check page fault from the executed instruction
 }
