@@ -26,9 +26,6 @@
 // do page walk
 #define DEBUG_ENABLE_PAGE_WALK      (0)
 
-// use sram cache for memory access 
-#define DEBUG_ENABLE_SRAM_CACHE     (0)
-
 // type converter
 // uint32 to its equivalent float with rounding
 uint32_t uint2float(uint32_t u);

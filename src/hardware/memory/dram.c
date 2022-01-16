@@ -37,7 +37,7 @@ uint64_t cpu_read64bits_dram(uint64_t paddr)
         val += (sram_cache_read(paddr + i) << (i * 8));
     }
     return val;
-#elif
+#else
     // read from DRAM directly
     // little-endian
     uint64_t val = 0x0;
@@ -65,7 +65,7 @@ void cpu_write64bits_dram(uint64_t paddr, uint64_t data)
         sram_cache_write(paddr + i, (data >> (i * 8)) & 0xff);
     }
     return;
-#elif
+#else
     // write to DRAM directly
     // little-endian
     pm[paddr + 0] = (data >> 0 ) & 0xff;

@@ -188,6 +188,30 @@ def build(key):
                     "-o", "./bin/run_isa"
                 ]
             ],
+        "int" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_INSTRUCTION_CYCLE",
+                    # "-DDEBUG_ENABLE_SRAM_CACHE",
+                    "-DUSE_NAVIE_VA2PA",
+                    "./src/common/convert.c",
+                    "./src/common/cleanup.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/trie.c",
+                    "./src/algorithm/array.c",
+                    "./src/hardware/cpu/isa.c",
+                    "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/cpu/inst.c",
+                    # "./src/hardware/cpu/sram.c",
+                    "./src/hardware/cpu/interrupt.c",
+                    "./src/hardware/memory/dram.c",
+                    # "./src/hardware/memory/swap.c",
+                    "./src/tests/test_run_isa.c",
+                    "-o", "./bin/run_isa"
+                ]
+            ],
         "inst" : [
                 [
                     "/usr/bin/gcc-7", 
@@ -375,7 +399,7 @@ def debug(key):
     assert(os.path.isdir("./bin/"))
     gdb = "/usr/bin/gdb"
     bin_map = {
-        "isa" : [gdb, "./bin/isa"],
+        "isa" : [gdb, "./bin/run_isa"],
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
         "malloc" : [gdb, "./bin/malloc"],
         "bst" : [gdb, "./bin/bst"],

@@ -56,6 +56,9 @@ int swap_out(uint64_t daddr, uint64_t ppn);
 // consider this function va2pa as functional
 uint64_t va2pa(uint64_t vaddr)
 {
+#ifdef USE_NAVIE_VA2PA
+    return vaddr % PHYSICAL_MEMORY_SPACE;
+#endif
     uint64_t paddr = 0;
 
 #ifdef USE_TLB_HARDWARE
@@ -72,8 +75,11 @@ uint64_t va2pa(uint64_t vaddr)
     // TLB read miss
 #endif
 
+#ifdef USE_PAGETABLE_VA2PA
     // assume that page_walk is consuming much time
     paddr = page_walk(vaddr);
+
+#endif
 
 #ifdef USE_TLB_HARDWARE
     // refresh TLB
@@ -92,6 +98,7 @@ uint64_t va2pa(uint64_t vaddr)
     return paddr;
 }
 
+#ifdef USE_TLB_HARDWARE
 static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr, 
     int *free_tlb_line_index)
 {
@@ -160,8 +167,9 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
 
     return 1;
 }
+#endif
 
-
+#ifdef USE_PAGETABLE_VA2PA
 // input - virtual address
 // output - physical address
 static uint64_t page_walk(uint64_t vaddr_value)
@@ -402,3 +410,4 @@ static void page_fault_handler(pte4_t *pte, address_t vaddr)
     page_map[ppn].pte4 = pte;
     page_map[ppn].daddr = daddr;
 }
+#endif

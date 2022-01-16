@@ -28,19 +28,17 @@ typedef struct IDT_ENTRY_STRUCT
 idt_entry_t idt[256];
 
 // handlers of IDT
-void protectionfault_handler();     // trap gate - exception
 void pagefault_handler();           // trap gate - exception
-void syscall_handler();             // trap gate - software interrupt
+void syscall_handler();             // trap gate - software interrupt / trap
 void timer_handler();               // interrupt gate - local APIC
 
 // initialize of IDT
 void idt_init()
 {
-    idt[13].handler = protectionfault_handler;
-    idt[14].handler = pagefault_handler;
+    idt[0x0e].handler = pagefault_handler;
     idt[0x80].handler = syscall_handler;
+    idt[0x81].handler = timer_handler;
 }
-
 
 // call interrupt with stack switching (user --> kernel)
 void call_interrupt_stack_switching(uint64_t int_vec)
@@ -99,8 +97,17 @@ void call_interrupt_stack_switching(uint64_t int_vec)
     handler();
 }
 
-
 // interrupt handlers
+
+void timer_handler()
+{
+    return;
+}
+
+void pagefault_handler()
+{
+    return;
+}
 
 void syscall_handler()
 {

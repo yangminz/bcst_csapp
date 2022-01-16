@@ -1,0 +1,61 @@
+// void main()
+// {
+//     __asm__(
+//         // open stack for string buffer
+//         // "rld\n"
+//         "movq $0x000a646c72, %rbx\n" \
+//         "pushq %rbx\n" \
+//         // "hello wo"
+//         "movq $0x6f77206f6c6c6568, %rbx\n" \
+//         "pushq %rbx\n" \
+//         // call write for the string to stdout
+//         "movq $1, %rax\n" \
+//         "movq $1, %rdi\n" \
+//         "movq %rsp, %rsi\n" \
+//         "movq $13, %rdx\n" \
+//         "syscall\n" \
+//         // call exit
+//         "movq $60, %rax\n" \
+//         "movq $0, %rdi\n" \
+//         "syscall\n" \
+//     );
+// }
+
+// ------------------------------- //
+// elf file content
+// ------------------------------- //
+
+// lines of elf file (witout comments and white line): [0] - [0]
+17
+
+// lines of the following section header tables: [1] - [1]
+2
+
+// section header
+// sh_name,sh_addr,sh_offset,sh_size
+.text,0x0,4,12
+.symtab,0x0,16,1
+
+// .text
+// main()
+// open stack for string buffer
+// "rld\n"
+movq $0x000a646c72, %rbx
+pushq %rbx
+// "hello wo"
+movq $0x6f77206f6c6c6568, %rbx
+pushq %rbx
+// call write for the string to stdout
+movq $1, %rax
+movq $1, %rdi
+movq %rsp, %rsi
+movq $13, %rdx
+syscall
+// call exit
+movq $60, %rax
+movq $0, %rdi
+syscall
+
+// .symtab
+// st_name,bind,type,st_shndex,st_value,st_size
+main,STB_GLOBAL,STT_FUNC,.text,0,12

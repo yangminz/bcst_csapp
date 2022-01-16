@@ -17,6 +17,7 @@
 #include "headers/common.h"
 #include "headers/algorithm.h"
 #include "headers/instruction.h"
+#include "headers/interrupt.h"
 
 static void print_register()
 {
@@ -48,6 +49,56 @@ static void print_stack()
         printf("\n");
         va -= 8;
     }
+}
+
+static void TestSyscallPrintHelloWorld()
+{
+    printf("Testing syscall to print 'hello world\n' ...\n");
+ 
+    // init state
+    cpu_reg.rsp = 0x7ffffffee0f0;
+
+    char assembly[12][MAX_INSTRUCTION_CHAR] = {
+        // open stack for string buffer
+        // "rld\n"
+        "movq $0x000a646c72, %rbx",
+        "pushq %rbx",
+        // "hello wo"
+        "movq $0x6f77206f6c6c6568, %rbx",
+        "pushq %rbx",
+        // call write for the string to stdout
+        "movq $1, %rax",
+        "movq $1, %rdi",
+        "movq %rsp, %rsi",
+        "movq $13, %rdx",
+        "int $0x80",
+        // call exit
+        "movq $60, %rax",
+        "movq $0, %rdi",
+        "int $0x80",
+    };
+
+    // copy to physical memory
+    for (int i = 0; i < 12; ++ i)
+    {
+        cpu_writeinst_dram(va2pa(i * 0x40 + 0x00400000), assembly[i]);
+    }
+    cpu_pc.rip = 0x00400000;
+
+    printf("begin\n");
+    int time = 0;
+    idt_init();
+    while (time < 12)
+    {
+        instruction_cycle();
+#ifdef DEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK
+        print_register();
+        print_stack();
+#endif
+        time ++;
+    }
+
+    printf("\033[32;1m\tPass\033[0m\n");
 }
 
 static void TestAddFunctionCallAndComputation()
@@ -212,8 +263,10 @@ static void TestSumRecursiveCondition()
 
 int main()
 {
-    TestAddFunctionCallAndComputation();
-    TestSumRecursiveCondition();
+    //TestAddFunctionCallAndComputation();
+    //TestSumRecursiveCondition();
+
+    TestSyscallPrintHelloWorld();
 
     finally_cleanup();
     return 0;

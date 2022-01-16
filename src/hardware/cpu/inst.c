@@ -126,6 +126,7 @@ static void lazy_initialize_trie()
         operator_mapping = trie_insert(operator_mapping, "movq",   (uint64_t)&mov_handler    );
         operator_mapping = trie_insert(operator_mapping, "mov",    (uint64_t)&mov_handler    );
         operator_mapping = trie_insert(operator_mapping, "push",   (uint64_t)&push_handler   );
+        operator_mapping = trie_insert(operator_mapping, "pushq",   (uint64_t)&push_handler   );
         operator_mapping = trie_insert(operator_mapping, "pop",    (uint64_t)&pop_handler    );
         operator_mapping = trie_insert(operator_mapping, "leaveq", (uint64_t)&leave_handler  );
         operator_mapping = trie_insert(operator_mapping, "callq",  (uint64_t)&call_handler   );
