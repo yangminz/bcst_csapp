@@ -18,6 +18,7 @@
 #include "headers/algorithm.h"
 #include "headers/instruction.h"
 #include "headers/interrupt.h"
+#include "headers/process.h"
 
 static void print_register()
 {
@@ -85,9 +86,18 @@ static void TestSyscallPrintHelloWorld()
     }
     cpu_pc.rip = 0x00400000;
 
+    // prepare a kernel stack
+    kstack_t kstack;
+    tss_s0_t tss;
+
+    tss.ESP0 = (uint64_t)&kstack + 8192;
+    cpu_task_register = (uint64_t)&tss;
+
+    idt_init();
+    syscall_init();
+    
     printf("begin\n");
     int time = 0;
-    idt_init();
     while (time < 12)
     {
         instruction_cycle();

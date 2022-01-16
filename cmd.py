@@ -208,6 +208,7 @@ def build(key):
                     "./src/hardware/cpu/interrupt.c",
                     "./src/hardware/memory/dram.c",
                     # "./src/hardware/memory/swap.c",
+                    "./src/process/syscall.c",
                     "./src/tests/test_run_isa.c",
                     "-o", "./bin/run_isa"
                 ]
@@ -380,6 +381,7 @@ def run(key):
     bin_map = {
         "inst" : ["./bin/test_inst"],
         "isa" : ["./bin/run_isa"],
+        "int" : ["./bin/run_isa"],
         "elf" : ["./bin/elf"],
         "link" : ["./bin/link", "main", "sum", "-o", "output"],
         "mesi" : ["./bin/mesi"],
@@ -400,6 +402,7 @@ def debug(key):
     gdb = "/usr/bin/gdb"
     bin_map = {
         "isa" : [gdb, "./bin/run_isa"],
+        "int" : [gdb, "./bin/run_isa"],
         "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
         "malloc" : [gdb, "./bin/malloc"],
         "bst" : [gdb, "./bin/bst"],

@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include "headers/cpu.h"
 #include "headers/interrupt.h"
+#include "headers/process.h"
 
 typedef void (*interrupt_handler_t)();
 
@@ -112,5 +113,6 @@ void pagefault_handler()
 void syscall_handler()
 {
     uint64_t syscall_num = cpu_reg.rax;
+    do_syscall(syscall_num);
     return;
 }

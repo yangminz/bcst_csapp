@@ -276,6 +276,7 @@ void int_handler(od_t *src_od, od_t *dst_od)
         // src: interrupt vector
         call_interrupt_stack_switching((src_od->value));
     }
+    increase_pc();
 }
 
 // from inst.c

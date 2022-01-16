@@ -78,7 +78,6 @@ uint64_t va2pa(uint64_t vaddr)
 #ifdef USE_PAGETABLE_VA2PA
     // assume that page_walk is consuming much time
     paddr = page_walk(vaddr);
-
 #endif
 
 #ifdef USE_TLB_HARDWARE
