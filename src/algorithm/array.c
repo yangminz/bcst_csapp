@@ -94,7 +94,7 @@ int array_delete(array_t *arr, int index)
     else
     {
         // copy move from index forward
-        for (int i = index; i < arr->count; ++ i)
+        for (int i = index + 1; i < arr->count; ++ i)
         {
             if (0 <= i - 1)
             {
