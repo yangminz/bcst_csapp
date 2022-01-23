@@ -41,6 +41,29 @@ void idt_init()
     idt[0x81].handler = timer_handler;
 }
 
+static uint64_t kstack_push(uint64_t rsp, uint64_t obj, uint64_t size)
+{
+    // rsp - current position of rsp
+    // obj - pushed object
+    // size - the size of pushed object in bytes
+    
+    /*  If we implement the kernel address space on physical memory in memory.h ...
+        cpu_write64bits_dram(
+            va2pa(cpu_reg.rsp),
+            rsp_user);
+        cpu_write64bits_dram(
+            va2pa(cpu_reg.rsp), 
+            rip_user);
+    */
+
+    rsp = rsp - size;
+    for (int i = 0; i < size; ++ i)
+    {
+        *(uint8_t *)(rsp + i) = *(uint8_t *)(obj + i);
+    }
+    return rsp;
+}
+
 // call interrupt with stack switching (user --> kernel)
 void call_interrupt_stack_switching(uint64_t int_vec)
 {
@@ -49,8 +72,10 @@ void call_interrupt_stack_switching(uint64_t int_vec)
     //  1.  Temporarily saves (internally) the current contents of 
     //      the SS, ESP, EFLAGS, CS, and EIP registers.
     //  TODO: SS & CS
-    uint64_t rsp_user = cpu_reg.rsp;
-    uint64_t rip_user = cpu_pc.rip;
+    trapframe_t tf = {
+        .rip = cpu_pc.rip,
+        .rsp = cpu_reg.rsp,
+    };
 
     //  2.  Loads the segment selector and stack pointer for the new stack 
     //      (that is, the stack for the privilege level being called) 
@@ -67,18 +92,7 @@ void call_interrupt_stack_switching(uint64_t int_vec)
     //  TODO: SS & CS
     //  TODO: kernel address space & page table mapping
     //  TODO: use malloc for kernel space
-    cpu_reg.rsp = cpu_reg.rsp - 8;
-    *(uint64_t *)cpu_reg.rsp = rsp_user;
-    cpu_reg.rsp = cpu_reg.rsp - 8;
-    *(uint64_t *)cpu_reg.rsp = rip_user;
-    /*  If we implement the kernel address space on physical memory in memory.h ...
-        cpu_write64bits_dram(
-            va2pa(cpu_reg.rsp),
-            rsp_user);
-        cpu_write64bits_dram(
-            va2pa(cpu_reg.rsp), 
-            rip_user);
-    */
+    cpu_reg.rsp = kstack_push(cpu_reg.rsp, (uint64_t)&tf, sizeof(tf));
 
     //  4.  Pushes an error code on the new stack (if appropriate).
 
@@ -95,7 +109,37 @@ void call_interrupt_stack_switching(uint64_t int_vec)
     //  so emulator's interrupt cannot interrupt host's CPU
 
     //  7.  Begins execution of the handler procedure at the new privilege level.
+    cpu_pc.rip = 0; // rip should be kernel handler starting address
     handler();
+
+    // interrupt return
+    interrupt_interrupt_stack_switching();
+}
+
+// interrupt return with stack switching (kernel --> user)
+void interrupt_interrupt_stack_switching()
+{
+    // 1.   Performs a privilege check.
+
+    // 2.   Restores the CS and EIP registers to their values prior to the interrupt or exception.
+    trapframe_t tf;
+    memcpy(&tf, (trapframe_t *)(cpu_reg.rsp), sizeof(tf));
+    cpu_reg.rsp += sizeof(tf);
+
+    // kernel stack should be empty now
+    tss_s0_t *tss_s0 = (tss_s0_t *)cpu_task_register;
+    uint64_t kstack = tss_s0->ESP0; // should be 8KB aligned
+    assert(cpu_reg.rsp == kstack);
+
+    cpu_pc.rip = tf.rip;
+
+    // 3.   Restores the EFLAGS register.
+    
+    // 4.   Restores the SS and ESP registers to their values prior to the interrupt or exception,
+    //      resulting in a stack switch back to the stack of the interrupted procedure.
+    cpu_reg.rsp = tf.rsp;
+    
+    // 5.   Resumes execution of the interrupted procedure.
 }
 
 // interrupt handlers
@@ -113,6 +157,31 @@ void pagefault_handler()
 void syscall_handler()
 {
     uint64_t syscall_num = cpu_reg.rax;
+
+    // push user general registers to kernel stack
+    // to save the context of user thread
+    userframe_t uf;
+    memcpy(&uf.general_registers, &cpu_reg, sizeof(cpu_reg));
+    memcpy(&uf.flags, &cpu_flags, sizeof(cpu_flags));
+    cpu_reg.rsp = kstack_push(cpu_reg.rsp, (uint64_t)&uf, sizeof(uf));
+
+    // store kernel rsp
+    uint64_t rsp = cpu_reg.rsp;
+    
+    // rsp push push push
     do_syscall(syscall_num);
+    // rsp pop pop pop
+
+    // restore kernel rsp
+    cpu_reg.rsp = rsp;
+
+    // recover user registers
+    memcpy(&uf, (userframe_t *)(cpu_reg.rsp), sizeof(uf));
+    cpu_reg.rsp += sizeof(uf);
+
+    // restore general registers
+    memcpy(&cpu_reg, &uf.general_registers, sizeof(cpu_reg));
+    memcpy(&cpu_flags, &uf.flags, sizeof(cpu_flags));
+
     return;
 }

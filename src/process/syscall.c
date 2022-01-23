@@ -37,6 +37,13 @@ static void exit_handler();
 static void wait_handler();
 static void kill_handler();
 
+static void destory_user_registers()
+{
+    // when run kernel thread, user registers should be useless
+    memset(&cpu_reg, 0, sizeof(cpu_reg));
+    memset(&cpu_flags, 0, sizeof(cpu_flags));
+}
+
 // initialize of IDT
 void syscall_init()
 {
@@ -52,10 +59,13 @@ void syscall_init()
 static void write_handler()
 {
     // assembly begin
+    // get user thread parameters
     uint64_t file_no = cpu_reg.rdi;
     uint64_t buf_vaddr = cpu_reg.rsi;
     uint64_t buf_length = cpu_reg.rdx;
     // assembly end
+
+    destory_user_registers();
 
     // The following resource are allocated on KERNEL STACK
     // TODO: this works only with NAVIE VA2PA

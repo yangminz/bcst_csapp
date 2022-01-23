@@ -24,8 +24,29 @@ typedef struct TSS_S0
     uint64_t SS0;
 } tss_s0_t;
 
+// the struct of trap frame when interrupt on kernel stack
+// executed by hardware CPU
+typedef struct STRUCT_TRAPFRAME
+{
+    // error code
+    uint64_t rip;
+    // CS: counter segment
+    // eflags
+    uint64_t rsp;
+    // SS: stack segment;
+} trapframe_t;
+
+// the struct of user frame when interrupt on kernel stack
+// managed by software OS (in handler)
+typedef struct STRUCT_USERFRAME
+{
+    cpu_reg_t general_registers;
+    cpu_flags_t flags;
+} userframe_t;
+
 void idt_init();
 
 void call_interrupt_stack_switching(uint64_t int_vec);
+void interrupt_interrupt_stack_switching();
 
 #endif
