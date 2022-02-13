@@ -16,6 +16,7 @@
 #include "headers/cpu.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
+#include "headers/address.h"
 
 typedef void (*interrupt_handler_t)();
 
@@ -113,11 +114,11 @@ void call_interrupt_stack_switching(uint64_t int_vec)
     handler();
 
     // interrupt return
-    interrupt_interrupt_stack_switching();
+    interrupt_return_stack_switching();
 }
 
 // interrupt return with stack switching (kernel --> user)
-void interrupt_interrupt_stack_switching()
+void interrupt_return_stack_switching()
 {
     // 1.   Performs a privilege check.
 
@@ -146,17 +147,28 @@ void interrupt_interrupt_stack_switching()
 
 void timer_handler()
 {
+    // TODO: trigger the scheduler
     return;
 }
 
 void pagefault_handler()
 {
+    // TODO: prepare parameter for level 4 pte & vaddr
+    address_t vaddr;
+
+    // TODO: 1. save user frame (trap frame is saved)
+    // TODO: 2. get fault vaddr
+    // TODO: 3. get pgd in kernel_pagefault_handler
+
+    kernel_pagefault_handler(vaddr);
     return;
 }
 
 void syscall_handler()
 {
     uint64_t syscall_num = cpu_reg.rax;
+
+    // TODO: trigger the scheduler
 
     // push user general registers to kernel stack
     // to save the context of user thread

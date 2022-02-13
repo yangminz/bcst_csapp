@@ -24,6 +24,27 @@ typedef union KERNEL_STACK_STRUCT
     // TODO: add thread_info
 } kstack_t;
 
+typedef struct KERNEL_THREAD_INFO_STRUCT
+{    
+    uint64_t pcb_vaddr;
+} threadinfo_t;
+
+typedef struct PROCESS_CONTROL_BLOCK_STRUCT
+{    
+    uint64_t pid;
+
+    struct
+    {
+        // page global directory
+        // This value is what's in CR3 register right now
+        uint64_t pgd_paddr;
+
+        // TODO: vm area
+    } mm;
+    
+    kstack_t *kstack;
+} pcb_t;
+
 void syscall_init();
 void do_syscall(int syscall_no);
 

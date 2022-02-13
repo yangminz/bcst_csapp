@@ -282,10 +282,16 @@ void int_handler(od_t *src_od, od_t *dst_od)
 // from inst.c
 void parse_instruction(char *inst_str, inst_t *inst);
 
+// time, the craft of god
+static uint64_t global_time = 0;
+static uint64_t timer_period = 5;
+
 // instruction cycle is implemented in CPU
 // the only exposed interface outside CPU
 void instruction_cycle()
 {
+    global_time += 1;
+
     // FETCH: get the instruction string by program counter
     char inst_str[MAX_INSTRUCTION_CHAR + 10];
     cpu_readinst_dram(va2pa(cpu_pc.rip), inst_str);
@@ -301,7 +307,13 @@ void instruction_cycle()
     // EXECUTE: get the function pointer or handler by the operator
     // update CPU and memory according the instruction
     inst.op(&(inst.src), &(inst.dst));
+    
+    // check page fault from the executed instruction
 
-    // TODO: check interrupt from APIC
-    // TODOL check page fault from the executed instruction
+    // check timer interrupt from APIC
+    if ((global_time % timer_period) == 0)
+    {
+        call_interrupt_stack_switching(0x81);
+        return;
+    }
 }
