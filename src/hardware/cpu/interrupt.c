@@ -44,8 +44,8 @@ void idt_init()
 
 static void print_kstack();
 
-// get the high vaddr of kstack
-static uint64_t get_kstack_top()
+// get the high vaddr of kstack from TSS
+uint64_t get_kstack_top()
 {
     //  TRICK: we do not use GDT. Instead, TR directly points to TSS (actually Stack0)
     tss_s0_t *tss_s0 = (tss_s0_t *)cpu_task_register;
@@ -253,7 +253,7 @@ void interrupt_stack_switching(uint64_t int_vec)
     cpu_pc.rip = (uint64_t)&handler; // rip should be kernel handler starting address
     handler();
 
-    // interrupt return
+    // interrupt return (iret instruction in kernel code)
     interrupt_return_stack_switching();
 
     printf("\033[32;1m After tf poped \033[0m\n");
@@ -271,9 +271,9 @@ void interrupt_return_stack_switching()
 
 void timer_handler()
 {
-    // TODO: trigger the scheduler
-    printf("timer handler: os should schedule\n");
-    return;
+    software_push_userframe();
+    os_schedule();
+    software_pop_userframe();
 }
 
 void pagefault_handler()
@@ -352,7 +352,7 @@ static void print_kstack()
     int num64 = KERNEL_STACK_SIZE / size64;
     int n_cols = 8;
     uint64_t base = kstack_top_vaddr - size64;
-    for (int r = 0; r < num64 / n_cols; ++ r)
+    for (int r = 0; r < 3; ++ r)
     {
         printf("[%16lx]  ", base);
 

@@ -87,11 +87,20 @@ static void TestSyscallPrintHelloWorld()
     cpu_pc.rip = 0x00400000;
 
     // prepare a kernel stack
-    kstack_t kstack;
+    uint8_t kstack_buf[8192 * 2];
+    uint64_t k_temp = (uint64_t)&kstack_buf[8192];
+
+    kstack_t *kstack = (kstack_t *)((k_temp >> 13) << 13);
     tss_s0_t tss;
 
-    tss.ESP0 = (uint64_t)&kstack + 8192;
+    tss.ESP0 = (uint64_t)kstack + 8192;
     cpu_task_register = (uint64_t)&tss;
+
+    pcb_t curr;
+    curr.prev = &curr;
+    curr.next = &curr;
+    curr.kstack = kstack;
+    kstack->threadinfo.pcb = &curr;
 
     idt_init();
     syscall_init();

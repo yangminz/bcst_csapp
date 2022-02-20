@@ -41,7 +41,17 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
     } mm;
     
     kstack_t *kstack;
+    uint64_t ctx_rsp;
+
+    struct PROCESS_CONTROL_BLOCK_STRUCT *next;
+    struct PROCESS_CONTROL_BLOCK_STRUCT *prev;
 } pcb_t;
+
+typedef struct STRUCT_PROCESS_CONTEXT
+{
+    cpu_reg_t general_registers;
+    cpu_flags_t flags;
+} context_t;
 
 void syscall_init();
 void do_syscall(int syscall_no);
