@@ -91,7 +91,7 @@ void os_schedule()
     // only kstack & page table will do the switch
 
     uint64_t rsp = cpu_reg.rsp;
-    uint64_t kstack_bottom_vaddr = ((rsp >> 13) << 13) + KERNEL_STACK_SIZE;
+    uint64_t kstack_bottom_vaddr = ((rsp >> 13) << 13);
 
     kstack_t *kstack_old = (kstack_t *)kstack_bottom_vaddr;
     pcb_t *pcb_old = kstack_old->threadinfo.pcb;

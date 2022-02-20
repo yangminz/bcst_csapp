@@ -271,6 +271,7 @@ void interrupt_return_stack_switching()
 
 void timer_handler()
 {
+    printf("\033[32;1mTimer interrupt to invoke OS scheduling\n\033[0m\n");
     software_push_userframe();
     os_schedule();
     software_pop_userframe();

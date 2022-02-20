@@ -90,10 +90,10 @@ static void TestSyscallPrintHelloWorld()
     uint8_t kstack_buf[8192 * 2];
     uint64_t k_temp = (uint64_t)&kstack_buf[8192];
 
-    kstack_t *kstack = (kstack_t *)((k_temp >> 13) << 13);
+    kstack_t *kstack = (kstack_t *)(((k_temp >> 13) << 13) + KERNEL_STACK_SIZE);
     tss_s0_t tss;
 
-    tss.ESP0 = (uint64_t)kstack + 8192;
+    tss.ESP0 = (uint64_t)kstack + KERNEL_STACK_SIZE;
     cpu_task_register = (uint64_t)&tss;
 
     pcb_t curr;
