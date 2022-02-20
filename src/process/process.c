@@ -16,9 +16,5 @@
 #include "headers/cpu.h"
 #include "headers/memory.h"
 #include "headers/interrupt.h"
+#include "headers/process.h"
 
-void os_schedule()
-{
-    // The magic is: RIP is not updated at all
-    // only kstack & page table will do the switch
-}

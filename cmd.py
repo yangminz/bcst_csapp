@@ -209,6 +209,7 @@ def build(key):
                     "./src/hardware/memory/dram.c",
                     # "./src/hardware/memory/swap.c",
                     "./src/process/syscall.c",
+                    "./src/process/schedule.c",
                     "./src/tests/test_run_isa.c",
                     "-o", "./bin/run_isa"
                 ]

@@ -46,8 +46,8 @@ typedef struct STRUCT_USERFRAME
 
 void idt_init();
 
-void call_interrupt_stack_switching(uint64_t int_vec);
-void interrupt_interrupt_stack_switching();
+void interrupt_stack_switching(uint64_t int_vec);
+void interrupt_return_stack_switching();
 
 
 #endif

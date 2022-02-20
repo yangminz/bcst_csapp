@@ -218,7 +218,7 @@ static uint64_t page_walk(uint64_t vaddr_value)
                     printf("page walk level 4: pt[%lx].present == 0\n\tmalloc new page table for it\n", vaddr.vpn1);
 #endif
                     // TODO: prepare arguments for page fault handler
-                    call_interrupt_stack_switching(0x80);
+                    interrupt_stack_switching(0x80);
 
 
 
@@ -260,7 +260,7 @@ static uint64_t page_walk(uint64_t vaddr_value)
 #ifdef DBUEG_PAGE_WALK
             printf("page walk level 2: pud[%lx].present == 0\n\tmalloc new page table for it\n", vaddr.vpn1);
 #endif
-            call_interrupt_stack_switching(0x80);
+            interrupt_stack_switching(0x80);
 
             /*
             pte123_t *pmd = malloc(page_table_size);

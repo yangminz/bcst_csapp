@@ -31,10 +31,11 @@ void kernel_pagefault_handler(address_t vaddr)
     // get page table directory from rsp
 
     uint64_t rsp_now = cpu_reg.rsp;
-    uint64_t kstack_high = (rsp_now >> 13) << 13;
-    uint64_t thread_info_low = kstack_high - 8192;
-    uint64_t pcb_vaddr = ((threadinfo_t *)thread_info_low)->pcb_vaddr;
-    uint64_t pgd_paddr = ((pcb_t *)pcb_vaddr)->mm.pgd_paddr;
+    uint64_t kstack_top = (rsp_now >> 13) << 13;
+    uint64_t kstack_bottom = kstack_top - KERNEL_STACK_SIZE;
+    
+    kstack_t *kstack = (kstack_t *)kstack_bottom;
+    uint64_t pgd_paddr = kstack->threadinfo.pcb->mm.pgd_paddr;
 
     // this is the selected ppn for vaddr
     int ppn = -1;
@@ -134,11 +135,11 @@ void kernel_pagefault_handler(address_t vaddr)
     victim->pte_value = 0;
     victim->present = 0;
     victim->daddr = page_map[ppn].daddr;
+);
 
     // load page from disk to physical memory first
     daddr = pte->daddr;
-    swap_in(daddr, ppn);
-
+    swap_in(daddr, ppn
     pte->pte_value = 0;
     pte->present = 1;
     pte->ppn = ppn;

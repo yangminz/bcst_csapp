@@ -274,7 +274,7 @@ void int_handler(od_t *src_od, od_t *dst_od)
     if (src_od->type == OD_IMM)
     {
         // src: interrupt vector
-        call_interrupt_stack_switching((src_od->value));
+        interrupt_stack_switching((src_od->value));
     }
     increase_pc();
 }
@@ -313,7 +313,7 @@ void instruction_cycle()
     // check timer interrupt from APIC
     if ((global_time % timer_period) == 0)
     {
-        call_interrupt_stack_switching(0x81);
+        interrupt_stack_switching(0x81);
         return;
     }
 }

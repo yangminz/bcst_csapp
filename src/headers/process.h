@@ -21,16 +21,14 @@
 typedef union KERNEL_STACK_STRUCT
 {    
     uint8_t stack[KERNEL_STACK_SIZE];
-    // TODO: add thread_info
+    struct
+    {
+        struct PROCESS_CONTROL_BLOCK_STRUCT *pcb;
+    } threadinfo;
 } kstack_t;
 
-typedef struct KERNEL_THREAD_INFO_STRUCT
-{    
-    uint64_t pcb_vaddr;
-} threadinfo_t;
-
 typedef struct PROCESS_CONTROL_BLOCK_STRUCT
-{    
+{
     uint64_t pid;
 
     struct
@@ -47,5 +45,7 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
 
 void syscall_init();
 void do_syscall(int syscall_no);
+
+void os_schedule();
 
 #endif
