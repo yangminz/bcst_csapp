@@ -41,6 +41,7 @@ int swap_in(uint64_t daddr, uint64_t ppn)
         *((uint64_t *)(&pm[ppn_ppo + i * 8])) = string2uint(str);
     }
     fclose(fr);
+    return 0;
 }
 
 int swap_out(uint64_t daddr, uint64_t ppn)
@@ -57,4 +58,5 @@ int swap_out(uint64_t daddr, uint64_t ppn)
         fprintf(fw, "0x%16lx\n", *((uint64_t *)(&pm[ppn_ppo + i * 8])));
     }
     fclose(fw);
+    return 0;
 }

@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "headers/memory.h"
 
 // include guards to prevent double declaration of any identifiers 
 // such as types, enums and static variables
@@ -27,6 +28,12 @@ typedef union KERNEL_STACK_STRUCT
     } threadinfo;
 } kstack_t;
 
+typedef struct STRUCT_PROCESS_CONTEXT
+{
+    cpu_reg_t regs;
+    cpu_flags_t flags;
+} context_t;
+
 typedef struct PROCESS_CONTROL_BLOCK_STRUCT
 {
     uint64_t pid;
@@ -35,27 +42,29 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
     {
         // page global directory
         // This value is what's in CR3 register right now
-        uint64_t pgd_paddr;
+        union
+        {
+            uint64_t pgd_paddr;
+            pte123_t *pgd;
+        };
 
         // TODO: vm area
     } mm;
     
     kstack_t *kstack;
-    uint64_t ctx_rsp;
+
+    // it's easier to store the context to PCB
+    context_t context;
 
     struct PROCESS_CONTROL_BLOCK_STRUCT *next;
     struct PROCESS_CONTROL_BLOCK_STRUCT *prev;
 } pcb_t;
 
-typedef struct STRUCT_PROCESS_CONTEXT
-{
-    cpu_reg_t general_registers;
-    cpu_flags_t flags;
-} context_t;
-
 void syscall_init();
 void do_syscall(int syscall_no);
 
 void os_schedule();
+
+pcb_t *get_current_pcb();
 
 #endif

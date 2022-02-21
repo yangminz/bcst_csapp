@@ -71,7 +71,8 @@ static void write_handler()
     // TODO: this works only with NAVIE VA2PA
     for (int i = 0; i < buf_length; ++ i)
     {
-        printf("%c", pm[va2pa(buf_vaddr + i)]);
+        // print as yellow
+        printf("\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i)]);
     }
 }
 
@@ -91,7 +92,7 @@ static void exit_handler()
     // assembly end
 
     // The following resource are allocated on KERNEL STACK
-    printf("Good Bye ~~~\n");
+    printf("\033[33;1mGood Bye ~~~\n\033[0m");
 }
 
 static void wait_handler()

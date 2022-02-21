@@ -28,6 +28,7 @@
 
 void kernel_pagefault_handler(address_t vaddr)
 {
+    /*
     // get page table directory from rsp
 
     uint64_t rsp_now = cpu_reg.rsp;
@@ -150,4 +151,5 @@ void kernel_pagefault_handler(address_t vaddr)
     page_map[ppn].dirty = 0;
     page_map[ppn].pte4 = pte;
     page_map[ppn].daddr = daddr;
+    */
 }

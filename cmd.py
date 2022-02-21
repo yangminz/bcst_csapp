@@ -214,6 +214,34 @@ def build(key):
                     "-o", "./bin/run_isa"
                 ]
             ],
+        "ctx" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_INSTRUCTION_CYCLE",
+                    # "-DDEBUG_ENABLE_SRAM_CACHE",
+                    # "-DUSE_NAVIE_VA2PA",
+                    "-DUSE_PAGETABLE_VA2PA",
+                    "./src/common/convert.c",
+                    "./src/common/cleanup.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/trie.c",
+                    "./src/algorithm/array.c",
+                    "./src/hardware/cpu/isa.c",
+                    "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/cpu/inst.c",
+                    # "./src/hardware/cpu/sram.c",
+                    "./src/hardware/cpu/interrupt.c",
+                    "./src/hardware/memory/dram.c",
+                    "./src/hardware/memory/swap.c",
+                    "./src/process/syscall.c",
+                    "./src/process/schedule.c",
+                    "./src/process/pagefault.c",
+                    "./src/tests/test_context.c",
+                    "-o", "./bin/ctx"
+                ]
+            ],
         "inst" : [
                 [
                     "/usr/bin/gcc-7", 
@@ -392,6 +420,7 @@ def run(key):
         "bst" : ["./bin/bst"],
         "malloc" : ["./bin/malloc"],
         "convert" : ["./bin/convert"],
+        "ctx" : ["./bin/ctx"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -410,6 +439,7 @@ def debug(key):
         "rbt" : [gdb, "./bin/rbt"],
         "trie" : [gdb, "./bin/trie"],
         "inst" : [gdb, "./bin/test_inst"],
+        "ctx" : [gdb, "./bin/ctx"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

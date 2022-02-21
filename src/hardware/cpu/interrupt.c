@@ -45,12 +45,17 @@ void idt_init()
 static void print_kstack();
 
 // get the high vaddr of kstack from TSS
-uint64_t get_kstack_top()
+uint64_t get_kstack_top_TSS()
 {
     //  TRICK: we do not use GDT. Instead, TR directly points to TSS (actually Stack0)
-    tss_s0_t *tss_s0 = (tss_s0_t *)cpu_task_register;
-    uint64_t kstack = tss_s0->ESP0; // should be 8KB aligned
-    return kstack;
+    uint64_t ks = tr_global_tss.ESP0; // should be 8KB aligned
+    assert(ks % KERNEL_STACK_SIZE == 0);
+    return ks;
+}
+
+uint64_t get_kstack_RSP()
+{
+    return (((cpu_reg.rsp) >> 13) << 13);
 }
 
 /* TRAP FRAME IS PART OF HARDWARE's CONCERN
@@ -85,17 +90,17 @@ static uint64_t hardware_push_trapframe(trapframe_t *tf)
     // Attention: RSP is virtual address, mapped by kernel part of page table.
     // But in our simulator, the kernel virtual address is the address
     // of the simulator process.
-    uint64_t kstack_low_vaddr = cpu_reg.rsp;
-    assert(kstack_low_vaddr == get_kstack_top());
+    uint64_t rsp = cpu_reg.rsp;
+    assert(rsp == get_kstack_top_TSS());
 
     // 2.   Push the prepared trapframe to kernel stack
     uint32_t tf_size = sizeof(trapframe_t);
     assert(tf_size < KERNEL_STACK_SIZE);
-    kstack_low_vaddr -= tf_size;
-    memcpy((trapframe_t *)kstack_low_vaddr, tf, tf_size);
+    rsp -= tf_size;
+    memcpy((trapframe_t *)rsp, tf, tf_size);
 
     // 3.   Update RSP
-    cpu_reg.rsp = kstack_low_vaddr;
+    cpu_reg.rsp = rsp;
 
     return cpu_reg.rsp;
 }
@@ -112,20 +117,17 @@ static void hardware_pop_trapframe()
 
     // get the starting address of trap frame
     // which is the low address of kstack now
-    uint64_t kstack_low_vaddr = cpu_reg.rsp;
-    uint64_t kstack_top_vaddr = get_kstack_top();
-    assert((kstack_low_vaddr + tf_size) == kstack_top_vaddr);
+    uint64_t rsp = cpu_reg.rsp;
+    assert((rsp + tf_size) == get_kstack_top_TSS());
 
     // restore the trap frame
     // tf is holding the user thread context
     trapframe_t tf;
-    memcpy(&tf, (trapframe_t *)kstack_low_vaddr, tf_size);
+    memcpy(&tf, (trapframe_t *)rsp, tf_size);
 
-    // update RSP
-    kstack_low_vaddr += tf_size;
-    cpu_reg.rsp = kstack_low_vaddr;
-    // check that this kstack is empty
-    assert(cpu_reg.rsp == kstack_top_vaddr);
+    // pop trap frame
+    rsp += tf_size;
+    cpu_reg.rsp = rsp;
 
     // Restores the CS and EIP registers to their values prior to the interrupt or exception.
     cpu_pc.rip = tf.rip;
@@ -163,19 +165,19 @@ static void software_push_userframe()
     assert(uf_size < KERNEL_STACK_SIZE - sizeof(trapframe_t));
 
     // get the vaddr of kstack low
-    uint64_t kstack_low_vaddr = cpu_reg.rsp;
-    assert((kstack_low_vaddr + tf_size) == get_kstack_top());
+    uint64_t rsp = cpu_reg.rsp;
+    assert((rsp + tf_size) == get_kstack_top_TSS());
 
     // store user frame to kstack
-    kstack_low_vaddr -= uf_size;
+    rsp -= uf_size;
     userframe_t uf = {
-        .general_registers = cpu_reg,
+        .regs = cpu_reg,
         .flags = cpu_flags
     };
-    memcpy((userframe_t *)kstack_low_vaddr, &uf, uf_size);
+    memcpy((userframe_t *)rsp, &uf, uf_size);
 
     // push RSP
-    cpu_reg.rsp = kstack_low_vaddr;
+    cpu_reg.rsp = rsp;
 }
 
 static void software_pop_userframe()
@@ -187,28 +189,25 @@ static void software_pop_userframe()
     assert(uf_size < KERNEL_STACK_SIZE - sizeof(trapframe_t));
 
     // get the vaddr of kstack low
-    uint64_t kstack_low_vaddr = cpu_reg.rsp;
-    assert((kstack_low_vaddr + tf_size + uf_size) == get_kstack_top());
+    uint64_t rsp = cpu_reg.rsp;
+    assert((rsp + tf_size + uf_size) == get_kstack_top_TSS());
 
     // restore user frame from kstack
     userframe_t uf;
-    memcpy(&uf, (trapframe_t *)kstack_low_vaddr, uf_size);
-    kstack_low_vaddr += uf_size;
+    memcpy(&uf, (trapframe_t *)rsp, uf_size);
+    rsp += uf_size;
     
     // restore cpu registers from user frame
-    memcpy(&cpu_reg, &uf.general_registers, sizeof(cpu_reg));
+    memcpy(&cpu_reg, &uf.regs, sizeof(cpu_reg));
     memcpy(&cpu_flags, &uf.flags, sizeof(cpu_flags));
 
     // pop rsp
-    cpu_reg.rsp = kstack_low_vaddr;
+    cpu_reg.rsp = rsp;
 }
 
 // call interrupt with stack switching (user --> kernel)
 void interrupt_stack_switching(uint64_t int_vec)
 {
-    printf("\033[32;1m start stack switching \033[0m\n");
-    print_kstack();
-
     assert(0 <= int_vec && int_vec <= 255);
 
     //  1.  Temporarily saves (internally) the current contents of 
@@ -224,7 +223,7 @@ void interrupt_stack_switching(uint64_t int_vec)
     //      from the TSS into the SS and ESP registers and switches to the new stack.
     // stack switching
     // this kstack is allocated in the heap of emulator
-    cpu_reg.rsp = get_kstack_top();
+    cpu_reg.rsp = get_kstack_top_TSS();
 
     //  3.  Pushes the temporarily saved SS, ESP, EFLAGS, CS, and EIP values 
     //      for the interrupted procedure’s stack onto the new stack.
@@ -246,8 +245,6 @@ void interrupt_stack_switching(uint64_t int_vec)
     //  Not needed because our interrupt is in isa.c:instruction_cycle
     //  but for kernel routine the code is running in host's CPU
     //  so emulator's interrupt cannot interrupt host's CPU
-    printf("\033[32;1m After tf pushed to kernel stack \033[0m\n");
-    print_kstack();
 
     //  7.  Begins execution of the handler procedure at the new privilege level.
     cpu_pc.rip = (uint64_t)&handler; // rip should be kernel handler starting address
@@ -255,9 +252,6 @@ void interrupt_stack_switching(uint64_t int_vec)
 
     // interrupt return (iret instruction in kernel code)
     interrupt_return_stack_switching();
-
-    printf("\033[32;1m After tf poped \033[0m\n");
-    print_kstack();
 }
 
 // interrupt return with stack switching (kernel --> user)
@@ -271,46 +265,8 @@ void interrupt_return_stack_switching()
 
 void timer_handler()
 {
-    printf("\033[32;1mTimer interrupt to invoke OS scheduling\n\033[0m\n");
+    printf("\033[32;1mTimer interrupt to invoke OS scheduling\033[0m\n");
     software_push_userframe();
-    os_schedule();
-    software_pop_userframe();
-}
-
-void pagefault_handler()
-{
-    // TODO: prepare parameter for level 4 pte & vaddr
-    address_t vaddr;
-
-    // TODO: 1. save user frame (trap frame is saved)
-    // TODO: 2. get fault vaddr
-    // TODO: 3. get pgd in kernel_pagefault_handler
-    // kernel_pagefault_handler(vaddr);
-    return;
-}
-
-void syscall_handler()
-{
-    // push user general registers to kernel stack
-    // to save the context of user thread
-    software_push_userframe();
-
-    // TRICK: rsp should not be stored here
-    // but we need to simulate kernel stack push & pop.
-    // So this is the vaddr of RSP when `do_syscall` returns
-    uint64_t rsp_after_do_syscall = cpu_reg.rsp;
-    
-    printf("\033[32;1m syscall handler: after user frame saved \033[0m\n");
-    print_kstack();
-
-    // The following instructions are executed in the 
-    // left space in the kernel stack
-    do_syscall(cpu_reg.rax);
-    cpu_reg.rsp = rsp_after_do_syscall;
-
-    // after the task of syscall
-    // OS schedules to another process
-    os_schedule();
 
     /* ================================= */
     /* ATTENTION HERE!!!                 */
@@ -323,9 +279,45 @@ void syscall_handler()
     /* So the user frame restored here   */
     /* is for the new scheduled process. */
     /* ================================= */
+    os_schedule();
 
-    printf("\033[32;1m syscall handler: after user frame restored \033[0m\n");
-    print_kstack();
+    software_pop_userframe();
+}
+
+void pagefault_handler()
+{
+    printf("\033[32;1mPage fault handling\033[0m\n");
+    // TODO: prepare parameter for level 4 pte & vaddr
+    address_t vaddr;
+
+    // TODO: 1. save user frame (trap frame is saved)
+    // TODO: 2. get fault vaddr
+    // TODO: 3. get pgd in kernel_pagefault_handler
+    // kernel_pagefault_handler(vaddr);
+    return;
+}
+
+void syscall_handler()
+{
+    printf("\033[32;1mInvoking system call [%ld]\033[0m\n", cpu_reg.rax);
+
+    // push user general registers to kernel stack
+    // to save the context of user thread
+    software_push_userframe();
+
+    // TRICK: rsp should not be stored here
+    // but we need to simulate kernel stack push & pop.
+    // So this is the vaddr of RSP when `do_syscall` returns
+    uint64_t rsp_after_do_syscall = cpu_reg.rsp;
+    
+    // The following instructions are executed in the 
+    // left space in the kernel stack
+    do_syscall(cpu_reg.rax);
+    cpu_reg.rsp = rsp_after_do_syscall;
+
+    // after the task of syscall
+    // OS schedules to another process
+    os_schedule();
 
     // recover user registers of new scheduled process
     software_pop_userframe();
@@ -335,18 +327,20 @@ void syscall_handler()
 
 static void print_kstack()
 {
-    uint64_t kstack_top_vaddr = get_kstack_top();
-    uint64_t kstack_bottom_vaddr = kstack_top_vaddr - KERNEL_STACK_SIZE;
+    uint64_t kstack_bottom_vaddr = get_kstack_RSP();
+    uint64_t kstack_top_vaddr = kstack_bottom_vaddr + KERNEL_STACK_SIZE;
     
     uint64_t tfa = kstack_top_vaddr - sizeof(trapframe_t);
     uint64_t ufa = tfa - sizeof(userframe_t);
 
+    pcb_t *pcb = get_current_pcb();
+
     // general info
-    printf("Kernel stack info\n" \
+    printf("Kernel stack info [PID = %ld]\n" \
             "top vaddr:\t0x%016lx\n" \
             "bottom vaddr:\t0x%016lx\n" \
             "RSP now:\t0x%016lx\n" \
-            "RIP now:\t0x%016lx\n", kstack_top_vaddr, kstack_bottom_vaddr, cpu_reg.rsp, cpu_pc.rip);
+            "RIP now:\t0x%016lx\n", pcb->pid, kstack_top_vaddr, kstack_bottom_vaddr, cpu_reg.rsp, cpu_pc.rip);
     
     // whole stack
     int size64 = sizeof(uint64_t);
@@ -398,13 +392,13 @@ static void print_kstack()
             "RBP: %016lx\n" \
             "RSP: %016lx\n" \
             "CF: %d\tZF: %d\tSF: %d\tOF: %d\n",
-            uf->general_registers.rax,
-            uf->general_registers.rbx,
-            uf->general_registers.rcx,
-            uf->general_registers.rdx,
-            uf->general_registers.rsi,
-            uf->general_registers.rdi,
-            uf->general_registers.rbp,
-            uf->general_registers.rsp,
+            uf->regs.rax,
+            uf->regs.rbx,
+            uf->regs.rcx,
+            uf->regs.rdx,
+            uf->regs.rsi,
+            uf->regs.rdi,
+            uf->regs.rbp,
+            uf->regs.rsp,
             uf->flags.CF, uf->flags.ZF, uf->flags.SF, uf->flags.OF);
 }

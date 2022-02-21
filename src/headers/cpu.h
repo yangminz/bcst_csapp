@@ -252,8 +252,19 @@ typedef union
 } cpu_pc_t;
 cpu_pc_t cpu_pc;
 
+// we only use stack0 of TSS
+// This information is stored in main memory
+typedef struct TSS_S0
+{
+    uint64_t ESP0;
+    uint64_t SS0;
+} tss_s0_t;
+
+// TSS are stored in DRAM
+// Intel thinks that each process can have its own TSS.
+// But we can use only one TSS globally.
 // pointing to Task-State Segment (in main memory) of the current process
-uint64_t cpu_task_register;
+tss_s0_t tr_global_tss;
 
 // control registers
 typedef struct
@@ -279,6 +290,8 @@ void instruction_cycle();
 
 /*--------------------------------------*/
 // mmu functions
+
+uint64_t mmu_vaddr_pagefault;
 
 // translate the virtual address to physical address in MMU
 // each MMU is owned by each core

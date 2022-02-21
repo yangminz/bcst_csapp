@@ -274,9 +274,24 @@ void int_handler(od_t *src_od, od_t *dst_od)
     if (src_od->type == OD_IMM)
     {
         // src: interrupt vector
+        increase_pc();
+        cpu_flags.__flags_value = 0;
+
+        /*  Please do think why RIP should increase before invoking interrut?
+         *  Consider that each interrupt will raise one context switch.
+         *  So after this function, RIP & RSP all belong to the new process.
+         *  If increae RIP after interrupt:
+         * 
+         *      interrupt_stack_switching((src_od->value)); // 1
+         *      increase_pc();                              // 2
+         * 
+         *  Then line 2 will update the RIP of the new process, making the 
+         *  new process lost one instruction.
+         */
         interrupt_stack_switching((src_od->value));
+        // Here is the thread of new process
+        // so do not do any operation after interrupt invocation.
     }
-    increase_pc();
 }
 
 // from inst.c
@@ -308,8 +323,6 @@ void instruction_cycle()
     // update CPU and memory according the instruction
     inst.op(&(inst.src), &(inst.dst));
     
-    // check page fault from the executed instruction
-
     // check timer interrupt from APIC
     if ((global_time % timer_period) == 0)
     {

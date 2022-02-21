@@ -28,6 +28,7 @@
 #define MAX_NUM_PHYSICAL_PAGE (16)    // 1 + MAX_INDEX_PHYSICAL_PAGE
 
 #define PAGE_TABLE_ENTRY_NUM    (512)
+#define PAGE_SIZE    (4096)
 
 // physical memory
 // 16 physical memory pages
