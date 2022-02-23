@@ -61,9 +61,6 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
 } pcb_t;
 
 void syscall_init();
-void do_syscall(int syscall_no);
-
-void os_schedule();
 
 pcb_t *get_current_pcb();
 

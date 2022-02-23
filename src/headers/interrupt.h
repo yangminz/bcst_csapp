@@ -62,6 +62,7 @@ uint64_t get_kstack_RSP();
  *                      So to successfully return to next process 1 instruction,
  *                      the return instruction to be pushed is the next.
  *                      THUS, WE NEED TO INCREMENT RIP BEFORE INVOKING INTERRUPT
+ *              process 1, ret addr
  * 
  *                  instruction_cycle
  *                      int_handler
@@ -72,8 +73,6 @@ uint64_t get_kstack_RSP();
  *                                  os_schedule
  *                              interrupt_return_stack_switching 
  *                              // jump to the return instruction of process 2
- * 
- *              process 1, ret addr
  * 
  *      Timer interrupt
  *              process 1, add

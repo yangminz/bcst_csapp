@@ -101,24 +101,6 @@ typedef union
     };
 } pte4_t;   // PT
 
-// physical page descriptor
-typedef struct
-{
-    int allocated;
-    int dirty;
-    int time;   // LRU cache
-
-    // real world: mapping to anon_vma or address_space
-    // we simply the situation here
-    // TODO: if multiple processes are using this page? E.g. Shared library
-    pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
-    uint64_t daddr;   // binding the revesed mapping with mapping to disk
-} pd_t;
-
-// for each pagable (swappable) physical page
-// create one reversed mapping
-pd_t page_map[MAX_NUM_PHYSICAL_PAGE]; 
-
 /*======================================*/
 /*      memory R/W                      */
 /*======================================*/

@@ -34,6 +34,11 @@ void pagefault_handler();           // trap gate - exception
 void syscall_handler();             // trap gate - software interrupt / trap
 void timer_handler();               // interrupt gate - local APIC
 
+// implementation of handlers
+void do_syscall(int syscall_no);
+void fix_pagefault();
+void os_schedule();
+
 // initialize of IDT
 void idt_init()
 {
@@ -281,7 +286,7 @@ void timer_handler()
 {
     printf("\033[32;1mTimer interrupt to invoke OS scheduling\033[0m\n");
     software_push_userframe();
-
+    os_schedule();
     /* ================================= */
     /* ATTENTION HERE!!!                 */
     /* --------------------------------- */
@@ -293,22 +298,16 @@ void timer_handler()
     /* So the user frame restored here   */
     /* is for the new scheduled process. */
     /* ================================= */
-    os_schedule();
-
     software_pop_userframe();
 }
 
 void pagefault_handler()
 {
     printf("\033[32;1mPage fault handling\033[0m\n");
-    // TODO: prepare parameter for level 4 pte & vaddr
-    address_t vaddr;
 
-    // TODO: 1. save user frame (trap frame is saved)
-    // TODO: 2. get fault vaddr
-    // TODO: 3. get pgd in kernel_pagefault_handler
-    // kernel_pagefault_handler(vaddr);
-    return;
+    software_push_userframe();
+    fix_pagefault();
+    os_schedule();
 }
 
 void syscall_handler()

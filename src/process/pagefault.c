@@ -18,26 +18,89 @@
 #include "headers/interrupt.h"
 #include "headers/process.h"
 
-
-
 // search paddr from main memory and disk
 // TODO: raise exception 14 (page fault) here
 // switch privilege from user mode (ring 3) to kernel mode (ring 0)
 // page_fault_handler(&pt[vaddr.vpn4], vaddr);
 
+// swap in/out
+int swap_in(uint64_t daddr, uint64_t ppn);
+int swap_out(uint64_t daddr, uint64_t ppn);
 
-void kernel_pagefault_handler(address_t vaddr)
+// 4KB
+static int page_table_size = PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t);
+
+// physical page descriptor
+typedef struct
 {
-    /*
+    int allocated;
+    int dirty;
+    int time;   // LRU cache
+
+    // real world: mapping to anon_vma or address_space
+    // we simply the situation here
+    // TODO: if multiple processes are using this page? E.g. Shared library
+    pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
+    uint64_t daddr;   // binding the revesed mapping with mapping to disk
+} pd_t;
+
+// for each pagable (swappable) physical page
+// create one reversed mapping
+static pd_t page_map[MAX_NUM_PHYSICAL_PAGE]; 
+
+// get the level 4 page table entry
+static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
+{
+    int vpns[4] = {
+        vaddr->vpn1,
+        vaddr->vpn2,
+        vaddr->vpn3,
+        vaddr->vpn4,
+    };
+
+    assert(pgd != NULL);
+    assert(sizeof(pte123_t) == sizeof(pte4_t));
+
+    int level = 0;
+    pte123_t *tab = pgd;
+    while (level < 4)
+    {
+        int vpn = vpns[level];
+        if (tab[vpn].present != 1)
+        {
+            // allocate a new page for next level
+
+            // note that this is a 48-bit address !!!
+            // the high bits are all zero
+            // And sizeof(pte123_t) == sizeof(pte4_t)
+            pte123_t *new_tab = (pte123_t *)malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
+            
+            // .paddr field is 50 bits
+            tab[vpn].paddr = (uint64_t)new_tab;
+            tab[vpn].present = 1;
+        }
+
+        // move to next level
+        tab = (pte123_t *)((uint64_t)tab[vpn].paddr);
+        level += 1;
+    }
+
+    pte4_t *pt = (pte4_t *)tab;
+    return &pt[vaddr->vpn4];
+}
+
+void fix_pagefault()
+{
     // get page table directory from rsp
+    pcb_t *pcb = get_current_pcb();
+    pte123_t *pgd = pcb->mm.pgd;
 
-    uint64_t rsp_now = cpu_reg.rsp;
-    uint64_t kstack_top = (rsp_now >> 13) << 13;
-    uint64_t kstack_bottom = kstack_top - KERNEL_STACK_SIZE;
+    // get the faulting address from MMU register
+    address_t vaddr = {.address_value = mmu_vaddr_pagefault};
+
+    // get the level 4 page table entry
+    pte4_t *pte = get_entry4(pgd, &vaddr);
     
-    kstack_t *kstack = (kstack_t *)kstack_bottom;
-    uint64_t pgd_paddr = kstack->threadinfo.pcb->mm.pgd_paddr;
-
     // this is the selected ppn for vaddr
     int ppn = -1;
     pte4_t *victim = NULL;
@@ -136,11 +199,10 @@ void kernel_pagefault_handler(address_t vaddr)
     victim->pte_value = 0;
     victim->present = 0;
     victim->daddr = page_map[ppn].daddr;
-);
 
     // load page from disk to physical memory first
     daddr = pte->daddr;
-    swap_in(daddr, ppn
+    swap_in(daddr, ppn);
     pte->pte_value = 0;
     pte->present = 1;
     pte->ppn = ppn;
@@ -151,5 +213,4 @@ void kernel_pagefault_handler(address_t vaddr)
     page_map[ppn].dirty = 0;
     page_map[ppn].pte4 = pte;
     page_map[ppn].daddr = daddr;
-    */
 }
