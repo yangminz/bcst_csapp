@@ -31,6 +31,28 @@ static inline void increase_pc()
 
 // instruction handlers
 
+/*  A Message from Interrupt & Page Fault:
+ *      For all instructions involving address translation (MMU, i.e. func `va2pa`),
+ *      `va2pa` must be called BEFORE rip increment `increase_pc`.
+ *      Because address translation may fail, page fault may happen, resulting 
+ *      page fault handling/interrupt and context switch.
+ * 
+ *      Happy path: No page fault
+ *          everything is good.
+ * 
+ *      Sad path: Page faults
+ *          then `va2pa` will not return to current process (process 1).
+ *          RIP pushed to trapframe will be the current RIP.
+ *          So when the execution of process 1 is resumed, the return
+ *          instruction is just the faulting instruction.
+ *          Which means the faulting `mov` should be executed twice:
+ * 
+ *          process 1, first `mov`: page fault
+ *              process 2
+ *              process 3
+ *          process 1, second `mov`: no page fault
+ */
+
 void mov_handler(od_t *src_od, od_t *dst_od)
 {
     if (src_od->type == OD_REG && dst_od->type == OD_REG)
@@ -274,23 +296,19 @@ void int_handler(od_t *src_od, od_t *dst_od)
     if (src_od->type == OD_IMM)
     {
         // src: interrupt vector
+
+        // Be careful here. Think why we need to increase RIP before interrupt?
+        // This `int` instruction is executed by process 1,
+        // but interrupt will cause OS's scheduling to process 2.
+        // So this `int_handler` will not return.
+        // When the execution of process 1 resumed, the system call is finished.
+        // We want to execute the next instruction, so RIP pushed to trap frame
+        // must be the next instruction.
         increase_pc();
         cpu_flags.__flags_value = 0;
 
-        /*  Please do think why RIP should increase before invoking interrut?
-         *  Consider that each interrupt will raise one context switch.
-         *  So after this function, RIP & RSP all belong to the new process.
-         *  If increae RIP after interrupt:
-         * 
-         *      interrupt_stack_switching((src_od->value)); // 1
-         *      increase_pc();                              // 2
-         * 
-         *  Then line 2 will update the RIP of the new process, making the 
-         *  new process lost one instruction.
-         */
+        // This function will not return.
         interrupt_stack_switching((src_od->value));
-        // Here is the thread of new process
-        // so do not do any operation after interrupt invocation.
     }
 }
 
@@ -305,6 +323,14 @@ static uint64_t timer_period = 5;
 // the only exposed interface outside CPU
 void instruction_cycle()
 {
+    // this is the entry point of the re-execution of
+    // interrupt return instruction.
+    // When a new process is scheduled, the first instruction/
+    // return instruction should start here, jumping out of the
+    // call stack of old process.
+    // This is especially useful for page fault handling.
+    setjmp(USER_INSTRUCTION_ON_IRET);
+
     global_time += 1;
 
     // FETCH: get the instruction string by program counter
@@ -327,6 +353,5 @@ void instruction_cycle()
     if ((global_time % timer_period) == 0)
     {
         interrupt_stack_switching(0x81);
-        return;
     }
 }

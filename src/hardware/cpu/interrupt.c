@@ -205,6 +205,15 @@ static void software_pop_userframe()
     cpu_reg.rsp = rsp;
 }
 
+/*  ATTENTION !!!!!!!!
+ *      This function will finally invoke OS scheduling.
+ *      Thus it's called by process 1, but return to process 2.
+ *      So for the invoker (process 1), it's a function that will never return.
+ *      We implement this by Non-Local Jump.
+ * 
+ *      If you are confused about non-local jumps, check interrupt.h
+ *      And the textbook: CSAPP: Exceptional Control Flow: Nonlocal Jumps
+ */
 // call interrupt with stack switching (user --> kernel)
 void interrupt_stack_switching(uint64_t int_vec)
 {
@@ -252,6 +261,11 @@ void interrupt_stack_switching(uint64_t int_vec)
 
     // interrupt return (iret instruction in kernel code)
     interrupt_return_stack_switching();
+    
+    // This function (longjmp) will not return
+    // The longjmp will move to the instruction cycle of the newly scheduled process.
+    // This interrupt_stack_switching will not return to the old process (invoker).
+    longjmp(USER_INSTRUCTION_ON_IRET, 1);
 }
 
 // interrupt return with stack switching (kernel --> user)
