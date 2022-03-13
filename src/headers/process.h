@@ -30,6 +30,7 @@ typedef union KERNEL_STACK_STRUCT
 
 typedef struct STRUCT_PROCESS_CONTEXT
 {
+    // attention: the registers & flags here are all in kernel mode
     cpu_reg_t regs;
     cpu_flags_t flags;
 } context_t;

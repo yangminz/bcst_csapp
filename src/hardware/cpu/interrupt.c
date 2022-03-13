@@ -308,6 +308,7 @@ void pagefault_handler()
     software_push_userframe();
     fix_pagefault();
     os_schedule();
+    software_pop_userframe();
 }
 
 void syscall_handler()
