@@ -27,7 +27,7 @@ void page_map_init();
 void pagemap_dirty(uint64_t ppn);
 void pagemap_update_time(uint64_t ppn);
 void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address);
-uint64_t new_swapaddr();
+uint64_t allocate_swappage(uint64_t ppn);
 
 static void link_page_table(pte123_t *pgd, pte123_t *pud, pte123_t *pmd, pte4_t *pt,
     int ppn, address_t *vaddr)
@@ -258,13 +258,7 @@ static void TestPageFaultHandlingCase3()
     {
         map_pte4(&other_process_pte4[i], i);
         pagemap_dirty(i);
-        uint64_t saddr = new_swapaddr();
-        set_pagemap_swapaddr(i, saddr);
-        
-        sprintf(filename, "./files/swap/page-%ld.page.txt", saddr);
-        FILE *fw = fopen(filename, "w");
-        assert(fw != NULL);
-        fclose(fw);
+        allocate_swappage(i);
     }
     pagemap_dirty(0);
 
