@@ -68,9 +68,8 @@ void mov_handler(od_t *src_od, od_t *dst_od)
     {
         // src: register
         // dst: virtual address
-        cpu_write64bits_dram(
-            va2pa((dst_od->value)), 
-            *(uint64_t *)(src_od->value));
+        uint64_t dst_pa = va2pa(dst_od->value);
+        cpu_write64bits_dram(dst_pa, *(uint64_t *)(src_od->value));
         increase_pc();
         cpu_flags.__flags_value = 0;
         return;
@@ -79,7 +78,8 @@ void mov_handler(od_t *src_od, od_t *dst_od)
     {
         // src: virtual address
         // dst: register
-        *(uint64_t *)(dst_od->value) = cpu_read64bits_dram(va2pa((src_od->value)));
+        uint64_t src_pa = va2pa(src_od->value);
+        *(uint64_t *)(dst_od->value) = cpu_read64bits_dram(src_pa);
         increase_pc();
         cpu_flags.__flags_value = 0;
         return;
@@ -102,8 +102,9 @@ void push_handler(od_t *src_od, od_t *dst_od)
         // src: register
         // dst: empty
         cpu_reg.rsp = cpu_reg.rsp - 8;
+        uint64_t rsp_pa = va2pa(cpu_reg.rsp);
         cpu_write64bits_dram(
-            va2pa(cpu_reg.rsp), 
+            rsp_pa, 
             *(uint64_t *)(src_od->value));
         increase_pc();
         cpu_flags.__flags_value = 0;
@@ -117,8 +118,8 @@ void pop_handler(od_t *src_od, od_t *dst_od)
     {
         // src: register
         // dst: empty
-        uint64_t old_val = cpu_read64bits_dram(
-            va2pa(cpu_reg.rsp));
+        uint64_t rsp_pa = va2pa(cpu_reg.rsp);
+        uint64_t old_val = cpu_read64bits_dram(rsp_pa);
         cpu_reg.rsp = cpu_reg.rsp + 8;
         *(uint64_t *)(src_od->value) = old_val;
         increase_pc();
@@ -133,8 +134,8 @@ void leave_handler(od_t *src_od, od_t *dst_od)
     cpu_reg.rsp = cpu_reg.rbp;
 
     // popq %rbp
-    uint64_t old_val = cpu_read64bits_dram(
-        va2pa(cpu_reg.rsp));
+    uint64_t rsp_pa = va2pa(cpu_reg.rsp);
+    uint64_t old_val = cpu_read64bits_dram(rsp_pa);
     cpu_reg.rsp = cpu_reg.rsp + 8;
     cpu_reg.rbp = old_val;
     increase_pc();
@@ -147,8 +148,9 @@ void call_handler(od_t *src_od, od_t *dst_od)
     // dst: empty
     // push the return value
     cpu_reg.rsp = cpu_reg.rsp - 8;
+    uint64_t rsp_pa = va2pa(cpu_reg.rsp);
     cpu_write64bits_dram(
-        va2pa(cpu_reg.rsp),
+        rsp_pa,
         cpu_pc.rip + sizeof(char) * MAX_INSTRUCTION_CHAR);
     // jump to target function address
     // TODO: support PC relative addressing
@@ -161,8 +163,8 @@ void ret_handler(od_t *src_od, od_t *dst_od)
     // src: empty
     // dst: empty
     // pop rsp
-    uint64_t ret_addr = cpu_read64bits_dram(
-        va2pa(cpu_reg.rsp));
+    uint64_t rsp_pa = va2pa(cpu_reg.rsp);
+    uint64_t ret_addr = cpu_read64bits_dram(rsp_pa);
     cpu_reg.rsp = cpu_reg.rsp + 8;
     // jump to return address
     cpu_pc.rip = ret_addr;
@@ -233,7 +235,8 @@ void cmp_handler(od_t *src_od, od_t *dst_od)
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
         // (dst_od->value) = (dst_od->value) - (src_od->value) = (dst_od->value) + (-(src_od->value))
-        uint64_t dval = cpu_read64bits_dram(va2pa((dst_od->value)));
+        uint64_t dst_pa = va2pa(dst_od->value);
+        uint64_t dval = cpu_read64bits_dram(dst_pa);
         uint64_t val = dval + (~(src_od->value) + 1);
 
         int val_sign = ((val >> 63) & 0x1);
@@ -284,7 +287,7 @@ void lea_handler(od_t *src_od, od_t *dst_od)
     {
         // src: virtual address - The effective address computed from instruction
         // dst: register - The register to load the effective address
-        *(uint64_t *)(dst_od->value) = (src_od->value);
+        *(uint64_t *)(dst_od->value) = src_od->value;
         increase_pc();
         cpu_flags.__flags_value = 0;
         return;
@@ -308,7 +311,7 @@ void int_handler(od_t *src_od, od_t *dst_od)
         cpu_flags.__flags_value = 0;
 
         // This function will not return.
-        interrupt_stack_switching((src_od->value));
+        interrupt_stack_switching(src_od->value);
     }
 }
 
@@ -335,7 +338,8 @@ void instruction_cycle()
 
     // FETCH: get the instruction string by program counter
     char inst_str[MAX_INSTRUCTION_CHAR + 10];
-    cpu_readinst_dram(va2pa(cpu_pc.rip), inst_str);
+    uint64_t pc_pa = va2pa(cpu_pc.rip);
+    cpu_readinst_dram(pc_pa, inst_str);
 
 #ifdef DEBUG_INSTRUCTION_CYCLE
     printf("%8lx    %s\n", cpu_pc.rip, inst_str);

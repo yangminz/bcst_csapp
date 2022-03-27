@@ -28,6 +28,8 @@ notification = "/* BCST - Introduction to Computer Systems\n" \
 def make_build_directory():
     if not os.path.isdir("./bin/"):
         os.mkdir("./bin/")
+    if not os.path.isdir("./files/swap/"):
+        os.mkdir("./files/swap/")
 
 def add_copyright_header():
     # get files with paths
@@ -177,7 +179,6 @@ def build(key):
                     "-I", "./src",
                     "-DDEBUG_INSTRUCTION_CYCLE",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
@@ -194,10 +195,9 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
                     "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DDEBUG_ENABLE_SRAM_CACHE",
+                    # "-DUSE_SRAM_CACHE",
                     "-DUSE_NAVIE_VA2PA",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
@@ -220,11 +220,10 @@ def build(key):
                     "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                     "-I", "./src",
                     "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DDEBUG_ENABLE_SRAM_CACHE",
+                    # "-DUSE_SRAM_CACHE",
                     # "-DUSE_NAVIE_VA2PA",
                     "-DUSE_PAGETABLE_VA2PA",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
@@ -242,6 +241,33 @@ def build(key):
                     "-o", "./bin/ctx"
                 ]
             ],
+        "pgf" : [
+                [
+                    "/usr/bin/gcc-7", 
+                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                    "-I", "./src",
+                    "-DDEBUG_INSTRUCTION_CYCLE",
+                    # "-DUSE_SRAM_CACHE",
+                    # "-DUSE_NAVIE_VA2PA",
+                    "-DUSE_PAGETABLE_VA2PA",
+                    "./src/common/convert.c",
+                    "./src/algorithm/hashtable.c",
+                    "./src/algorithm/trie.c",
+                    "./src/algorithm/array.c",
+                    "./src/hardware/cpu/isa.c",
+                    "./src/hardware/cpu/mmu.c",
+                    "./src/hardware/cpu/inst.c",
+                    # "./src/hardware/cpu/sram.c",
+                    "./src/hardware/cpu/interrupt.c",
+                    "./src/hardware/memory/dram.c",
+                    "./src/hardware/memory/swap.c",
+                    "./src/process/syscall.c",
+                    "./src/process/schedule.c",
+                    "./src/process/pagefault.c",
+                    "./src/tests/test_pagefault.c",
+                    "-o", "./bin/pgf"
+                ]
+            ],
         "inst" : [
                 [
                     "/usr/bin/gcc-7", 
@@ -249,7 +275,6 @@ def build(key):
                     "-I", "./src",
                     "-DDEBUG_INSTRUCTION_CYCLE",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/trie.c",
                     "./src/algorithm/array.c",
@@ -265,7 +290,6 @@ def build(key):
                     "-I", "./src",
                     "-shared", "-fPIC",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/array.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/linkedlist.c",
@@ -279,7 +303,6 @@ def build(key):
                     "-I", "./src",
                     # "-DDEBUG_LINK",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/array.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/linkedlist.c",
@@ -297,7 +320,6 @@ def build(key):
                     "-DDEBUG_PARSE_ELF",
                     "-DDEBUG_LINK",
                     "./src/common/convert.c",
-                    "./src/common/cleanup.c",
                     "./src/algorithm/array.c",
                     "./src/algorithm/hashtable.c",
                     "./src/algorithm/linkedlist.c",
@@ -421,6 +443,7 @@ def run(key):
         "malloc" : ["./bin/malloc"],
         "convert" : ["./bin/convert"],
         "ctx" : ["./bin/ctx"],
+        "pgf" : ["./bin/pgf"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -440,6 +463,7 @@ def debug(key):
         "trie" : [gdb, "./bin/trie"],
         "inst" : [gdb, "./bin/test_inst"],
         "ctx" : [gdb, "./bin/ctx"],
+        "pgf" : [gdb, "./bin/pgf"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())

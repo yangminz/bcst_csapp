@@ -1,0 +1,1 @@
+This path is used as swap space for page fault handling.

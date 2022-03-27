@@ -24,7 +24,6 @@
 // then the physical space is (1 << 16) = 65536
 // total 16 physical memory
 #define PHYSICAL_MEMORY_SPACE   (65536)
-#define MAX_INDEX_PHYSICAL_PAGE (15)
 #define MAX_NUM_PHYSICAL_PAGE (16)    // 1 + MAX_INDEX_PHYSICAL_PAGE
 
 #define PAGE_TABLE_ENTRY_NUM    (512)

@@ -272,11 +272,6 @@ static int read_elf(const char *filename, uint64_t bufaddr)
     return line_counter;
 }
 
-static void free_link_constant_dict()
-{
-    hashtable_free(link_constant_dict);
-}
-
 static void init_dictionary()
 {
     if (link_constant_dict != NULL)
@@ -297,8 +292,6 @@ static void init_dictionary()
     link_constant_dict = hashtable_insert(link_constant_dict, "R_X86_64_32", R_X86_64_32);
     link_constant_dict = hashtable_insert(link_constant_dict, "R_X86_64_PC32", R_X86_64_PC32);
     link_constant_dict = hashtable_insert(link_constant_dict, "R_X86_64_PLT32", R_X86_64_PLT32);
-
-    add_cleanup_event(free_link_constant_dict);
 }
 
 void parse_elf(char *filename, elf_t *elf)
@@ -541,8 +534,6 @@ int main()
     assert(elf_file->reltext[1].r_addend == -4);
 
     free_elf(elf_file);
-
-    finally_cleanup();
 
     printf("\tPass\n.");
 }

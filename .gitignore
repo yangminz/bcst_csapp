@@ -1,5 +1,6 @@
 /.vscode
-/files/swapfiles/*.page.txt
+/files/swap/*
+!/files/swap/*.md
 /bin
 
 # Prerequisites

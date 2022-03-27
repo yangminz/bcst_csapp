@@ -27,15 +27,12 @@
 int swap_in(uint64_t daddr, uint64_t ppn);
 int swap_out(uint64_t daddr, uint64_t ppn);
 
-// 4KB
-static int page_table_size = PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t);
-
 // physical page descriptor
 typedef struct
 {
     int allocated;
     int dirty;
-    int time;   // LRU cache
+    int time;   // LRU cache: 0 - Fresh
 
     // real world: mapping to anon_vma or address_space
     // we simply the situation here
@@ -46,7 +43,7 @@ typedef struct
 
 // for each pagable (swappable) physical page
 // create one reversed mapping
-static pd_t page_map[MAX_NUM_PHYSICAL_PAGE]; 
+static pd_t page_map[MAX_NUM_PHYSICAL_PAGE];
 
 // get the level 4 page table entry
 static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
@@ -89,6 +86,107 @@ static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
     return &pt[vaddr->vpn4];
 }
 
+void page_map_init()
+{
+    for (int k = 0; k < MAX_NUM_PHYSICAL_PAGE; ++ k)
+    {
+        page_map[k].allocated = 0;
+        page_map[k].dirty = 0;
+        page_map[k].time = 0;
+        page_map[k].pte4 = NULL;
+    }
+}
+
+void pagemap_update_time(uint64_t ppn)
+{
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    assert(page_map[ppn].allocated == 1);
+    assert(page_map[ppn].pte4->present == 1);
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        page_map[i].time += 1;
+    }
+    page_map[ppn].time = 0;
+}
+
+void pagemap_dirty(uint64_t ppn)
+{
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    assert(page_map[ppn].allocated == 1);
+    assert(page_map[ppn].pte4->present == 1);
+    page_map[ppn].dirty = 1;
+    page_map[ppn].pte4->dirty = 1;
+}
+
+// used by frame swap-in from swap space
+// for newly allocated anoymous page
+void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address)
+{
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    page_map[ppn].daddr = swap_address;
+}
+
+void map_pte4(pte4_t *pte, uint64_t ppn)
+{
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    // must use an empty reversed mapping slot
+    assert(page_map[ppn].allocated == 0);
+    assert(page_map[ppn].dirty == 0);
+    assert(page_map[ppn].pte4 == NULL);
+
+    // map the level 4 page table
+    pte->present = 1;
+    pte->ppn = ppn;
+    pte->dirty = 0;
+
+    // reversed mapping
+    page_map[ppn].allocated = 1;    // allocated for vaddr
+    page_map[ppn].dirty = 0;        // allocated as clean
+    page_map[ppn].time = 0;         // most recently used physical page
+    page_map[ppn].pte4 = pte;
+
+    // Let's consider this, where can we store the swap address on disk?
+    // In this case of physical page being allocated and mapped,
+    // the swap address is stored in reversed mapping array
+    page_map[ppn].daddr = pte->daddr;
+
+    /*  When mapped
+        Page table entry: present = 1, ppn
+        page_map[ppn]: pte4, swap address
+        data on DRAM[ppn] (DIRTY/CLEAN), SWAP[swap address]
+     */
+}
+
+void unmap_pte4(uint64_t ppn)
+{
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    // Get the page table entry from reversed mapping array by ppn
+    // Note that in this case the page MUST be allocated
+    assert(page_map[ppn].allocated == 1);
+    pte4_t *pte = page_map[ppn].pte4;
+    assert(pte->present == 1);
+
+    pte->pte_value = 0;
+    pte->present = 0;
+    // In this case, page_map[ppn] would be mapped by other page table.
+    // Previously, this is used to store the swap address.
+    // Now we need to move the swap address to the page table entry.
+    pte->daddr = page_map[ppn].daddr;
+
+    // clear the reversed mapping
+    page_map[ppn].allocated = 0;
+    page_map[ppn].dirty = 0;
+    page_map[ppn].time = 0;
+    page_map[ppn].pte4 = NULL;
+
+    /*  When unmapped
+        Page table entry: present = 0, swap address
+        page_map[ppn]: not applicable any more
+        data on SWAP[swap address] (WB)
+     */
+    // now page_map[ppn] can be used by other page table entry
+}
+
 void fix_pagefault()
 {
     // get page table directory from rsp
@@ -101,37 +199,23 @@ void fix_pagefault()
     // get the level 4 page table entry
     pte4_t *pte = get_entry4(pgd, &vaddr);
     
-    // this is the selected ppn for vaddr
-    int ppn = -1;
-    pte4_t *victim = NULL;
-    uint64_t daddr = 0xffffffffffffffff;
-
     // 1. try to request one free physical page from DRAM
     // kernel's responsibility
     for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
     {
-        if (page_map[i].pte4->present == 0)
+        if (page_map[i].allocated == 0)
         {
-            printf("PageFault: use free ppn %d\n", i);
-
             // found i as free ppn
-            ppn = i;
-
-            page_map[ppn].allocated = 1;    // allocate for vaddr
-            page_map[ppn].dirty = 0;    // allocated as clean
-            page_map[ppn].time = 0;    // most recently used physical page
-            page_map[ppn].pte4 = pte;
-
-            pte->present = 1;
-            pte->ppn = ppn;
-            pte->dirty = 0;
-
+            map_pte4(pte, i);
+         
+            printf("\033[34;1m\tPageFault: use free ppn %d\033[0m\n", i);
             return;
         }
     }
 
     // 2. no free physical page: select one clean page (LRU) and overwrite
     // in this case, there is no DRAM - DISK transaction
+    // you know you can optimize this loop in the previous one.
     int lru_ppn = -1;
     int lru_time = -1;
     for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
@@ -144,32 +228,19 @@ void fix_pagefault()
         }
     }
     
+    // this is the selected ppn for vaddr
     if (-1 != lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE)
     {
-        ppn = lru_ppn;
+        // reversed mapping will find the victim page table
+        // unmap the victim (LRU)
+        unmap_pte4(lru_ppn);
 
-        // reversed mapping
-        victim = page_map[ppn].pte4;
+        // load page from disk to physical memory
+        // at the victim's ppn
+        swap_in(pte->daddr, lru_ppn);
+        map_pte4(pte, lru_ppn);
 
-        victim->pte_value = 0;
-        victim->present = 0;
-        victim->daddr = page_map[ppn].daddr;
-
-        // load page from disk to physical memory first
-        daddr = pte->daddr;
-        swap_in(pte->daddr, ppn);
-
-        pte->pte_value = 0;
-        pte->present = 1;
-        pte->ppn = ppn;
-        pte->dirty = 0;
-
-        page_map[ppn].allocated = 1;
-        page_map[ppn].time = 0;
-        page_map[ppn].dirty = 0;
-        page_map[ppn].pte4 = pte;
-        page_map[ppn].daddr = daddr;
-
+        printf("\033[34;1m\tPageFault: discard clean ppn %d as victim\033[0m\n", lru_ppn);
         return;
     }
 
@@ -185,32 +256,17 @@ void fix_pagefault()
             lru_ppn = i;
         }
     }
-
     assert(0 <= lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE);
 
-    ppn = lru_ppn;
-
-    // reversed mapping
-    victim = page_map[ppn].pte4;
-
     // write back
-    swap_out(page_map[ppn].daddr, ppn);
+    swap_out(page_map[lru_ppn].daddr, lru_ppn);
 
-    victim->pte_value = 0;
-    victim->present = 0;
-    victim->daddr = page_map[ppn].daddr;
+    // unmap victim
+    unmap_pte4(lru_ppn);
 
-    // load page from disk to physical memory first
-    daddr = pte->daddr;
-    swap_in(daddr, ppn);
-    pte->pte_value = 0;
-    pte->present = 1;
-    pte->ppn = ppn;
-    pte->dirty = 0;
+    // load page from disk to physical memory
+    swap_in(pte->daddr, lru_ppn);
+    map_pte4(pte, lru_ppn);
 
-    page_map[ppn].allocated = 1;
-    page_map[ppn].time = 0;
-    page_map[ppn].dirty = 0;
-    page_map[ppn].pte4 = pte;
-    page_map[ppn].daddr = daddr;
+    printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }

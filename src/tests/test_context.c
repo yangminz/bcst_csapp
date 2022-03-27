@@ -21,7 +21,11 @@
 #include "headers/interrupt.h"
 #include "headers/process.h"
 
-static void load_code(int pid, address_t *code_addr)
+void map_pte4(pte4_t *pte, uint64_t ppn);
+void unmap_pte4(uint64_t ppn);
+void page_map_init();
+
+static void load_code_physically(int pid, address_t *code_addr)
 {
     /* this is a while loop like:
      * while(1) { printf("p%d\n", pid); }
@@ -66,6 +70,8 @@ static void link_page_table(pte123_t *pgd, pte123_t *pud, pte123_t *pmd, pte4_t 
 
     (&(pt[vpn4]))->ppn = ppn;
     (&(pt[vpn4]))->present = 1;
+
+    map_pte4(pt, ppn);
 }
 
 static void TestContextSwitching()
@@ -102,187 +108,31 @@ static void TestContextSwitching()
     p2.mm.pgd = &p2_pgd[0];
     p3.mm.pgd = &p3_pgd[0];
 
-    // p1's page table
+    page_map_init();
 
-    // p1's stack page
-    pte123_t p1_pud_stack[512];
-    pte123_t p1_pmd_stack[512];
-    pte4_t p1_pt_stack[512];
-    link_page_table(&p1_pgd[0], &p1_pud_stack[0], &p1_pmd_stack[0], &p1_pt_stack[0], 0, &stack_addr);
+    // please think why we do not need to map the stack page directly?
+    // how will page fault handling help us with this?
 
     // p1's code page
-    pte123_t p1_pud_code[512];
-    pte123_t p1_pmd_code[512];
+    pte123_t p1_pud[512];
+    pte123_t p1_pmd[512];
     pte4_t p1_pt_code[512];
-    link_page_table(&p1_pgd[0], &p1_pud_code[0], &p1_pmd_code[0], &p1_pt_code[0], 1, &code_addr);
-    load_code(1, &code_addr);
+    link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt_code[0], 1, &code_addr);
+    load_code_physically(1, &code_addr);
 
-    // p2's page table
-
-    // p2's stack page
-    pte123_t p2_pud_stack[512];
-    pte123_t p2_pmd_stack[512];
-    pte4_t p2_pt_stack[512];
-    link_page_table(&p2_pgd[0], &p2_pud_stack[0], &p2_pmd_stack[0], &p2_pt_stack[0], 2, &stack_addr);
-    
     // p2's code page
-    pte123_t p2_pud_code[512];
-    pte123_t p2_pmd_code[512];
+    pte123_t p2_pud[512];
+    pte123_t p2_pmd[512];
     pte4_t p2_pt_code[512];
-    link_page_table(&p2_pgd[0], &p2_pud_code[0], &p2_pmd_code[0], &p2_pt_code[0], 3, &code_addr);
-    load_code(2, &code_addr);
-    
-    // p3's page table
+    link_page_table(&p2_pgd[0], &p2_pud[0], &p2_pmd[0], &p2_pt_code[0], 3, &code_addr);
+    load_code_physically(2, &code_addr);
 
-    // p3's stack page
-    pte123_t p3_pud_stack[512];
-    pte123_t p3_pmd_stack[512];
-    pte4_t p3_pt_stack[512];
-    link_page_table(&p3_pgd[0], &p3_pud_stack[0], &p3_pmd_stack[0], &p3_pt_stack[0], 4, &stack_addr);
-    
     // p3's code page
-    pte123_t p3_pud_code[512];
-    pte123_t p3_pmd_code[512];
+    pte123_t p3_pud[512];
+    pte123_t p3_pmd[512];
     pte4_t p3_pt_code[512];
-    link_page_table(&p3_pgd[0], &p3_pud_code[0], &p3_pmd_code[0], &p3_pt_code[0], 5, &code_addr);
-    load_code(3, &code_addr);
-
-    // create kernel stacks
-    uint8_t stack_buf[8192 * 4];
-
-    uint64_t p1_stack_bottom = (((uint64_t)&stack_buf[8192]) >> 13) << 13;
-    uint64_t p2_stack_bottom = p1_stack_bottom + KERNEL_STACK_SIZE;
-    uint64_t p3_stack_bottom = p2_stack_bottom + KERNEL_STACK_SIZE;
-
-    p1.kstack = (kstack_t *)p1_stack_bottom;
-    p2.kstack = (kstack_t *)p2_stack_bottom;
-    p3.kstack = (kstack_t *)p3_stack_bottom;
-
-    p1.kstack->threadinfo.pcb = &p1;
-    p2.kstack->threadinfo.pcb = &p2;
-    p3.kstack->threadinfo.pcb = &p3;
-
-    // create trap frames for p2, p3
-    trapframe_t tf = {
-        .rip = code_addr.vaddr_value,
-        .rsp = stack_addr.vaddr_value
-    };
-    memcpy(
-        (trapframe_t *)(p2_stack_bottom + KERNEL_STACK_SIZE - sizeof(trapframe_t)),
-        &tf, sizeof(trapframe_t));
-    memcpy(
-        (trapframe_t *)(p3_stack_bottom + KERNEL_STACK_SIZE - sizeof(trapframe_t)),
-        &tf, sizeof(trapframe_t));
-
-    // create user frames for p2, p3
-    // create contexts for p2, p3
-    // actually user frames & contexts does not matter at the starting point
-    p2.context.regs.rsp = p2_stack_bottom + KERNEL_STACK_SIZE - sizeof(trapframe_t) - sizeof(userframe_t);
-    p3.context.regs.rsp = p3_stack_bottom + KERNEL_STACK_SIZE - sizeof(trapframe_t) - sizeof(userframe_t);
-
-    // run p1
-    tr_global_tss.ESP0 = p1_stack_bottom + KERNEL_STACK_SIZE;
-
-    cpu_controls.cr3 = p1.mm.pgd_paddr;
-
-    idt_init();
-    syscall_init();
-    
-    printf("begin\n");
-    int time = 0;
-    while (time < 100)
-    {
-        instruction_cycle();
-#ifdef DEBUG_INSTRUCTION_CYCLE_INFO_REG_STACK
-        print_register();
-        print_stack();
-#endif
-        time ++;
-    }
-
-    printf("\033[32;1m\tPass\033[0m\n");
-}
-
-static void TestPageFaultHandling()
-{
-    printf("Testing page fault handling ...\n");
-
-    // init state
-    cpu_reg.rsp = 0x7ffffffee0f0;
-    cpu_pc.rip = 0x00400000;
-
-    address_t stack_addr = {.address_value = cpu_reg.rsp};
-    address_t code_addr = {.address_value = cpu_pc.rip};
-
-    // prepare 3 processes as circular doubly linked list
-    pcb_t p1, p2, p3;
-    p1.next = &p2;
-    p2.next = &p3;
-    p3.next = &p1;
-    p1.prev = &p3;
-    p2.prev = &p1;
-    p3.prev = &p2;
-
-    p1.pid = 1;
-    p2.pid = 2;
-    p3.pid = 3;
-
-    // prepare the page tables for these processes
-    // each process will use 2 page tables: 
-    // one for user stack, one for user data & code
-    pte123_t p1_pgd[512];
-    pte123_t p2_pgd[512];
-    pte123_t p3_pgd[512];
-    p1.mm.pgd = &p1_pgd[0];
-    p2.mm.pgd = &p2_pgd[0];
-    p3.mm.pgd = &p3_pgd[0];
-
-    // p1's page table
-
-    // p1's stack page
-    pte123_t p1_pud_stack[512];
-    pte123_t p1_pmd_stack[512];
-    pte4_t p1_pt_stack[512];
-    link_page_table(&p1_pgd[0], &p1_pud_stack[0], &p1_pmd_stack[0], &p1_pt_stack[0], 0, &stack_addr);
-
-    // p1's code page
-    pte123_t p1_pud_code[512];
-    pte123_t p1_pmd_code[512];
-    pte4_t p1_pt_code[512];
-    link_page_table(&p1_pgd[0], &p1_pud_code[0], &p1_pmd_code[0], &p1_pt_code[0], 1, &code_addr);
-    load_code(1, &code_addr);
-
-    // p2's page table
-
-    // p2's stack page
-    pte123_t p2_pud_stack[512];
-    pte123_t p2_pmd_stack[512];
-    pte4_t p2_pt_stack[512];
-    link_page_table(&p2_pgd[0], &p2_pud_stack[0], &p2_pmd_stack[0], &p2_pt_stack[0], 2, &stack_addr);
-    // set page fault
-    p2_pt_stack[stack_addr.vpn4].present = 0;
-    
-    // p2's code page
-    pte123_t p2_pud_code[512];
-    pte123_t p2_pmd_code[512];
-    pte4_t p2_pt_code[512];
-    link_page_table(&p2_pgd[0], &p2_pud_code[0], &p2_pmd_code[0], &p2_pt_code[0], 3, &code_addr);
-    load_code(2, &code_addr);
-    
-    // p3's page table
-
-    // p3's stack page
-    pte123_t p3_pud_stack[512];
-    pte123_t p3_pmd_stack[512];
-    pte4_t p3_pt_stack[512];
-    link_page_table(&p3_pgd[0], &p3_pud_stack[0], &p3_pmd_stack[0], &p3_pt_stack[0], 4, &stack_addr);
-    
-    // p3's code page
-    pte123_t p3_pud_code[512];
-    pte123_t p3_pmd_code[512];
-    pte4_t p3_pt_code[512];
-    link_page_table(&p3_pgd[0], &p3_pud_code[0], &p3_pmd_code[0], &p3_pt_code[0], 5, &code_addr);
-    load_code(3, &code_addr);
+    link_page_table(&p3_pgd[0], &p3_pud[0], &p3_pmd[0], &p3_pt_code[0], 5, &code_addr);
+    load_code_physically(3, &code_addr);
 
     // create kernel stacks
     uint8_t stack_buf[8192 * 4];
@@ -341,9 +191,7 @@ static void TestPageFaultHandling()
 }
 
 int main()
-{
-    TestPageFaultHandling();
-
-    finally_cleanup();
+{    
+    TestContextSwitching();
     return 0;
 }

@@ -286,7 +286,5 @@ int main()
     //TestSumRecursiveCondition();
 
     TestSyscallPrintHelloWorld();
-
-    finally_cleanup();
     return 0;
 }

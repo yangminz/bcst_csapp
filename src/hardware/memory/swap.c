@@ -18,18 +18,57 @@
 #include "headers/common.h"
 #include "headers/address.h"
 
+void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address);
+
 // each swap file is swap page
 // each line of this swap page is one uint64
-#define SWAP_PAGE_FILE_LINES 512
+#define SWAP_PAGE_FILE_LINES (512)
+#define SWAP_ADDRESS_MIN (100)
 
 // disk address counter
-static uint64_t internal_swap_daddr = 0;
+static uint64_t internal_swap_addr = SWAP_ADDRESS_MIN;
+static char *SWAP_FILE_DIRECTORY = "./files/swap";
+
+uint64_t new_swapaddr()
+{
+    return internal_swap_addr++;
+}
 
 int swap_in(uint64_t daddr, uint64_t ppn)
 {
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    
     FILE *fr = NULL;
     char filename[128];
-    sprintf(filename, "../files/swap/page-%ld.txt", daddr);
+
+    if (daddr == 0)
+    {
+        // daddr == 0 indicates that this page is not backed by file
+        // nor backed by swap space. It should be a newly created 
+        // anoymous page. Allocate one swap address for it.
+        daddr = new_swapaddr();
+        
+        sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
+        FILE *fw = fopen(filename, "w");
+        assert(fw != NULL);
+
+        // write zero page for anoymous page
+        // But there is no transaction actually
+        fclose(fw);
+        uint64_t ppn_ppo = ppn << PHYSICAL_PAGE_OFFSET_LENGTH;
+        memset(&pm[ppn_ppo], 0, PAGE_SIZE);
+        
+        // Now the page is like swapped in from swap space. So:
+        // daddr is stored on page_map
+        // ppn is sotred in page table entry (level 4)
+        // we need to tell page_map the new daddr
+        set_pagemap_swapaddr(ppn, daddr);
+
+        return 0;
+    }
+
+    assert(daddr >= SWAP_ADDRESS_MIN);
+    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
     fr = fopen(filename, "r");
     assert(fr != NULL);
 
@@ -41,14 +80,17 @@ int swap_in(uint64_t daddr, uint64_t ppn)
         *((uint64_t *)(&pm[ppn_ppo + i * 8])) = string2uint(str);
     }
     fclose(fr);
-    return 0;
+    return 1;
 }
 
 int swap_out(uint64_t daddr, uint64_t ppn)
 {
+    assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
+    assert(daddr >= SWAP_ADDRESS_MIN);
+
     FILE *fw = NULL;
     char filename[128];
-    sprintf(filename, "../files/swap/page-%ld.txt", daddr);
+    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
     fw = fopen(filename, "w");
     assert(fw != NULL);
 

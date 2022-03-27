@@ -52,12 +52,6 @@ uint64_t string2uint_range(const char *str, int start, int end);
 #define MAX_INSTRUCTION_CHAR (64)
 
 /*======================================*/
-/*      clean up events                 */
-/*======================================*/
-void add_cleanup_event(void *func);
-void finally_cleanup();
-
-/*======================================*/
 /*      wrap of the memory              */
 /*======================================*/
 void *tag_malloc(uint64_t size, char *tagstr);
