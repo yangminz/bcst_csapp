@@ -49,7 +49,7 @@ static void link_page_table(pte123_t *pgd, pte123_t *pud, pte123_t *pmd, pte4_t 
     (&(pt[vpn4]))->ppn = ppn;
     (&(pt[vpn4]))->present = 1;
 
-    map_pte4(pt, ppn);
+    map_pte4(&(pt[vpn4]), ppn);
 }
 
 static void TestPageFaultHandlingCase1()

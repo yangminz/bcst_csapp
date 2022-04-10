@@ -67,7 +67,7 @@ typedef union
     struct
     {
         uint64_t _present           : 1;
-        uint64_t daddr            : 63;   // disk address
+        uint64_t saddr            : 63;   // swap space address
     };
 } pte123_t; // PGD, PUD, PMD
 
@@ -96,7 +96,7 @@ typedef union
     struct
     {
         uint64_t _present           : 1;    // present = 0
-        uint64_t daddr            : 63;   // disk address
+        uint64_t saddr            : 63;   // swap space address
     };
 } pte4_t;   // PT
 

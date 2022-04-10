@@ -31,10 +31,10 @@ static uint64_t internal_swap_addr = SWAP_ADDRESS_MIN;
 
 uint64_t allocate_swappage(uint64_t ppn)
 {
-    uint64_t daddr = internal_swap_addr++;
+    uint64_t saddr = internal_swap_addr++;
     
     char filename[128];
-    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
+    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, saddr);
     FILE *fw = fopen(filename, "w");
     assert(fw != NULL);
 
@@ -45,32 +45,32 @@ uint64_t allocate_swappage(uint64_t ppn)
     memset(&pm[ppn_ppo], 0, PAGE_SIZE);
     
     // Now the page is like swapped in from swap space. So:
-    // daddr is stored on page_map
+    // saddr is stored on page_map
     // ppn is sotred in page table entry (level 4)
-    // we need to tell page_map the new daddr
-    set_pagemap_swapaddr(ppn, daddr);
+    // we need to tell page_map the new saddr
+    set_pagemap_swapaddr(ppn, saddr);
 
-    return daddr;
+    return saddr;
 }
 
-int swap_in(uint64_t daddr, uint64_t ppn)
+int swap_in(uint64_t saddr, uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
     
     FILE *fr = NULL;
     char filename[128];
 
-    if (daddr == 0)
+    if (saddr == 0)
     {
-        // daddr == 0 indicates that this page is not backed by file
+        // saddr == 0 indicates that this page is not backed by file
         // nor backed by swap space. It should be a newly created 
         // anoymous page. Allocate one swap address for it.
         allocate_swappage(ppn);
         return 0;
     }
 
-    assert(daddr >= SWAP_ADDRESS_MIN);
-    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
+    assert(saddr >= SWAP_ADDRESS_MIN);
+    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, saddr);
     fr = fopen(filename, "r");
     assert(fr != NULL);
 
@@ -85,14 +85,14 @@ int swap_in(uint64_t daddr, uint64_t ppn)
     return 1;
 }
 
-int swap_out(uint64_t daddr, uint64_t ppn)
+int swap_out(uint64_t saddr, uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
-    assert(daddr >= SWAP_ADDRESS_MIN);
+    assert(saddr >= SWAP_ADDRESS_MIN);
 
     FILE *fw = NULL;
     char filename[128];
-    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, daddr);
+    sprintf(filename, "%s/page-%ld.page.txt", SWAP_FILE_DIRECTORY, saddr);
     fw = fopen(filename, "w");
     assert(fw != NULL);
 

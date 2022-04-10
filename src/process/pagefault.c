@@ -24,8 +24,8 @@
 // page_fault_handler(&pt[vaddr.vpn4], vaddr);
 
 // swap in/out
-int swap_in(uint64_t daddr, uint64_t ppn);
-int swap_out(uint64_t daddr, uint64_t ppn);
+int swap_in(uint64_t saddr, uint64_t ppn);
+int swap_out(uint64_t saddr, uint64_t ppn);
 
 // physical page descriptor
 typedef struct
@@ -38,7 +38,7 @@ typedef struct
     // we simply the situation here
     // TODO: if multiple processes are using this page? E.g. Shared library
     pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
-    uint64_t daddr;   // binding the revesed mapping with mapping to disk
+    uint64_t saddr;   // binding the revesed mapping with mapping to disk
 } pd_t;
 
 // for each pagable (swappable) physical page
@@ -70,7 +70,7 @@ static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
             // note that this is a 48-bit address !!!
             // the high bits are all zero
             // And sizeof(pte123_t) == sizeof(pte4_t)
-            pte123_t *new_tab = (pte123_t *)malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
+            pte123_t *new_tab = (pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
             
             // .paddr field is 50 bits
             tab[vpn].paddr = (uint64_t)new_tab;
@@ -123,7 +123,7 @@ void pagemap_dirty(uint64_t ppn)
 void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
-    page_map[ppn].daddr = swap_address;
+    page_map[ppn].saddr = swap_address;
 }
 
 void map_pte4(pte4_t *pte, uint64_t ppn)
@@ -133,6 +133,11 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
     assert(page_map[ppn].allocated == 0);
     assert(page_map[ppn].dirty == 0);
     assert(page_map[ppn].pte4 == NULL);
+
+    // Let's consider this, where can we store the swap address on disk?
+    // In this case of physical page being allocated and mapped,
+    // the swap address is stored in reversed mapping array
+    page_map[ppn].saddr = pte->saddr;
 
     // map the level 4 page table
     pte->present = 1;
@@ -144,11 +149,6 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
     page_map[ppn].dirty = 0;        // allocated as clean
     page_map[ppn].time = 0;         // most recently used physical page
     page_map[ppn].pte4 = pte;
-
-    // Let's consider this, where can we store the swap address on disk?
-    // In this case of physical page being allocated and mapped,
-    // the swap address is stored in reversed mapping array
-    page_map[ppn].daddr = pte->daddr;
 
     /*  When mapped
         Page table entry: present = 1, ppn
@@ -171,7 +171,7 @@ void unmap_pte4(uint64_t ppn)
     // In this case, page_map[ppn] would be mapped by other page table.
     // Previously, this is used to store the swap address.
     // Now we need to move the swap address to the page table entry.
-    pte->daddr = page_map[ppn].daddr;
+    pte->saddr = page_map[ppn].saddr;
 
     // clear the reversed mapping
     page_map[ppn].allocated = 0;
@@ -191,6 +191,7 @@ void fix_pagefault()
 {
     // get page table directory from rsp
     pcb_t *pcb = get_current_pcb();
+    // same as what is stored in CR3 register exactly
     pte123_t *pgd = pcb->mm.pgd;
 
     // get the faulting address from MMU register
@@ -237,7 +238,7 @@ void fix_pagefault()
 
         // load page from disk to physical memory
         // at the victim's ppn
-        swap_in(pte->daddr, lru_ppn);
+        swap_in(pte->saddr, lru_ppn);
         map_pte4(pte, lru_ppn);
 
         printf("\033[34;1m\tPageFault: discard clean ppn %d as victim\033[0m\n", lru_ppn);
@@ -259,13 +260,13 @@ void fix_pagefault()
     assert(0 <= lru_ppn && lru_ppn < MAX_NUM_PHYSICAL_PAGE);
 
     // write back
-    swap_out(page_map[lru_ppn].daddr, lru_ppn);
+    swap_out(page_map[lru_ppn].saddr, lru_ppn);
 
     // unmap victim
     unmap_pte4(lru_ppn);
 
     // load page from disk to physical memory
-    swap_in(pte->daddr, lru_ppn);
+    swap_in(pte->saddr, lru_ppn);
     map_pte4(pte, lru_ppn);
 
     printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);

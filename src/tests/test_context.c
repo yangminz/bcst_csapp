@@ -47,7 +47,7 @@ static void load_code_physically(int pid, address_t *code_addr)
     // the correct execution is:
     // 000, 040, 080, 0c0, [100, 140, 180, 1c0], [100, 140, 180, 1c0], [100, 140, 180, 1c0], ...
     code[0][13] = (uint8_t)pid + '0';
-    uint8_t *start = &pm[(2 * pid - 1) * PAGE_SIZE + code_addr->vpo];
+    uint8_t *start = &pm[(pid - 1) * PAGE_SIZE + code_addr->vpo];
     memcpy((char *)start, &code, sizeof(char) * 8 * MAX_INSTRUCTION_CHAR);
 }
 
@@ -71,7 +71,7 @@ static void link_page_table(pte123_t *pgd, pte123_t *pud, pte123_t *pmd, pte4_t 
     (&(pt[vpn4]))->ppn = ppn;
     (&(pt[vpn4]))->present = 1;
 
-    map_pte4(pt, ppn);
+    map_pte4(&(pt[vpn4]), ppn);
 }
 
 static void TestContextSwitching()
@@ -117,21 +117,21 @@ static void TestContextSwitching()
     pte123_t p1_pud[512];
     pte123_t p1_pmd[512];
     pte4_t p1_pt_code[512];
-    link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt_code[0], 1, &code_addr);
+    link_page_table(&p1_pgd[0], &p1_pud[0], &p1_pmd[0], &p1_pt_code[0], 0, &code_addr);
     load_code_physically(1, &code_addr);
 
     // p2's code page
     pte123_t p2_pud[512];
     pte123_t p2_pmd[512];
     pte4_t p2_pt_code[512];
-    link_page_table(&p2_pgd[0], &p2_pud[0], &p2_pmd[0], &p2_pt_code[0], 3, &code_addr);
+    link_page_table(&p2_pgd[0], &p2_pud[0], &p2_pmd[0], &p2_pt_code[0], 1, &code_addr);
     load_code_physically(2, &code_addr);
 
     // p3's code page
     pte123_t p3_pud[512];
     pte123_t p3_pmd[512];
     pte4_t p3_pt_code[512];
-    link_page_table(&p3_pgd[0], &p3_pud[0], &p3_pmd[0], &p3_pt_code[0], 5, &code_addr);
+    link_page_table(&p3_pgd[0], &p3_pud[0], &p3_pmd[0], &p3_pt_code[0], 2, &code_addr);
     load_code_physically(3, &code_addr);
 
     // create kernel stacks

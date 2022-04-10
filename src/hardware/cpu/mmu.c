@@ -51,8 +51,8 @@ static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr,
 static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value, 
     int free_tlb_line_index);
 
-int swap_in(uint64_t daddr, uint64_t ppn);
-int swap_out(uint64_t daddr, uint64_t ppn);
+int swap_in(uint64_t saddr, uint64_t ppn);
+int swap_out(uint64_t saddr, uint64_t ppn);
 
 // consider this function va2pa as functional
 uint64_t va2pa(uint64_t vaddr)
