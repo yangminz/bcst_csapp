@@ -315,6 +315,11 @@ void int_handler(od_t *src_od, od_t *dst_od)
     }
 }
 
+void nop_handler(od_t *src_od, od_t *dst_od)
+{
+    increase_pc();
+}
+
 // from inst.c
 void parse_instruction(char *inst_str, inst_t *inst);
 

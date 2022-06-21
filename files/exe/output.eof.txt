@@ -7,8 +7,8 @@ push   %rbp
 mov    %rsp,%rbp
 sub    $0x10,%rsp
 mov    $0x2,%esi
-lea    0x0000000000000948(%rip),%rdi    
-callq  0x0000000000000160   
+lea    0x0000000000000438(%rip),%rdi    
+callq  0x00000000000000a0   
 mov    %rax,-0x8(%rbp)
 mov    -0x8(%rbp),%rax
 leaveq
@@ -30,7 +30,7 @@ addq   $0x1,-0x10(%rbp)
 mov    -0x10(%rbp),%rax
 cmp    -0x20(%rbp),%rax
 jb     1e 
-mov    0x0000000000000170(%rip),%rdx 
+mov    0x00000000000000b0(%rip),%rdx 
 mov    -0x8(%rbp),%rax
 add    %rdx,%rax
 pop    %rbp

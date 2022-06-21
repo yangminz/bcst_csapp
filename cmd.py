@@ -2,10 +2,22 @@
 # usage: 
 #   ./cmd.py argv[1] argv[2], ...
 #   /usr/bin/python3 ./cmd.py argv[1] argv[2], ...
-import sys
-import os
-import subprocess
+import sys, os, subprocess, argparse, math, json
 from pathlib import Path
+from functools import reduce
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-b", "--build", help="Build the target module.")
+parser.add_argument("-t", "--test", help="Test the target module.")
+parser.add_argument("-d", "--debug", help="Debug the target module.")
+parser.add_argument("-m", "--memcheck", help="Check the memory of the target module.")
+parser.add_argument("--hex", help="Convert ascii word to hex 64 numbers.")
+parser.add_argument("--clean", action="store_true", help="Clean the unused files.")
+parser.add_argument("--count", action="store_true", help="Count the lines of source code.")
+parser.add_argument("--format", action="store_true", help="Format the lines of source code.")
+parser.add_argument("--copyright", action="store_true", help="Add copyright info to source code.")
+parser.add_argument("--csim", action="store_true", help="Check and verify the cache module.")
+args = parser.parse_args()
 
 # print arguments
 i = 0
@@ -169,320 +181,39 @@ def count_lines():
         print(count)
     print("\nTotal:", total_count)
 
-def build(key):
+def load_config():
+    filename = "./config.json"
+    content = open(filename, "r", encoding="utf-8").read()
+    js = json.loads(content)
+    return js
+
+def run_recursive(obj):
+    if isinstance(obj, list):
+        if len(obj) > 0:
+            all_childs_string = reduce(
+                lambda x, y: x and y, 
+                list(map(lambda x: isinstance(x, str), obj)))
+            list_childs = list(filter(lambda x: isinstance(x, list), obj))
+            if all_childs_string:
+                # a list of strings -- command
+                print(" ".join(obj))
+                subprocess.run(obj)
+            elif len(list_childs) > 0:
+                for child in list_childs:
+                    run_recursive(child)
+    
+def execute(module, component):
     make_build_directory()
-    gcc_map = {
-        "isa" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
-                    "-I", "./src",
-                    "-DDEBUG_INSTRUCTION_CYCLE",
-                    "./src/common/convert.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/trie.c",
-                    "./src/algorithm/array.c",
-                    "./src/hardware/cpu/isa.c",
-                    "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/memory/dram.c",
-                    "./src/tests/test_run_isa.c",
-                    "-o", "./bin/run_isa"
-                ]
-            ],
-        "int" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DUSE_SRAM_CACHE",
-                    "-DUSE_NAVIE_VA2PA",
-                    "./src/common/convert.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/trie.c",
-                    "./src/algorithm/array.c",
-                    "./src/hardware/cpu/isa.c",
-                    "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/cpu/inst.c",
-                    # "./src/hardware/cpu/sram.c",
-                    "./src/hardware/cpu/interrupt.c",
-                    "./src/hardware/memory/dram.c",
-                    # "./src/hardware/memory/swap.c",
-                    "./src/process/syscall.c",
-                    "./src/process/schedule.c",
-                    "./src/tests/test_run_isa.c",
-                    "-o", "./bin/run_isa"
-                ]
-            ],
-        "ctx" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DUSE_SRAM_CACHE",
-                    # "-DUSE_NAVIE_VA2PA",
-                    "-DUSE_PAGETABLE_VA2PA",
-                    "./src/common/convert.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/trie.c",
-                    "./src/algorithm/array.c",
-                    "./src/hardware/cpu/isa.c",
-                    "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/cpu/inst.c",
-                    # "./src/hardware/cpu/sram.c",
-                    "./src/hardware/cpu/interrupt.c",
-                    "./src/hardware/memory/dram.c",
-                    "./src/hardware/memory/swap.c",
-                    "./src/process/syscall.c",
-                    "./src/process/schedule.c",
-                    "./src/process/pagefault.c",
-                    "./src/tests/test_context.c",
-                    "-o", "./bin/ctx"
-                ]
-            ],
-        "pgf" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_INSTRUCTION_CYCLE",
-                    # "-DUSE_SRAM_CACHE",
-                    # "-DUSE_NAVIE_VA2PA",
-                    "-DUSE_PAGETABLE_VA2PA",
-                    "./src/common/convert.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/trie.c",
-                    "./src/algorithm/array.c",
-                    "./src/hardware/cpu/isa.c",
-                    "./src/hardware/cpu/mmu.c",
-                    "./src/hardware/cpu/inst.c",
-                    # "./src/hardware/cpu/sram.c",
-                    "./src/hardware/cpu/interrupt.c",
-                    "./src/hardware/memory/dram.c",
-                    "./src/hardware/memory/swap.c",
-                    "./src/process/syscall.c",
-                    "./src/process/schedule.c",
-                    "./src/process/pagefault.c",
-                    "./src/tests/test_pagefault.c",
-                    "-o", "./bin/pgf"
-                ]
-            ],
-        "inst" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
-                    "-I", "./src",
-                    "-DDEBUG_INSTRUCTION_CYCLE",
-                    "./src/common/convert.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/trie.c",
-                    "./src/algorithm/array.c",
-                    "./src/hardware/cpu/inst.c",
-                    "./src/tests/test_inst.c",
-                    "-o", "./bin/test_inst"
-                ],
-            ],
-        "link" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-shared", "-fPIC",
-                    "./src/common/convert.c",
-                    "./src/algorithm/array.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/linkedlist.c",
-                    "./src/linker/parseElf.c",
-                    "./src/linker/staticlink.c",
-                    "-o", "./bin/staticLinker.so"
-                ],
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-                    "-I", "./src",
-                    # "-DDEBUG_LINK",
-                    "./src/common/convert.c",
-                    "./src/algorithm/array.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/linkedlist.c",
-                    "./src/linker/linker.c", 
-                    "-ldl", "-o", "./bin/link"
-                ],
-            ],
-        "elf" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", 
-                    "-Wno-unused-function",
-                    "-Wno-unused-but-set-variable",
-                    "-I", "./src",
-                    "-DDEBUG_PARSE_ELF",
-                    "-DDEBUG_LINK",
-                    "./src/common/convert.c",
-                    "./src/algorithm/array.c",
-                    "./src/algorithm/hashtable.c",
-                    "./src/algorithm/linkedlist.c",
-                    "./src/linker/parseElf.c",
-                    "-o", "./bin/elf"
-                ],
-            ],
-        "mesi" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable",
-                    "-I", "./src",
-                    # "-DDEBUG",
-                    "./src/mains/mesi.c",
-                    "-o", "./bin/mesi"
-                ],
-            ],
-        "false_sharing" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
-                    "-I", "./src",
-                    "-pthread",
-                    "./src/mains/false_sharing.c",
-                    "-o", "./bin/false_sharing"
-                ],
-            ],
-        "rbt" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_REDBLACK",
-                    "./src/common/convert.c",
-                    "./src/algorithm/bst.c",
-                    "./src/algorithm/rbt.c",
-                    "./src/tests/test_rbt.c",
-                    "-o", "./bin/rbt"
-                ],
-            ],
-        "trie" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_TRIE",
-                    "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
-                    "./src/tests/test_trie.c",
-                    "-o", "./bin/trie"
-                ],
-            ],
-        "bst" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_BST",
-                    "./src/algorithm/bst.c",
-                    "./src/common/convert.c",
-                    "./src/tests/test_bst.c",
-                    "-o", "./bin/bst"
-                ],
-            ],
-        "malloc" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_MALLOC",
-                    # "-DIMPLICIT_FREE_LIST",
-                    # "-DEXPLICIT_FREE_LIST",
-                    "-DREDBLACK_TREE",
-                    "./src/common/convert.c",
-                    "./src/algorithm/linkedlist.c",
-                    "./src/algorithm/bst.c",
-                    "./src/algorithm/rbt.c",
-                    "./src/malloc/block.c", 
-                    "./src/malloc/small_list.c", 
-                    "./src/malloc/implicit_list.c", 
-                    "./src/malloc/explicit_list.c", 
-                    "./src/malloc/segregated_list.c", 
-                    "./src/malloc/redblack_tree.c",
-                    "./src/malloc/mem_alloc.c",
-                    "./src/tests/test_malloc.c",
-                    "-o", "./bin/malloc"
-                ],
-            ],
-        "convert" : [
-                [
-                    "/usr/bin/gcc-7", 
-                    "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
-                    "-I", "./src",
-                    "-DDEBUG_BST",
-                    "-DDEBUG_STRING2UINT",
-                    "./src/common/convert.c",
-                    "./src/tests/test_convert.c",
-                    "-o", "./bin/convert"
-                ],
-            ],
-    }
-
-    if not key in gcc_map:
-        print("input the correct build key:", gcc_map.keys())
+    config = load_config();
+    if not module in config:
+        print("input the correct build module:", config.keys())
         exit()
-    for command in gcc_map[key]:
-        subprocess.run(command)
-
-def run(key):
-    assert(os.path.isdir("./bin/"))
-    bin_map = {
-        "inst" : ["./bin/test_inst"],
-        "isa" : ["./bin/run_isa"],
-        "int" : ["./bin/run_isa"],
-        "elf" : ["./bin/elf"],
-        "link" : ["./bin/link", "main", "sum", "-o", "output"],
-        "mesi" : ["./bin/mesi"],
-        "false_sharing" : ["./bin/false_sharing"],
-        "rbt" : ["./bin/rbt"],
-        "trie" : ["./bin/trie"],
-        "bst" : ["./bin/bst"],
-        "malloc" : ["./bin/malloc"],
-        "convert" : ["./bin/convert"],
-        "ctx" : ["./bin/ctx"],
-        "pgf" : ["./bin/pgf"],
-    }
-    if not key in bin_map:
-        print("input the correct binary key:", bin_map.keys())
+    if not component in config[module]:
+        print("target module '" + module + "' does not have the '" + component + "' component.\nplease check.")
         exit()
-    subprocess.run(bin_map[key])
-
-def debug(key):
-    assert(os.path.isdir("./bin/"))
-    gdb = "/usr/bin/gdb"
-    bin_map = {
-        "isa" : [gdb, "./bin/run_isa"],
-        "int" : [gdb, "./bin/run_isa"],
-        "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
-        "malloc" : [gdb, "./bin/malloc"],
-        "bst" : [gdb, "./bin/bst"],
-        "rbt" : [gdb, "./bin/rbt"],
-        "trie" : [gdb, "./bin/trie"],
-        "inst" : [gdb, "./bin/test_inst"],
-        "ctx" : [gdb, "./bin/ctx"],
-        "pgf" : [gdb, "./bin/pgf"],
-    }
-    if not key in bin_map:
-        print("input the correct binary key:", bin_map.keys())
-        exit()
-    subprocess.run(bin_map[key])
-
-def mem_check(key):
-    assert(os.path.isdir("./bin/"))
-    bin_map = {
-        "isa" : ["./bin/ut_isa"],
-        "link" : ["./bin/link", "main", "sum", "-o", "output"]
-    }
-    if not key in bin_map:
-        print("input the correct memory check key:", bin_map.keys())
-        exit()
-    subprocess.run([
-        "/usr/bin/valgrind",
-        "--tool=memcheck",
-        "--leak-check=full"] + bin_map[key])
+    # find all list of strings and execute
+    assert(component in {"build", "test", "debug", "memcheck"})
+    run_recursive(config[module][component])
 
 def cache_verify():
     make_build_directory()
@@ -519,29 +250,41 @@ def cache_verify():
         print(" ".join(a))
         subprocess.run(a)
 
-# main
-assert(len(sys.argv) >= 2)
-operation = sys.argv[1].lower()
+def printHex():
+    strVal = args.hex
+    print(strVal)
+    length = len(strVal)
+    buffer = ""
+    for i in range(math.ceil(length/8)):
+        line = ""
+        for j in range(8):
+            index = j + i * 8
+            if index < len(strVal):
+                line = str(hex(ord(strVal[index])))[2:] + line
+            else:
+                line = "00" + line
+        line = "[" + str(i * 8) + "]\t" + line
+        line += "\t" + strVal[i * 8: i * 8 + 8] + "\n"
+        buffer += line
+    print(buffer)
 
-if operation == "build":
-    assert(len(sys.argv) == 3)
-    build(sys.argv[2])
-elif operation == "run":
-    assert(len(sys.argv) == 3)
-    run(sys.argv[2])
-elif operation == "debug":
-    assert(len(sys.argv) == 3)
-    debug(sys.argv[2])
-elif operation == "memcheck":
-    assert(len(sys.argv) == 3)
-    mem_check(sys.argv[2])
-elif operation == "count":
+# main
+
+if args.build:
+    execute(args.build, "build")
+elif args.test:
+    execute(args.test, "test")
+elif args.debug:
+    execute(args.debug, "debug")
+elif args.memcheck:
+    execute(args.memcheck, "memcheck")
+elif args.hex:
+    printHex()
+elif args.count == True:
     count_lines()
-elif operation == "clean":
-    pass
-elif operation == "copyright":
+elif args.copyright == True:
     add_copyright_header()
-elif operation == "format":
+elif args.format == True:
     format_code()
-elif operation == "csim":
+elif args.csim == True:
     cache_verify()
