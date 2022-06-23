@@ -1,4 +1,5 @@
 {
+    "copyright": "/* BCST - Introduction to Computer Systems\n * Author:      yangminz@outlook.com\n * Github:      https://github.com/yangminz/bcst_csapp\n * Bilibili:    https://space.bilibili.com/4564101\n * Zhihu:       https://www.zhihu.com/people/zhao-yang-min\n * This project (code repository and videos) is exclusively owned by yangminz \n * and shall not be used for commercial and profitting purpose \n * without yangminz's permission.\n */\n",
     "isa":
     {
         "build": [

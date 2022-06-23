@@ -26,17 +26,13 @@ for argv in sys.argv:
     i += 1
 print("================")
 
-# file headers contains copyright information
-notification = "/* BCST - Introduction to Computer Systems\n" \
-" * Author:      yangminz@outlook.com\n" \
-" * Github:      https://github.com/yangminz/bcst_csapp\n" \
-" * Bilibili:    https://space.bilibili.com/4564101\n" \
-" * Zhihu:       https://www.zhihu.com/people/zhao-yang-min\n" \
-" * This project (code repository and videos) is exclusively owned by yangminz \n" \
-" * and shall not be used for commercial and profitting purpose \n" \
-" * without yangminz's permission.\n" \
-" */\n\n"
+def load_config():
+    filename = "./config.json"
+    content = open(filename, "r", encoding="utf-8").read()
+    js = json.loads(content)
+    return js
 
+# file headers contains copyright information
 def make_build_directory():
     if not os.path.isdir("./bin/"):
         os.mkdir("./bin/")
@@ -46,7 +42,7 @@ def make_build_directory():
 def add_copyright_header():
     # get files with paths
     filelist = list(Path(".").rglob("*.[ch]"))
-
+    notification = load_config()["copyright"]
     # recursively add lines to every .c and .h file
     print("recursively add lines to every .c and .h file")
     for filename in filelist:
@@ -180,12 +176,6 @@ def count_lines():
             print(" ", end="")
         print(count)
     print("\nTotal:", total_count)
-
-def load_config():
-    filename = "./config.json"
-    content = open(filename, "r", encoding="utf-8").read()
-    js = json.loads(content)
-    return js
 
 def run_recursive(obj):
     if isinstance(obj, list):
