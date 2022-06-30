@@ -311,7 +311,7 @@ static void test_delete()
     //  2. both sibling's childs black = (NULL, NULL)
     // double black gives black to parent
     // parent black, then parent double black, continue to parent, untill root
-    // silbing red
+    // sibling red
     r = rbt_construct_keystr(
         "(10,"
             "(5,(1,#,#),(7,#,#)),"
@@ -374,7 +374,7 @@ static void test_delete()
 
     // A COMPLETE TEST CASE
 
-    // silbing red
+    // sibling red
     r = rbt_construct_keystr(
         "(50,"
             "(20,(15,#,#),(35,#,#)),"

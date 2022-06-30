@@ -119,7 +119,7 @@ void pagemap_dirty(uint64_t ppn)
 }
 
 // used by frame swap-in from swap space
-// for newly allocated anoymous page
+// for newly allocated anonymous page
 void set_pagemap_swapaddr(uint64_t ppn, uint64_t swap_address)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);

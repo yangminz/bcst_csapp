@@ -38,7 +38,7 @@ uint64_t allocate_swappage(uint64_t ppn)
     FILE *fw = fopen(filename, "w");
     assert(fw != NULL);
 
-    // write zero page for anoymous page
+    // write zero page for anonymous page
     // But there is no transaction actually
     fclose(fw);
     uint64_t ppn_ppo = ppn << PHYSICAL_PAGE_OFFSET_LENGTH;
@@ -64,7 +64,7 @@ int swap_in(uint64_t saddr, uint64_t ppn)
     {
         // saddr == 0 indicates that this page is not backed by file
         // nor backed by swap space. It should be a newly created 
-        // anoymous page. Allocate one swap address for it.
+        // anonymous page. Allocate one swap address for it.
         allocate_swappage(ppn);
         return 0;
     }
