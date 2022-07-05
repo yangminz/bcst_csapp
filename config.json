@@ -104,7 +104,7 @@
     {
         "build": [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
             "-I", "./src",
             "-DDEBUG_INSTRUCTION_CYCLE",
             "-DUSE_PAGETABLE_VA2PA",

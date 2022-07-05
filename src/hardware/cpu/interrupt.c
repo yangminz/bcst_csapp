@@ -47,8 +47,6 @@ void idt_init()
     idt[0x81].handler = timer_handler;
 }
 
-static void print_kstack();
-
 // get the high vaddr of kstack from TSS
 uint64_t get_kstack_top_TSS()
 {
@@ -339,9 +337,9 @@ void syscall_handler()
 
 // Helper functions
 
-static void print_kstack()
+static void print_kstack(pcb_t *p)
 {
-    uint64_t kstack_bottom_vaddr = get_kstack_RSP();
+    uint64_t kstack_bottom_vaddr = (uint64_t)p->kstack;
     uint64_t kstack_top_vaddr = kstack_bottom_vaddr + KERNEL_STACK_SIZE;
     
     uint64_t tfa = kstack_top_vaddr - sizeof(trapframe_t);

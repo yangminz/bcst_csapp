@@ -19,6 +19,9 @@
 
 #define KERNEL_malloc malloc
 
+// We must call this function VERY VERY CAREFULLY
+int KERNEL_free(void *ptr);
+
 // the struct of trap frame when interrupt on kernel stack
 // executed by hardware CPU
 typedef struct STRUCT_TRAPFRAME

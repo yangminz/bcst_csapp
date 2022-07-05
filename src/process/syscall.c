@@ -82,7 +82,10 @@ static void getpid_handler()
 
 static void fork_handler()
 {
+    uint64_t kernel_rsp = cpu_reg.rsp;
     destory_user_registers();
+    cpu_reg.rsp = kernel_rsp;
+
     syscall_fork();
 }
 

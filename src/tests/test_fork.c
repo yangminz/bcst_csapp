@@ -91,7 +91,7 @@ static void TestFork()
         "mov    $0x39, %rax",
         "int    $0x80",
         // check fork result to detect parent or child
-        "mov    %eax,%rbx",
+        "mov    %rax,%rbx",
         "cmpq   $0x0,%rbx",
         // not returns 0, then parent process
         "jne    $0x00400380",
@@ -105,7 +105,7 @@ static void TestFork()
         "int    $0x80",
         "jmp    $0x00400180",
         // LOOP: parent
-        // parent LOOP: print child
+        // parent LOOP: print parent
         "movq   $0a746e65726170, %rbx", // 0x00400380
         "pushq  %rbx",
         "movq   $1, %rax",
@@ -133,7 +133,7 @@ static void TestFork()
     syscall_init();
 
     // this should trigger page fault
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         instruction_cycle();
     }
