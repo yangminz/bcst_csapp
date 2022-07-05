@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include "headers/cpu.h"
 #include "headers/memory.h"
 #include "headers/common.h"
@@ -270,4 +271,57 @@ void fix_pagefault()
     map_pte4(pte, lru_ppn);
 
     printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
+}
+
+/*  copy one physical frame for new process to use
+    And this new frame should have exactly the same data as parent process
+    Used by fork
+    ----------------
+    parent_ppn: the ppn of the frame (parent process) to be copied
+    child_pte: the level 4 page table entry to be mapped
+    return value: 1 for success, 0 for failure
+ */
+int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn)
+{
+    assert(0 <= parent_ppn && parent_ppn < MAX_NUM_PHYSICAL_PAGE);
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (page_map[i].allocated == 0)
+        {
+            // found i as free ppn
+            map_pte4(child_pte, i);
+            // copy user frame
+            memcpy(&pm[i << PHYSICAL_PAGE_OFFSET_LENGTH],
+                &pm[parent_ppn << PHYSICAL_PAGE_OFFSET_LENGTH], PAGE_SIZE);
+            return 1;
+        }
+    }
+
+    // TODO && ATTENTIOn!!: In real world, we may evict victim to provide
+    //                      enough space for new child frame
+    // But in our case, parent_ppn may be evicted. This is bad.
+    // So we should fail the fork
+    return 0;
+}
+
+// check if there are enough frames to use
+int enough_frames(int request_num)
+{
+    int free_num = 0;
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (page_map[i].allocated == 0)
+        {
+            free_num += 1;
+        }
+    }
+    
+    if (request_num <= free_num)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }

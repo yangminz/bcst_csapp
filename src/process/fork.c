@@ -19,6 +19,10 @@
 #include "headers/syscall.h"
 #include "headers/process.h"
 
+// from page fault
+int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn);
+int enough_frames(int request_num);
+
 static uint64_t fork_naive_copy();
 static uint64_t fork_cow();
 
@@ -53,7 +57,7 @@ void update_userframe_returnvalue(pcb_t *p, uint64_t retval)
     uf->regs.rax = retval;
 }
 
-pte123_t *copy_pagetable_dfs(pte123_t *src, int level)
+static pte123_t *copy_pagetable(pte123_t *src, int level)
 {
     // allocate one page for destination
     pte123_t *dst = KERNEL_malloc(sizeof(pte123_t) * PAGE_TABLE_ENTRY_NUM);
@@ -63,6 +67,20 @@ pte123_t *copy_pagetable_dfs(pte123_t *src, int level)
 
     if (level == 4)
     {
+        pte4_t *parent_pt = (pte4_t *)src;
+        pte4_t *child_pt = (pte4_t *)dst;
+
+        // copy user frames here
+        for (int j = 0; j < PAGE_TABLE_ENTRY_NUM; ++ j)
+        {
+            if (parent_pt[j].present == 1)
+            {
+                // copy the physical frame to child
+                int copy_ = copy_userframe(&child_pt[j], parent_pt[j].ppn);
+                assert(copy_ == 1);
+            }
+        }
+
         return dst;
     }
 
@@ -72,16 +90,45 @@ pte123_t *copy_pagetable_dfs(pte123_t *src, int level)
         if (src[i].present == 1)
         {
             pte123_t *src_next = (pte123_t *)(uint64_t)(src[i].paddr);
-            dst[i].paddr = (uint64_t)copy_pagetable_dfs(src_next, level + 1);
+            dst[i].paddr = (uint64_t)copy_pagetable(src_next, level + 1);
         }
     }
 
     return dst;
 }
 
+static int get_childframe_num(pte123_t *p, int level)
+{
+    int count = 0;
+
+    if (level == 4)
+    {
+        for (int i = 0; i < PAGE_TABLE_ENTRY_NUM; ++ i)
+        {
+            if (p[i].present == 1)
+            {
+                count += 1;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < PAGE_TABLE_ENTRY_NUM; ++ i)
+        {
+            if (p[i].present == 1)
+            {
+                count += get_childframe_num(
+                    (pte123_t *)(uint64_t)p[i].paddr, level + 1);
+            }
+        }
+    }
+
+    return count;
+}
+
 #define PAGE_TABLE_ENTRY_PADDR_MASK (~((0xffffffffffffffff >> 12) << 12))
 
-static int compare_pagetables_recursive(pte123_t *p, pte123_t *q, int level)
+static int compare_pagetables(pte123_t *p, pte123_t *q, int level)
 {
     for (int i = 0; i < PAGE_TABLE_ENTRY_NUM; ++ i)
     {
@@ -93,21 +140,24 @@ static int compare_pagetables_recursive(pte123_t *p, pte123_t *q, int level)
         }
 
         if (level < 4 && p[i].present == 1 &&
-            compare_pagetables_recursive(
+            compare_pagetables(
                 (pte123_t *)(uint64_t)p[i].paddr, 
                 (pte123_t *)(uint64_t)q[i].paddr, level + 1) == 0)
         {
             // sub-pages not match
             assert(0);
         }
+        else if (level == 4 && p[i].present == 1)
+        {
+            // compare the physical frame content
+            int p_ppn = p[i].paddr;
+            int q_ppn = q[i].paddr;
+            assert(memcmp(&pm[p_ppn << 12], &pm[q_ppn << 12], PAGE_SIZE) == 0);
+        }
+
     }
 
     return 1;
-}
-
-static int compare_pagetables(pte123_t *p, pte123_t *q)
-{
-    return compare_pagetables_recursive(p, q, 1);
 }
 
 static uint64_t fork_naive_copy()
@@ -124,6 +174,15 @@ static uint64_t fork_naive_copy()
     // DIRECT COPY
     // find all pages of current process:
     pcb_t *parent_pcb = get_current_pcb();
+
+    // check memory size
+    int needed_userframe_num = get_childframe_num(parent_pcb->mm.pgd, 1);
+    if (enough_frames(needed_userframe_num) == 0)
+    {
+        // there are no enough frames for child process to use
+        update_userframe_returnvalue(parent_pcb, -1);
+        return -1;
+    }
 
     // ATTENTION HERE!!!
     // In a realistic OS, you need to allocate kernel pages as well
@@ -163,10 +222,8 @@ static uint64_t fork_naive_copy()
     update_userframe_returnvalue(child_pcb, 0);
 
     // copy the entire page table of parent
-    child_pcb->mm.pgd = copy_pagetable_dfs(parent_pcb->mm.pgd, 1);
-    assert(compare_pagetables(child_pcb->mm.pgd, parent_pcb->mm.pgd) == 1);
-
-    // TODO: find physical frames to copy the pages of parent
+    child_pcb->mm.pgd = copy_pagetable(parent_pcb->mm.pgd, 1);
+    assert(compare_pagetables(child_pcb->mm.pgd, parent_pcb->mm.pgd, 1) == 1);
 
     // All copy works are done here
     return 0;
