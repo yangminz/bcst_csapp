@@ -135,19 +135,17 @@ static void TestContextSwitching()
     load_code_physically(3, &code_addr);
 
     // create kernel stacks
-    uint8_t stack_buf[8192 * 4];
-
-    uint64_t p1_stack_bottom = (((uint64_t)&stack_buf[8192]) >> 13) << 13;
-    uint64_t p2_stack_bottom = p1_stack_bottom + KERNEL_STACK_SIZE;
-    uint64_t p3_stack_bottom = p2_stack_bottom + KERNEL_STACK_SIZE;
-
-    p1.kstack = (kstack_t *)p1_stack_bottom;
-    p2.kstack = (kstack_t *)p2_stack_bottom;
-    p3.kstack = (kstack_t *)p3_stack_bottom;
+    p1.kstack = aligned_alloc(KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
+    p2.kstack = aligned_alloc(KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
+    p3.kstack = aligned_alloc(KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
 
     p1.kstack->threadinfo.pcb = &p1;
     p2.kstack->threadinfo.pcb = &p2;
     p3.kstack->threadinfo.pcb = &p3;
+
+    uint64_t p1_stack_bottom = (uint64_t)p1.kstack;
+    uint64_t p2_stack_bottom = (uint64_t)p2.kstack;
+    uint64_t p3_stack_bottom = (uint64_t)p3.kstack;
 
     // create trap frames for p2, p3
     trapframe_t tf = {

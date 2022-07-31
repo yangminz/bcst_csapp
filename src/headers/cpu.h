@@ -293,6 +293,11 @@ void instruction_cycle();
 
 uint64_t mmu_vaddr_pagefault;
 
+// flush TLB if use it
+#if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+void flush_tlb();
+#endif
+
 // translate the virtual address to physical address in MMU
 // each MMU is owned by each core
 uint64_t va2pa(uint64_t vaddr);

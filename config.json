@@ -50,10 +50,11 @@
     {
         "build": [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
             "-I", "./src",
             "-DDEBUG_INSTRUCTION_CYCLE",
             "-DUSE_PAGETABLE_VA2PA",
+            "-DUSE_FORK_NAIVE_COPY",
             "./src/common/convert.c",
             "./src/algorithm/hashtable.c",
             "./src/algorithm/trie.c",
@@ -65,6 +66,7 @@
             "./src/hardware/memory/dram.c",
             "./src/hardware/memory/swap.c",
             "./src/process/syscall.c",
+            "./src/process/fork.c",
             "./src/process/schedule.c",
             "./src/process/pagefault.c",
             "./src/tests/test_context.c",
@@ -77,7 +79,7 @@
     {
         "build": [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
             "-I", "./src",
             "-DDEBUG_INSTRUCTION_CYCLE",
             "-DUSE_PAGETABLE_VA2PA",

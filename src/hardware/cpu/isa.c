@@ -230,32 +230,38 @@ void sub_handler(od_t *src_od, od_t *dst_od)
 
 void cmp_handler(od_t *src_od, od_t *dst_od)
 {
+    uint64_t val, dval;
     if (src_od->type == OD_IMM && dst_od->type == OD_MEM)
     {
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
         // (dst_od->value) = (dst_od->value) - (src_od->value) = (dst_od->value) + (-(src_od->value))
         uint64_t dst_pa = va2pa(dst_od->value);
-        uint64_t dval = cpu_read64bits_dram(dst_pa);
-        uint64_t val = dval + (~(src_od->value) + 1);
-
-        int val_sign = ((val >> 63) & 0x1);
-        int src_sign = (((src_od->value) >> 63) & 0x1);
-        int dst_sign = ((dval >> 63) & 0x1);
-
-        // set condition flags
-        cpu_flags.CF = (val > dval); // unsigned
-
-        cpu_flags.ZF = (val == 0);
-        cpu_flags.SF = val_sign;
-
-        cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) || (src_sign == 0 && dst_sign == 1 && val_sign == 0);
-
-        // signed and unsigned value follow the same addition. e.g.
-        // 5 = 0000000000000101, 3 = 0000000000000011, -3 = 1111111111111101, 5 + (-3) = 0000000000000010
-        increase_pc();
-        return;
+        dval = cpu_read64bits_dram(dst_pa);
     }
+    else if (src_od->type == OD_IMM && dst_od->type == OD_REG)
+    {
+        dval = *(uint64_t *)(dst_od->value);
+    }
+    
+    val = dval + (~(src_od->value) + 1);
+
+    int val_sign = ((val >> 63) & 0x1);
+    int src_sign = (((src_od->value) >> 63) & 0x1);
+    int dst_sign = ((dval >> 63) & 0x1);
+
+    // set condition flags
+    cpu_flags.CF = (val > dval); // unsigned
+
+    cpu_flags.ZF = (val == 0);
+    cpu_flags.SF = val_sign;
+
+    cpu_flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) || (src_sign == 0 && dst_sign == 1 && val_sign == 0);
+
+    // signed and unsigned value follow the same addition. e.g.
+    // 5 = 0000000000000101, 3 = 0000000000000011, -3 = 1111111111111101, 5 + (-3) = 0000000000000010
+    increase_pc();
+    return;
 }
 
 void jne_handler(od_t *src_od, od_t *dst_od)
@@ -325,7 +331,7 @@ void parse_instruction(char *inst_str, inst_t *inst);
 
 // time, the craft of god
 static uint64_t global_time = 0;
-static uint64_t timer_period = 5;
+static uint64_t timer_period = 5000000;
 
 // instruction cycle is implemented in CPU
 // the only exposed interface outside CPU
@@ -347,7 +353,7 @@ void instruction_cycle()
     cpu_readinst_dram(pc_pa, inst_str);
 
 #ifdef DEBUG_INSTRUCTION_CYCLE
-    printf("%8lx    %s\n", cpu_pc.rip, inst_str);
+    printf("[%4ld] %8lx    %s\n", global_time, cpu_pc.rip, inst_str);
 #endif
 
     // DECODE: decode the run-time instruction operands

@@ -11,6 +11,7 @@
 // Memory Management Unit 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "headers/cpu.h"
 #include "headers/memory.h"
@@ -99,6 +100,11 @@ uint64_t va2pa(uint64_t vaddr)
 }
 
 #if defined(USE_TLB_HARDWARE) && defined(USE_PAGETABLE_VA2PA)
+void flush_tlb()
+{
+    memset(&mmu_tlb, 0, sizeof(tlb_cache_t));
+}
+
 static int read_tlb(uint64_t vaddr_value, uint64_t *paddr_value_ptr, 
     int *free_tlb_line_index)
 {

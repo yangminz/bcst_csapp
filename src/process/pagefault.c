@@ -281,7 +281,7 @@ void fix_pagefault()
     child_pte: the level 4 page table entry to be mapped
     return value: 1 for success, 0 for failure
  */
-int copy_userframe(pte4_t *child_pte, uint64_t parent_ppn)
+int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn)
 {
     assert(0 <= parent_ppn && parent_ppn < MAX_NUM_PHYSICAL_PAGE);
     for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
