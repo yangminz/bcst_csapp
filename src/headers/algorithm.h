@@ -166,6 +166,14 @@ uint64_t linkedlist_internal_index(linkedlist_internal_t *list,
     uint64_t index);
 uint64_t linkedlist_internal_next(linkedlist_internal_t *list,
     linkedlist_node_interface *i_node);
+int linkedlist_internal_insert_after(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node, 
+    uint64_t prev,
+    uint64_t node);
+int linkedlist_internal_insert_before(linkedlist_internal_t *list, 
+    linkedlist_node_interface *i_node, 
+    uint64_t next,
+    uint64_t node);
 
 //
 //  The implementation of the default linked list

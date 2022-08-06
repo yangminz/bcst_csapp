@@ -175,7 +175,7 @@ static int write_tlb(uint64_t vaddr_value, uint64_t paddr_value,
 }
 #endif
 
-#ifdef USE_PAGETABLE_VA2PA
+//#ifdef USE_PAGETABLE_VA2PA
 // input - virtual address
 // output - physical address
 static uint64_t page_walk(uint64_t vaddr_value)
@@ -225,6 +225,13 @@ static uint64_t page_walk(uint64_t vaddr_value)
             .ppn = pte->ppn,
             .ppo = vpo    // page offset inside the 4KB page
         };
+
+        // TODO
+        if (pte->readonly == 1 && va2pa_write)
+        {
+            goto RAISE_PAGE_FAULT;
+        }
+
         return paddr.paddr_value;
     }
     else

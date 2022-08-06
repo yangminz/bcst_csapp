@@ -46,8 +46,8 @@ typedef struct
 // create one reversed mapping
 static pd_t page_map[MAX_NUM_PHYSICAL_PAGE];
 
-// get the level 4 page table entry
-static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
+// get the level page table entry
+pte123_t *get_pagetableentry(pte123_t *pgd, address_t *vaddr, int level, int allocate)
 {
     int vpns[4] = {
         vaddr->vpn1,
@@ -58,33 +58,47 @@ static pte4_t *get_entry4(pte123_t *pgd, address_t *vaddr)
 
     assert(pgd != NULL);
     assert(sizeof(pte123_t) == sizeof(pte4_t));
+    assert(1 <= level && level <= 4);
 
-    int level = 0;
+    int tab_level = 1;
     pte123_t *tab = pgd;
-    while (level < 4)
-    {
-        int vpn = vpns[level];
-        if (tab[vpn].present != 1)
-        {
-            // allocate a new page for next level
+    pte123_t *pte = NULL;
 
-            // note that this is a 48-bit address !!!
-            // the high bits are all zero
-            // And sizeof(pte123_t) == sizeof(pte4_t)
-            pte123_t *new_tab = (pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
-            
-            // .paddr field is 50 bits
-            tab[vpn].paddr = (uint64_t)new_tab;
-            tab[vpn].present = 1;
-        }
+    while (tab_level <= level)
+    {
+        int vpn = vpns[tab_level - 1];
+        pte = &tab[vpn];
 
         // move to next level
-        tab = (pte123_t *)((uint64_t)tab[vpn].paddr);
-        level += 1;
+        if (tab_level < 4)
+        {
+            if (pte->present != 1)
+            {
+                if (allocate == 1)
+                {
+                    // allocate a new page for next level
+
+                    // note that this is a 48-bit address !!!
+                    // the high bits are all zero
+                    // And sizeof(pte123_t) == sizeof(pte4_t)
+                    pte123_t *new_tab = (pte123_t *)KERNEL_malloc(PAGE_TABLE_ENTRY_NUM * sizeof(pte123_t));
+                    
+                    // .paddr field is 50 bits
+                    tab[vpn].paddr = (uint64_t)new_tab;
+                    tab[vpn].present = 1;
+                }
+                else
+                {
+                    return NULL;
+                }
+            }
+            tab = (pte123_t *)((uint64_t)pte->paddr);
+        }
+
+        tab_level += 1;
     }
 
-    pte4_t *pt = (pte4_t *)tab;
-    return &pt[vaddr->vpn4];
+    return pte;
 }
 
 void page_map_init()
@@ -198,8 +212,10 @@ void fix_pagefault()
     // get the faulting address from MMU register
     address_t vaddr = {.address_value = mmu_vaddr_pagefault};
 
+    // TODO: check read/write in vma
+
     // get the level 4 page table entry
-    pte4_t *pte = get_entry4(pgd, &vaddr);
+    pte4_t *pte = (pte4_t *)get_pagetableentry(pgd, &vaddr, 4, 1);
     
     // 1. try to request one free physical page from DRAM
     // kernel's responsibility
@@ -273,6 +289,21 @@ void fix_pagefault()
     printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
 }
 
+int allocate_physicalframe(pte4_t *pte)
+{
+    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    {
+        if (page_map[i].allocated == 0)
+        {
+            // found i as free ppn
+            map_pte4(pte, i);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 /*  copy one physical frame for new process to use
     And this new frame should have exactly the same data as parent process
     Used by fork
@@ -284,20 +315,14 @@ void fix_pagefault()
 int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn)
 {
     assert(0 <= parent_ppn && parent_ppn < MAX_NUM_PHYSICAL_PAGE);
-    for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
+    if (allocate_physicalframe(child_pte) == 1)
     {
-        if (page_map[i].allocated == 0)
-        {
-            // found i as free ppn
-            map_pte4(child_pte, i);
-            // copy user frame
-            memcpy(&pm[i << PHYSICAL_PAGE_OFFSET_LENGTH],
-                &pm[parent_ppn << PHYSICAL_PAGE_OFFSET_LENGTH], PAGE_SIZE);
-            return 1;
-        }
+        uint64_t ppn = child_pte->ppn;
+        memcpy(&pm[ppn << PHYSICAL_PAGE_OFFSET_LENGTH],
+            &pm[parent_ppn << PHYSICAL_PAGE_OFFSET_LENGTH], PAGE_SIZE);
     }
-
-    // TODO && ATTENTIOn!!: In real world, we may evict victim to provide
+    
+    // TODO && ATTENTION!!: In real world, we may evict victim to provide
     //                      enough space for new child frame
     // But in our case, parent_ppn may be evicted. This is bad.
     // So we should fail the fork

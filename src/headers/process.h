@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "headers/memory.h"
+#include "headers/algorithm.h"
 
 // include guards to prevent double declaration of any identifiers 
 // such as types, enums and static variables
@@ -41,16 +42,24 @@ typedef struct VIRTUAL_MEMORY_AREA_STRUCT
     struct VIRTUAL_MEMORY_AREA_STRUCT *next;
     uint64_t vma_start;
     uint64_t vma_end;
-    struct
+    union
     {
-        uint64_t read:      1;
-        uint64_t write:     1;
-        uint64_t execute:   1;
-        uint64_t private:   1;
-    } vma_mode;
+        uint64_t mode_value;
+        struct
+        {
+            uint64_t read:      1;
+            uint64_t write:     1;
+            uint64_t execute:   1;
+            uint64_t private:   1;
+        } vma_mode;
+    };
+
     // actually we need inode here but we do not implement file system
     char filepath[128];
-} vm_area_struct;
+
+    // used for RBT indexing
+    int rbt_color;
+} vm_area_t;
 
 typedef struct PROCESS_CONTROL_BLOCK_STRUCT
 {
@@ -66,7 +75,8 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
             pte123_t *pgd;
         };
 
-        // TODO: vm area
+        // virtual memory area
+        linkedlist_internal_t vma;
     } mm;
     
     kstack_t *kstack;
@@ -81,5 +91,8 @@ typedef struct PROCESS_CONTROL_BLOCK_STRUCT
 void syscall_init();
 
 pcb_t *get_current_pcb();
+
+void setup_pagetable_from_vma(pcb_t *proc);
+int vma_add_area(pcb_t *proc, vm_area_t *area);
 
 #endif
