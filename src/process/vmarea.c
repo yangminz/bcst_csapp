@@ -118,7 +118,7 @@ static int set_vma_value(uint64_t vma_addr, uint64_t vma_value)
 }
 
 // fill in the interface
-static linkedlist_node_interface vma_list_interface = {
+static linkedlist_node_interface vma_interface = {
     .construct_node = construct_vma_node,
     .destruct_node = destruct_vma_node,
     .is_null_node = is_null_vma_node,
@@ -204,7 +204,7 @@ int vma_add_area(pcb_t *proc, vm_area_t *area)
     if (proc->mm.vma.count == 0)
     {
         linkedlist_internal_insert(&(proc->mm.vma),
-            &vma_list_interface, (uint64_t)area);
+            &vma_interface, (uint64_t)area);
         return 1;
     }
     else
@@ -235,7 +235,7 @@ int vma_add_area(pcb_t *proc, vm_area_t *area)
                 {
                     // insert a new vma node
                     linkedlist_internal_insert_before(&(proc->mm.vma),
-                        &vma_list_interface, (uint64_t)p, (uint64_t)area);
+                        &vma_interface, (uint64_t)p, (uint64_t)area);
                     return 1;
                 }
             }
@@ -252,7 +252,7 @@ int vma_add_area(pcb_t *proc, vm_area_t *area)
         else
         {
             linkedlist_internal_insert_after(&(proc->mm.vma),
-                &vma_list_interface, (uint64_t)p, (uint64_t)area);
+                &vma_interface, (uint64_t)p, (uint64_t)area);
             return 1;
         }
     }
@@ -332,4 +332,20 @@ void setup_pagetable_from_vma(pcb_t *proc)
         // move to next area
         a = a->next;
     }
+}
+
+vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr)
+{
+    assert(p != NULL);
+
+    vm_area_t *a = (vm_area_t *)(p->mm.vma.head);
+    for (size_t i = 0; i < p->mm.vma.count; i++)
+    {
+        if (a->vma_start <= vaddr && vaddr < a->vma_end)
+        {
+            return a;
+        }
+        a = a->next;
+    }
+    return NULL;
 }

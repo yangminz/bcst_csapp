@@ -49,5 +49,6 @@ typedef struct INST_STRUCT
 // sizeof(inst_t) = 0x40
 
 #define MAX_NUM_INSTRUCTION_CYCLE 100
+#define DEREF_VALUE(od) (*(uint64_t *)(od->value))
 
 #endif

@@ -73,7 +73,7 @@ static void write_handler()
     for (int i = 0; i < buf_length; ++ i)
     {
         // print as yellow
-        printf("\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i)]);
+        printf("\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i, 0)]);
     }
 }
 

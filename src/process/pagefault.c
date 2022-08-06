@@ -28,6 +28,9 @@
 int swap_in(uint64_t saddr, uint64_t ppn);
 int swap_out(uint64_t saddr, uint64_t ppn);
 
+// virtual memory area
+vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr);
+
 // physical page descriptor
 typedef struct
 {
@@ -212,11 +215,29 @@ void fix_pagefault()
     // get the faulting address from MMU register
     address_t vaddr = {.address_value = mmu_vaddr_pagefault};
 
-    // TODO: check read/write in vma
-
     // get the level 4 page table entry
     pte4_t *pte = (pte4_t *)get_pagetableentry(pgd, &vaddr, 4, 1);
-    
+
+#ifdef USE_FORK_COW
+    // check read/write in vma
+    vm_area_t *area = search_vma_vaddr(pcb, vaddr.vaddr_value);
+    if (area == NULL)
+    {
+        // not in area
+    }
+    else
+    {
+        // found in area
+        if (pte->readonly == 1 &&
+            area->vma_mode.write == 1 && 
+            area->vma_mode.private == 0)
+        {
+            // TODO: invoke COW
+            printf("COW!!!!!\n");
+        }
+    }
+#endif
+
     // 1. try to request one free physical page from DRAM
     // kernel's responsibility
     for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)

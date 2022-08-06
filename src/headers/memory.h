@@ -104,6 +104,12 @@ typedef union
 /*      memory R/W                      */
 /*======================================*/
 
+// used by instructions: use virtual address
+uint64_t virtual_read_data(uint64_t vaddr);
+void virtual_write_data(uint64_t vaddr, uint64_t data);
+void virtual_read_inst(uint64_t vaddr, char *buf);
+void virtual_write_inst(uint64_t vaddr, const char *str);
+
 // used by instructions: read or write uint64_t to DRAM
 uint64_t cpu_read64bits_dram(uint64_t paddr);
 void cpu_write64bits_dram(uint64_t paddr, uint64_t data);

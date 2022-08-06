@@ -30,6 +30,8 @@ void cmp_handler             (od_t *src_od, od_t *dst_od) {};
 void jne_handler             (od_t *src_od, od_t *dst_od) {};
 void jmp_handler             (od_t *src_od, od_t *dst_od) {};
 void lea_handler             (od_t *src_od, od_t *dst_od) {};
+void int_handler             (od_t *src_od, od_t *dst_od) {};
+void nop_handler             (od_t *src_od, od_t *dst_od) {};
 
 void parse_instruction(const char *str, inst_t *inst);
 void parse_operand(const char *str, od_t *od);

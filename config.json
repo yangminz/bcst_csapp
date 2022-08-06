@@ -4,16 +4,24 @@
     {
         "build": [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-function", "-Wno-unused-variable",
             "-I", "./src",
             "-DDEBUG_INSTRUCTION_CYCLE",
+            "-DUSE_NAVIE_VA2PA",
             "./src/common/convert.c",
             "./src/algorithm/hashtable.c",
             "./src/algorithm/trie.c",
             "./src/algorithm/array.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
+            "./src/hardware/cpu/interrupt.c",
+            "./src/hardware/cpu/inst.c",
             "./src/hardware/memory/dram.c",
+            "./src/hardware/memory/swap.c",
+            "./src/process/syscall.c",
+            "./src/process/schedule.c",
+            "./src/process/pagefault.c",
+            "./src/process/fork.c",
             "./src/tests/test_run_isa.c",
             "-o", "./bin/run_isa"
         ],
@@ -25,7 +33,7 @@
     {
         "build": [
             "/usr/bin/gcc-7", 
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
             "-I", "./src",
             "-DDEBUG_INSTRUCTION_CYCLE",
             "-DUSE_NAVIE_VA2PA",
@@ -38,8 +46,11 @@
             "./src/hardware/cpu/inst.c",
             "./src/hardware/cpu/interrupt.c",
             "./src/hardware/memory/dram.c",
+            "./src/hardware/memory/swap.c",
             "./src/process/syscall.c",
             "./src/process/schedule.c",
+            "./src/process/pagefault.c",
+            "./src/process/fork.c",
             "./src/tests/test_run_isa.c",
             "-o", "./bin/run_isa"
         ],
