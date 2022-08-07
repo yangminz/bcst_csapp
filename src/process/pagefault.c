@@ -18,6 +18,7 @@
 #include "headers/address.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
+#include "headers/color.h"
 
 // search paddr from main memory and disk
 // TODO: raise exception 14 (page fault) here
@@ -228,6 +229,7 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
         {
             page_map[ppn].mapping[i] = pte;
             success = 1;
+            break;
         }
     }
     assert(success == 1);
@@ -324,7 +326,7 @@ void fix_pagefault()
             // found i as free ppn
             map_pte4(pte, i);
          
-            printf("\033[34;1m\tPageFault: use free ppn %d\033[0m\n", i);
+            printf(BLUESTR("\tPageFault: use free ppn %d\n"), i);
             return;
         }
     }
@@ -356,7 +358,7 @@ void fix_pagefault()
         swap_in(pte->saddr, lru_ppn);
         map_pte4(pte, lru_ppn);
 
-        printf("\033[34;1m\tPageFault: discard clean ppn %d as victim\033[0m\n", lru_ppn);
+        printf(BLUESTR("\tPageFault: discard clean ppn %d as victim\n"), lru_ppn);
         return;
     }
 
@@ -384,7 +386,7 @@ void fix_pagefault()
     swap_in(pte->saddr, lru_ppn);
     map_pte4(pte, lru_ppn);
 
-    printf("\033[34;1m\tPageFault: write back & use ppn %d\033[0m\n", lru_ppn);
+    printf(BLUESTR("\tPageFault: write back & use ppn %d\n"), lru_ppn);
 }
 
 int allocate_physicalframe(pte4_t *pte)

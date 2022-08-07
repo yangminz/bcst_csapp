@@ -19,6 +19,7 @@
 #include "headers/instruction.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
+#include "headers/color.h"
 
 static void print_register()
 {
@@ -114,7 +115,7 @@ static void TestSyscallPrintHelloWorld()
         time ++;
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void TestAddFunctionCallAndComputation()
@@ -196,7 +197,7 @@ static void TestAddFunctionCallAndComputation()
     assert(virtual_read_data(0x7ffffffee0f8) == 0x000000000000abcd);
     assert(virtual_read_data(0x7ffffffee0f0) == 0x0000000000000000); // rsp
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void TestSumRecursiveCondition()
@@ -274,7 +275,7 @@ static void TestSumRecursiveCondition()
     assert(virtual_read_data(0x7ffffffee228)== 0x0000000000000006);
     assert(virtual_read_data(0x7ffffffee220)== 0x00007ffffffee310); // rsp
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 int main()

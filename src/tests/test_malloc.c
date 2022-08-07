@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include "headers/allocator.h"
 #include "headers/algorithm.h"
+#include "headers/color.h"
 
 void check_heap_correctness();
 
@@ -34,7 +35,7 @@ static void test_roundup()
         }
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 /*  hex table
@@ -80,7 +81,7 @@ static void test_get_blocksize_allocated()
         assert(get_allocated(i) == ALLOCATED);
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_set_blocksize_allocated()
@@ -122,7 +123,7 @@ static void test_set_blocksize_allocated()
         assert(is_lastblock(addr) == 1);
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_get_header_payload_addr()
@@ -144,7 +145,7 @@ static void test_get_header_payload_addr()
         assert(get_header(payload_addr) == header_addr);
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_get_next_prev()
@@ -229,7 +230,7 @@ static void test_get_next_prev()
         i -= 1;
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 // collection for the pointers
@@ -295,7 +296,7 @@ static void test_malloc_free()
     assert(get_allocated(get_firstblock()) == FREE);
     check_heap_correctness();
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 int main()

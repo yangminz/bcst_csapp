@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "headers/common.h"
+#include "headers/color.h"
 
 static void test_float()
 {
@@ -25,7 +26,7 @@ static void test_float()
         assert(*(uint32_t *)&float_val == float_map);
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_string()
@@ -53,7 +54,7 @@ static void test_string()
         assert(string2uint(neg_hex) == -1 * v);
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 int main()

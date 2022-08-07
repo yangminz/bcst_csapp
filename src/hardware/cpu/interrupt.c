@@ -16,6 +16,7 @@
 #include "headers/cpu.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
+#include "headers/color.h"
 #include "headers/address.h"
 
 typedef void (*interrupt_handler_t)();
@@ -282,7 +283,7 @@ void interrupt_return_stack_switching()
 
 void timer_handler()
 {
-    printf("\033[32;1mTimer interrupt to invoke OS scheduling\033[0m\n");
+    printf("Timer interrupt to invoke OS scheduling\n");
     software_push_userframe();
     os_schedule();
     /* ================================= */
@@ -301,7 +302,7 @@ void timer_handler()
 
 void pagefault_handler()
 {
-    printf("\033[32;1mPage fault handling\033[0m\n");
+    printf(GREENSTR("Page fault handling\n"));
 
     software_push_userframe();
     fix_pagefault();
@@ -311,7 +312,7 @@ void pagefault_handler()
 
 void syscall_handler()
 {
-    printf("\033[32;1mInvoking system call [%ld]\033[0m\n", cpu_reg.rax);
+    printf(GREENSTR("Invoking system call [%ld]\n"), cpu_reg.rax);
 
     // push user general registers to kernel stack
     // to save the context of user thread
@@ -370,12 +371,12 @@ static void print_kstack(pcb_t *p)
             if (tfa <= base)
             {
                 // print trap frame green
-                printf("\033[32;1m%16lx  \033[0m", val64);
+                printf(GREENSTR("%16lx  "), val64);
             }
             else if (ufa <= base)
             {
                 // print user frame yellow
-                printf("\033[33;1m%16lx  \033[0m", val64);
+                printf(YELLOWSTR("%16lx  "), val64);
             }
             else
             {

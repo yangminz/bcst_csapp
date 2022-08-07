@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "headers/cpu.h"
+#include "headers/color.h"
 #include "headers/memory.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
@@ -52,7 +53,7 @@ void os_schedule()
 
     // pcb_new should be selected by the scheduling algorithm
     pcb_t *pcb_new = pcb_old->next;
-    printf("    \033[31;1mOS schedule [%ld] -> [%ld]\033[0m\n", pcb_old->pid, pcb_new->pid);
+    printf(REDSTR("    OS schedule [%ld] -> [%ld]\n"), pcb_old->pid, pcb_new->pid);
 
     // context switch
 

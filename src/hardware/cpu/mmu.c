@@ -18,6 +18,7 @@
 #include "headers/common.h"
 #include "headers/address.h"
 #include "headers/interrupt.h"
+#include "headers/color.h"
 
 // -------------------------------------------- //
 // TLB cache struct
@@ -210,7 +211,7 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request)
         if (tab[vpn].present != 1)
         {
             // page fault
-            printf("\033[31;1mMMU (%lx): level %d page fault: [%x].present == 0\n\033[0m", vaddr_value, level + 1, vpn);
+            printf(REDSTR("MMU (%lx): level %d page fault: [%x].present == 0\n"), vaddr_value, level + 1, vpn);
             goto RAISE_PAGE_FAULT;
         }
 
@@ -231,7 +232,7 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request)
         if (pte->readonly == 1 && write_request)
         {
             // actually protection fault
-            printf("\033[31;1m\tProtection Fault\n\033[0m");
+            printf(REDSTR("\tProtection Fault\n"));
             goto RAISE_PAGE_FAULT;
         }
 
@@ -239,7 +240,7 @@ static uint64_t page_walk(uint64_t vaddr_value, int write_request)
     }
     else
     {
-        printf("\033[31;1mMMU (%lx): level 4 page fault: [%x].present == 0\n\033[0m", vaddr_value, vaddr.vpn4);
+        printf(REDSTR("MMU (%lx): level 4 page fault: [%x].present == 0\n"), vaddr_value, vaddr.vpn4);
     }
 
 RAISE_PAGE_FAULT:

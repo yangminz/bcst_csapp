@@ -17,6 +17,7 @@
 #include "headers/memory.h"
 #include "headers/interrupt.h"
 #include "headers/syscall.h"
+#include "headers/color.h"
 
 typedef void (*syscall_handler_t)();
 
@@ -73,7 +74,7 @@ static void write_handler()
     for (int i = 0; i < buf_length; ++ i)
     {
         // print as yellow
-        printf("\033[33;1m%c\033[0m", pm[va2pa(buf_vaddr + i, 0)]);
+        printf(YELLOWSTR("%c"), pm[va2pa(buf_vaddr + i, 0)]);
     }
 }
 
@@ -99,7 +100,7 @@ static void exit_handler()
     // assembly end
 
     // The following resource are allocated on KERNEL STACK
-    printf("\033[33;1mGood Bye ~~~\n\033[0m");
+    printf(REDSTR("Good Bye ~~~\n"));
 }
 
 static void wait_handler()

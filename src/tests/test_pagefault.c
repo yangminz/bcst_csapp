@@ -20,6 +20,7 @@
 #include "headers/instruction.h"
 #include "headers/interrupt.h"
 #include "headers/process.h"
+#include "headers/color.h"
 
 void map_pte4(pte4_t *pte, uint64_t ppn);
 void unmap_pte4(uint64_t ppn);
@@ -125,7 +126,7 @@ static void TestPageFaultHandlingCase1()
         instruction_cycle();
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void TestPageFaultHandlingCase2()
@@ -204,7 +205,7 @@ static void TestPageFaultHandlingCase2()
         instruction_cycle();
     }
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void TestPageFaultHandlingCase3()
@@ -289,7 +290,7 @@ static void TestPageFaultHandlingCase3()
         instruction_cycle();
     }
 
-    printf("\033[32;1m\tPass; Check the swapped out files.\033[0m\n");
+    printf(GREENSTR("Pass; Check the swapped out files.\n"));
 }
 
 int main()

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <assert.h>
 #include <headers/algorithm.h>
+#include "headers/color.h"
 
 int rbt_compare(rb_tree_t *a, rb_tree_t *b);
 rb_tree_t *rbt_construct_keystr(char *tree, char *color);
@@ -490,7 +491,7 @@ static void test_delete()
 
     bst_free(r);
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_insert()
@@ -555,7 +556,7 @@ static void test_insert()
     bst_free(r);
     bst_free(ans);
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_rotate()
@@ -667,7 +668,7 @@ static void test_rotate()
         bst_free(t);
     }
     
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 static void test_insert_delete()
@@ -723,7 +724,7 @@ static void test_insert_delete()
     free(array);
     rbt_free(tree);
 
-    printf("\033[32;1m\tPass\033[0m\n");
+    printf(GREENSTR("Pass\n"));
 }
 
 int main()
