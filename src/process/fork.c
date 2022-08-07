@@ -138,7 +138,7 @@ static pte123_t *copy_pagetable(pte123_t *src, int level)
 
                 // update page_map.mappings
                 uint64_t ppn = (uint64_t)(((pte4_t *)&src[j])->ppn);
-                map_pte4(&dst[j], ppn);
+                map_pte4((pte4_t *)&dst[j], ppn);
             }
         }
 #endif

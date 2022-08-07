@@ -32,6 +32,8 @@ int swap_out(uint64_t saddr, uint64_t ppn);
 // virtual memory area
 vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr);
 
+int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn);
+
 #define MAX_REVERSED_MAPPING_NUMBER (4)
 
 // physical page descriptor
@@ -203,7 +205,7 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
     // must use an empty reversed mapping slot
-    assert(page_map[ppn].allocated == 0);
+    // assert(page_map[ppn].allocated == 0);
     assert(page_map[ppn].dirty == 0);
     // for simplicity, the number is constrained
     assert(page_map[ppn].reversed_counter < MAX_REVERSED_MAPPING_NUMBER);
@@ -297,19 +299,6 @@ static void copy_on_write(pte4_t *pte)
     uint64_t old_ppn = (uint64_t)pte->ppn;
     assert(page_map[old_ppn].reversed_counter > 1);
 
-    // Allocate new physical frame for the PTE
-    int success = allocate_physicalframe(pte);
-    assert(success == 1);
-    assert(pte->present == 1);
-    uint64_t new_ppn = (uint64_t)pte->ppn;
-
-    // Copy data in physical frame
-    memcpy(
-        &pm[new_ppn << PHYSICAL_PAGE_OFFSET_LENGTH],
-        &pm[old_ppn << PHYSICAL_PAGE_OFFSET_LENGTH],
-        PAGE_SIZE
-    );
-
     // Update the left mappings
     pte4_t *remaining[MAX_REVERSED_MAPPING_NUMBER];
     int remaining_count = 0;
@@ -330,8 +319,15 @@ static void copy_on_write(pte4_t *pte)
     // remove all remaining from old ppn
     unmapall_pte4(old_ppn);
 
-    // reinsert and update r/w mode
+    // Allocate new physical frame for the PTE
+    // Copy data in physical frame
+    int success = copy_physicalframe(pte, old_ppn);
     pte->readonly = 0;
+    assert(success == 1);
+    assert(pte->present == 1);
+    uint64_t new_ppn = (uint64_t)pte->ppn;
+
+    // reinsert and update r/w mode
     for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
     {
         if (remaining[i] != NULL)
@@ -498,7 +494,7 @@ int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn)
     //                      enough space for new child frame
     // But in our case, parent_ppn may be evicted. This is bad.
     // So we should fail the fork
-    return 0;
+    return 1;
 }
 
 // check if there are enough frames to use
