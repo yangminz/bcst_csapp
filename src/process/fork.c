@@ -96,10 +96,6 @@ static void copy_vmareas(pcb_t *src, pcb_t *dst)
         strcpy(dst_vma->filepath, src_vma->filepath);
         dst_vma->rbt_color = src_vma->rbt_color;
 
-        // update the shared bit in vma mode
-        src_vma->vma_mode.private = 0;
-        dst_vma->vma_mode.private = 0;
-
         // add the new virtual memory area to child process
         vma_add_area(dst, dst_vma);
 
@@ -126,7 +122,7 @@ static pte123_t *copy_pagetable(pte123_t *src, int level)
         // set the all pte4 to be read only
         for (int j = 0; j < PAGE_TABLE_ENTRY_NUM; ++ j)
         {
-            if (dst[j].present == 1)
+            if (src[j].present == 1)
             {
                 // This is a valid pte4
                 pte4_t *pte = (pte4_t *)&dst[j];
@@ -139,6 +135,12 @@ static pte123_t *copy_pagetable(pte123_t *src, int level)
                 // update page_map.mappings
                 uint64_t ppn = (uint64_t)(((pte4_t *)&src[j])->ppn);
                 map_pte4((pte4_t *)&dst[j], ppn);
+            }
+            else
+            {
+                // TODO:
+                // if parent page table entry tells that physical frame
+                // is swapped out ...
             }
         }
 #endif

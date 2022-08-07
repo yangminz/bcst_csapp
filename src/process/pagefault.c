@@ -293,7 +293,7 @@ static void copy_on_write(pte4_t *pte)
     assert(pte->present == 1);
     assert(pte->readonly == 1);
     
-    printf(REDSTR("\tCopy-on-Write\n"));
+    printf(BLUESTR("\tCopy-on-Write\n"));
 
     // Get the old ppn, this ppn should be mapped by multiple processes's PTEs
     uint64_t old_ppn = (uint64_t)pte->ppn;
@@ -319,14 +319,6 @@ static void copy_on_write(pte4_t *pte)
     // remove all remaining from old ppn
     unmapall_pte4(old_ppn);
 
-    // Allocate new physical frame for the PTE
-    // Copy data in physical frame
-    int success = copy_physicalframe(pte, old_ppn);
-    pte->readonly = 0;
-    assert(success == 1);
-    assert(pte->present == 1);
-    uint64_t new_ppn = (uint64_t)pte->ppn;
-
     // reinsert and update r/w mode
     for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
     {
@@ -345,6 +337,18 @@ static void copy_on_write(pte4_t *pte)
             }
         }
     }
+
+    // Allocate new physical frame for the PTE
+    // Copy data in physical frame
+    int success = copy_physicalframe(pte, old_ppn);
+    pte->readonly = 0;
+    assert(success == 1);
+    assert(pte->present == 1);
+    uint64_t new_ppn = (uint64_t)pte->ppn;
+    assert(new_ppn != old_ppn);
+
+    printf(BLUESTR("\tPTE<%p> removed from Frame[%ld]. New Frame[%ld] allocated\n"),
+        pte, old_ppn, new_ppn);
 }
 
 void fix_pagefault()
