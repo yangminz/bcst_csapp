@@ -31,6 +31,8 @@ int swap_out(uint64_t saddr, uint64_t ppn);
 // virtual memory area
 vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr);
 
+#define MAX_REVERSED_MAPPING_NUMBER (4)
+
 // physical page descriptor
 typedef struct
 {
@@ -38,10 +40,31 @@ typedef struct
     int dirty;
     int time;   // LRU cache: 0 - Fresh
 
-    // real world: mapping to anon_vma or address_space
-    // we simply the situation here
-    // TODO: if multiple processes are using this page? E.g. Shared library
-    pte4_t *pte4;       // the reversed mapping: from PPN to page table entry
+    /*  real world: mapping to anon_vma or address_space
+        we simply the situation here:
+        We limit that one physical frame can be shared by 
+        at most MAX_REVERSED_MAPPING_NUMBER PTEs
+        And use mappings to manage them.
+
+            ** anon_vma
+        The reversed mapping: from PPN to anonymous VMAs
+        This physical frame is in anonymous area, e.g. [stack], [heap]
+        Multiple processes are sharing the same anonymous area
+        This happens in Fork and Copy-On-Write
+        We need reversed mapping to modify all related PTEs from RO to RW
+
+            ** address_space
+        The reversed mapping: from PPN to file-backed VMAs
+        This physical frame is in file-backed area, e.g., .text, .data
+        Multiple processes are sharing the same file-backed area
+        This happens in Fork and Copy-On-Write
+    */
+    pte4_t *mapping[MAX_REVERSED_MAPPING_NUMBER];
+
+    // count the number of processes sharing this physical frame
+    // Actually it must be the number of non-NULL in mapping field
+    uint64_t reversed_counter;
+
     uint64_t saddr;   // binding the revesed mapping with mapping to disk
 } pd_t;
 
@@ -111,7 +134,11 @@ void page_map_init()
         page_map[k].allocated = 0;
         page_map[k].dirty = 0;
         page_map[k].time = 0;
-        page_map[k].pte4 = NULL;
+        page_map[k].reversed_counter = 0;
+        for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+        {
+            page_map[k].mapping[i] = NULL;
+        }
     }
 }
 
@@ -119,7 +146,17 @@ void pagemap_update_time(uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
     assert(page_map[ppn].allocated == 1);
-    assert(page_map[ppn].pte4->present == 1);
+    int reversed_count = 0;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (page_map[ppn].mapping[i] != NULL)
+        {
+            assert(page_map[ppn].mapping[i]->present == 1);
+            reversed_count += 1;
+        }
+    }
+    assert(reversed_count == page_map[ppn].reversed_counter);
+
     for (int i = 0; i < MAX_NUM_PHYSICAL_PAGE; ++ i)
     {
         page_map[i].time += 1;
@@ -131,9 +168,26 @@ void pagemap_dirty(uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
     assert(page_map[ppn].allocated == 1);
-    assert(page_map[ppn].pte4->present == 1);
+    int reversed_count = 0;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (page_map[ppn].mapping[i] != NULL)
+        {
+            assert(page_map[ppn].mapping[i]->present == 1);
+            reversed_count += 1;
+        }
+    }
+    assert(reversed_count == page_map[ppn].reversed_counter);
+
     page_map[ppn].dirty = 1;
-    page_map[ppn].pte4->dirty = 1;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (page_map[ppn].mapping[i] != NULL)
+        {
+            page_map[ppn].mapping[i]->dirty = 1;
+            reversed_count += 1;
+        }
+    }
 }
 
 // used by frame swap-in from swap space
@@ -150,7 +204,7 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
     // must use an empty reversed mapping slot
     assert(page_map[ppn].allocated == 0);
     assert(page_map[ppn].dirty == 0);
-    assert(page_map[ppn].pte4 == NULL);
+    assert(page_map[ppn].reversed_counter < MAX_REVERSED_MAPPING_NUMBER);
 
     // Let's consider this, where can we store the swap address on disk?
     // In this case of physical page being allocated and mapped,
@@ -164,9 +218,20 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
 
     // reversed mapping
     page_map[ppn].allocated = 1;    // allocated for vaddr
-    page_map[ppn].dirty = 0;        // allocated as clean
-    page_map[ppn].time = 0;         // most recently used physical page
-    page_map[ppn].pte4 = pte;
+    // page_map[ppn].dirty = 0;        // allocated as clean
+    page_map[ppn].time = 0;         // most recently used physical page    
+    
+    int success = 0;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (page_map[ppn].mapping[i] == NULL)
+        {
+            page_map[ppn].mapping[i] = pte;
+            success = 1;
+        }
+    }
+    assert(success == 1);
+    page_map[ppn].reversed_counter += 1;
 
     /*  When mapped
         Page table entry: present = 1, ppn
@@ -181,21 +246,33 @@ void unmap_pte4(uint64_t ppn)
     // Get the page table entry from reversed mapping array by ppn
     // Note that in this case the page MUST be allocated
     assert(page_map[ppn].allocated == 1);
-    pte4_t *pte = page_map[ppn].pte4;
-    assert(pte->present == 1);
+    assert(page_map[ppn].reversed_counter > 0);
 
-    pte->pte_value = 0;
-    pte->present = 0;
-    // In this case, page_map[ppn] would be mapped by other page table.
-    // Previously, this is used to store the swap address.
-    // Now we need to move the swap address to the page table entry.
-    pte->saddr = page_map[ppn].saddr;
-
-    // clear the reversed mapping
+    // clear all the reversed mapping
     page_map[ppn].allocated = 0;
     page_map[ppn].dirty = 0;
     page_map[ppn].time = 0;
-    page_map[ppn].pte4 = NULL;
+    
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (page_map[ppn].mapping[i] != NULL)
+        {
+            // release PTE
+            pte4_t *pte = page_map[ppn].mapping[i];
+            assert(pte->present == 1);
+            pte->pte_value = 0;
+            pte->present = 0;
+            // In this case, page_map[ppn] would be mapped by other page table.
+            // Previously, this is used to store the swap address.
+            // Now we need to move the swap address to the page table entry.
+            pte->saddr = page_map[ppn].saddr;
+
+            // release reversed mapping
+            page_map[ppn].mapping[i] = NULL;
+            page_map[ppn].reversed_counter -= 1;
+        }
+    }
+    assert(page_map[ppn].reversed_counter == 0);
 
     /*  When unmapped
         Page table entry: present = 0, swap address

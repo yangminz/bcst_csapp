@@ -334,6 +334,7 @@ void setup_pagetable_from_vma(pcb_t *proc)
     }
 }
 
+// Actually, this function should be implemented by Red-Black Tree
 vm_area_t *search_vma_vaddr(pcb_t *p, uint64_t vaddr)
 {
     assert(p != NULL);
