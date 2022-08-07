@@ -23,7 +23,7 @@
 #include "headers/color.h"
 
 void map_pte4(pte4_t *pte, uint64_t ppn);
-void unmap_pte4(uint64_t ppn);
+void unmapall_pte4(uint64_t ppn);
 void page_map_init();
 void pagemap_dirty(uint64_t ppn);
 void pagemap_update_time(uint64_t ppn);

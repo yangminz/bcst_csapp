@@ -205,6 +205,7 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
     // must use an empty reversed mapping slot
     assert(page_map[ppn].allocated == 0);
     assert(page_map[ppn].dirty == 0);
+    // for simplicity, the number is constrained
     assert(page_map[ppn].reversed_counter < MAX_REVERSED_MAPPING_NUMBER);
 
     // Let's consider this, where can we store the swap address on disk?
@@ -242,7 +243,7 @@ void map_pte4(pte4_t *pte, uint64_t ppn)
      */
 }
 
-void unmap_pte4(uint64_t ppn)
+void unmapall_pte4(uint64_t ppn)
 {
     assert(0 <= ppn && ppn < MAX_NUM_PHYSICAL_PAGE);
     // Get the page table entry from reversed mapping array by ppn
@@ -284,6 +285,72 @@ void unmap_pte4(uint64_t ppn)
     // now page_map[ppn] can be used by other page table entry
 }
 
+static void copy_on_write(pte4_t *pte)
+{
+    //  pte: the corresponding pte of COW vaddr
+    assert(pte->present == 1);
+    assert(pte->readonly == 1);
+    
+    printf(REDSTR("\tCopy-on-Write\n"));
+
+    // Get the old ppn, this ppn should be mapped by multiple processes's PTEs
+    uint64_t old_ppn = (uint64_t)pte->ppn;
+    assert(page_map[old_ppn].reversed_counter > 1);
+
+    // Allocate new physical frame for the PTE
+    int success = allocate_physicalframe(pte);
+    assert(success == 1);
+    assert(pte->present == 1);
+    uint64_t new_ppn = (uint64_t)pte->ppn;
+
+    // Copy data in physical frame
+    memcpy(
+        &pm[new_ppn << PHYSICAL_PAGE_OFFSET_LENGTH],
+        &pm[old_ppn << PHYSICAL_PAGE_OFFSET_LENGTH],
+        PAGE_SIZE
+    );
+
+    // Update the left mappings
+    pte4_t *remaining[MAX_REVERSED_MAPPING_NUMBER];
+    int remaining_count = 0;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        pte4_t *t = page_map[old_ppn].mapping[i];
+        if (t != pte && t != NULL)
+        {
+            remaining[i] = t;
+            remaining_count += 1;
+        }
+        else
+        {
+            remaining[i] = NULL;
+        }
+    }
+
+    // remove all remaining from old ppn
+    unmapall_pte4(old_ppn);
+
+    // reinsert and update r/w mode
+    pte->readonly = 0;
+    for (int i = 0; i < MAX_REVERSED_MAPPING_NUMBER; ++ i)
+    {
+        if (remaining[i] != NULL)
+        {
+            assert(remaining[i]->readonly == 1);
+            map_pte4(remaining[i], old_ppn);
+
+            if (remaining_count == 1)
+            {
+                // if only one pte is left, set it to read/write
+                // This is the case: old mappings = [parent, child]
+                // both are read only. The new mappings are [parent]
+                // [child], both are read/write.
+                remaining[i]->readonly = 0;
+            }
+        }
+    }
+}
+
 void fix_pagefault()
 {
     // get page table directory from rsp
@@ -303,17 +370,22 @@ void fix_pagefault()
     if (area == NULL)
     {
         // not in area
+        assert(0);
     }
     else
     {
         // found in area
         if (pte->readonly == 1 &&
-            area->vma_mode.write == 1 && 
-            area->vma_mode.private == 0)
+            area->vma_mode.write == 1)
         {
-            // TODO: invoke COW
-            printf("COW!!!!!\n");
+            copy_on_write(pte);
         }
+        else
+        {
+            assert(0);
+        }
+
+        return;
     }
 #endif
 
@@ -351,7 +423,7 @@ void fix_pagefault()
     {
         // reversed mapping will find the victim page table
         // unmap the victim (LRU)
-        unmap_pte4(lru_ppn);
+        unmapall_pte4(lru_ppn);
 
         // load page from disk to physical memory
         // at the victim's ppn
@@ -380,7 +452,7 @@ void fix_pagefault()
     swap_out(page_map[lru_ppn].saddr, lru_ppn);
 
     // unmap victim
-    unmap_pte4(lru_ppn);
+    unmapall_pte4(lru_ppn);
 
     // load page from disk to physical memory
     swap_in(pte->saddr, lru_ppn);

@@ -22,6 +22,7 @@
 // from page fault
 int copy_physicalframe(pte4_t *child_pte, uint64_t parent_ppn);
 int enough_frames(int request_num);
+void map_pte4(pte4_t *pte, uint64_t ppn);
 
 static pcb_t *fork_naive_copy(pcb_t *parent_pcb);
 static pcb_t *fork_cow(pcb_t *parent_pcb);
@@ -135,7 +136,9 @@ static pte123_t *copy_pagetable(pte123_t *src, int level)
                 pte->readonly = 1;
                 (&src[j])->readonly = 1;
 
-                // TODO: update page_map.count
+                // update page_map.mappings
+                uint64_t ppn = (uint64_t)(((pte4_t *)&src[j])->ppn);
+                map_pte4(&dst[j], ppn);
             }
         }
 #endif
