@@ -350,5 +350,17 @@
             "-o", "./bin/convert"
         ],
         "test": ["./bin/convert"]
+    },
+    "shell":
+    {
+        "build": [
+            "/usr/bin/gcc-7", 
+            "-Wall", "-g", "-O0", "-Werror", "-std=c11", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+            "-I", "./src",
+            "./src/mains/shell.c",
+            "-o", "./bin/shl"
+        ],
+        "test": ["./bin/shl"],
+        "debug": ["/usr/bin/gdb", "./bin/shl"]
     }
 }
