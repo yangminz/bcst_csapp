@@ -48,25 +48,32 @@ typedef struct USERINPUT_STRUCT
     int argc;
     // the value of arguments
     char **argv;
+    // the raw char pointer
+    char *raw;
 } userinput_t;
+
+typedef enum
+{
+    NEW,
+    FG_RUNNING,
+    BG_RUNNING,
+    STOPPED,
+} job_state_t;
 
 typedef struct JOB_TASK_STRUCT
 {
     pid_t pid;
-    struct JOB_TASK_STRUCT *prev;
-    struct JOB_TASK_STRUCT *next;
+    job_state_t state;
+    char argstr[MAX_LENGTH_USERINPUT];
 } job_task_t;
 
-typedef struct JOB_LIST_STRUCT
-{
-    int count;
-    job_task_t *head;
-} job_list_t;
+#define MAX_NUM_JOBS (64)
+job_task_t job_list[MAX_NUM_JOBS];
 
-static job_list_t job_list;
-static void joblist_add(job_list_t *list, pid_t pid);
-static int joblist_del(job_list_t *list, pid_t pid);
-static void joblist_print(job_list_t *list);
+static int job_add(pid_t pid, job_state_t state, char *argstr);
+static int job_delete(pid_t pid);
+static void job_print();
+static void job_init();
 
 static void parse_userinput(
     const char *input,
@@ -107,6 +114,11 @@ sighandler_t *register_sighandler(
     return old_action.sa_handler;
 }
 
+// flag indicating if sigchld has been invoked
+// to wait for child process zombies
+static int fg_reaped = 0;
+static int fg_pid;
+
 int main()
 {
     userinput_t input;
@@ -117,6 +129,8 @@ int main()
     register_sighandler(SIGCHLD, sigchld_handler, SA_RESTART);
     register_sighandler(SIGINT,  sigint_handler,  SA_RESTART);
     register_sighandler(SIGTSTP, sigtstp_handler, SA_RESTART);
+
+    job_init();
 
     while (1)
     {
@@ -148,15 +162,24 @@ int main()
 static void run_child(userinput_t *input)
 {
     char *envp[] = { NULL };
+
+    // block before fork to eliminate the race condition between
+    // parent (shell) and the handler threads on the 
+    // global resource -- job list add/delete
+    // handler should delete the job from the list after it's added
+    sigset_t mask, prev;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask, &prev);
+
     pid_t pid = fork();
     if (pid == 0)
     {
-        // set the foreground job group
-        pid = getpid();
-        setpgid(pid, pid);
-        joblist_add(&job_list, pid);
+        // new created child process will inherit the signal
+        // pending vector, blocking vector from parent.
+        // unblock and reset in case further execve will fork
+        sigprocmask(SIG_SETMASK, &prev, NULL);
 
-        // new created child process
         // do not trigger copy on write here
         if (execve(input->argv[0], input->argv, envp) < 0)
         {
@@ -166,9 +189,30 @@ static void run_child(userinput_t *input)
     }
     else
     {
-        // parent should wait for the child process to terminate
-        waitpid(pid, NULL, WUNTRACED);
-        printf("%d terminated\n", pid);
+        // critical section
+        // when SIGCHLD is blocked
+        // the code in this section is executed before handler
+        job_add(pid, FG_RUNNING, input->raw);
+        fg_reaped = 0;
+
+        if (input->type == FOREGROUND_JOB)
+        {
+            // fg_pid is also a critical global variable
+            fg_pid = pid;
+
+            // unblock -- recover the previous signal block vector
+            sigprocmask(SIG_SETMASK, &prev, NULL);
+
+            // wait for hanlder being invoked
+            while (fg_reaped == 0)
+            {
+                sleep(1);
+            }
+        }
+        else
+        {
+            // background job
+        }
     }
 }
 
@@ -181,7 +225,7 @@ static void evaluate(userinput_t *input)
         printf(YELLOWSTR("Shell terminating ...\n"));
         exit(0);
     case BUILTIN_JOBS:
-        joblist_print(&job_list);
+        job_print();
         break;
     case BUILTIN_FGCONT:
         break;
@@ -212,10 +256,12 @@ static void parse_userinput(
     result->type = EMPTY;
     result->argc = 0;
     result->argv = NULL;
+    result->raw = NULL;
     if (input == NULL || *input == '\0')
     {
         return;
     }
+    result->raw = (char *)input;
 
     // the previous char
     int p = -1;
@@ -301,10 +347,27 @@ static void parse_userinput(
 
 static void sigchld_handler(int sig)
 {
-    // when this handler is called,
-    // at least one child has terminated and
-    // SIGCHLD signal is not blocked
-    printf("catched sig child\n");
+    int status;
+
+    // waitpid(-1) -- match any process
+    pid_t pid = waitpid(-1, &status, WUNTRACED | WNOHANG);
+    while (pid > 0)
+    {
+        // when this handler is invoked,
+        // SIGCHLD is unblocked.
+        // so it's safe to operate on global resource
+        if (pid == fg_pid)
+        {
+            fg_reaped = 1;
+        }
+
+        if (WIFEXITED(status))
+        {
+            job_delete(pid);
+        }
+
+        pid = waitpid(-1, &status, WUNTRACED | WNOHANG);
+    }
 }
 
 static void sigint_handler(int sig)
@@ -315,77 +378,74 @@ static void sigint_handler(int sig)
 static void sigtstp_handler(int sig)
 {}
 
-// Insert a new pid into background job list
-static void joblist_add(job_list_t *list, pid_t pid)
+static void job_init()
 {
-    if (pid == -1)
+    for (int i = 0; i < MAX_NUM_JOBS; ++ i)
     {
-        return;
-    }
-
-    job_task_t *task = malloc(sizeof(job_task_t));
-    task->pid = pid;
-    task->prev = task;
-    task->next = task;
-
-    if (list->count == 0)
-    {
-        list->head = task;
-        list->count = 1;
-    }
-    else
-    {
-        task->next = list->head;
-        list->head->prev->next = task;
-        task->prev = list->head->prev;
-        list->head->prev = task;
-        list->count += 1;
+        job_list[i].state = NEW;
+        job_list[i].pid = -1;
+        memset(job_list[i].argstr, '\0', sizeof(job_list[i].argstr));
     }
 }
 
-// delete an existing pid from background job list
-static int joblist_del(job_list_t *list, pid_t pid)
+// Insert a new pid into background job list
+static int job_add(pid_t pid, job_state_t state, char *argstr)
 {
     if (pid == -1)
     {
-        return 0;
+        return -1;
     }
-
-    if (list->head->pid == pid)
+    
+    for (int i = 0; i < MAX_NUM_JOBS; ++i)
     {
-        list->head = list->head->next;
-    }
-
-    if (list->count == 1)
-    {
-        free(list->head);
-        list->count = 0;
-        list->head = NULL;
-        return 1;
-    }
-
-    job_task_t *task = list->head;
-    for (int i = 0; i < list->count; ++ i)
-    {
-        if (task->pid == pid)
+        if (job_list[i].state == NEW)
         {
-            // the job to deleted
-            task->prev->next = task->next;
-            task->next->prev = task->prev;
-            free(task);
-            list->count -= 1;
+            // insert to this job
+            job_list[i].pid = pid;
+            job_list[i].state = state;
+            strcpy(job_list[i].argstr, argstr);
             return 1;
         }
     }
 
+    printf(REDSTR("job_add::no free slot for new job\n"));
     return 0;
 }
 
-static void joblist_print(job_list_t *list)
+// delete an existing pid from background job list
+static int job_delete(pid_t pid)
 {
-    job_task_t *task = list->head;
-    for (int i = 0; i < list->count; ++ i)
+    if (pid == -1)
     {
-        printf("%d\n", task->pid);
+        return -1;
+    }
+
+    for (int i = 0; i < MAX_NUM_JOBS; ++ i)
+    {
+        if (job_list[i].pid == pid)
+        {
+            job_list[i].pid = 0;
+            job_list[i].state = NEW;
+            memset(job_list[i].argstr, '\0', sizeof(job_list[i].argstr));
+            return 1;
+        }
+    }
+
+    printf(REDSTR("job_delete::pid {%d} not found from job list\n"), pid);
+    return 0;
+}
+
+static void job_print()
+{
+    for (int i = 0; i < MAX_NUM_JOBS; ++ i)
+    {
+        if (job_list[i].state == NEW)
+        {
+            continue;
+        }
+        printf("[%d]\t%d\t%s\n",
+            job_list[i].pid,
+            job_list[i].state,
+            job_list[i].argstr);
     }
 }
