@@ -361,6 +361,6 @@
             "-o", "./bin/shl"
         ],
         "test": ["./bin/shl"],
-        "debug": ["/usr/bin/gdb", "./bin/shl"]
+        "debug": ["/bin/echo", "Run the shell with '--test' and get it's PID. \nUse 'sudo gdb attach <PID>' to debug."]
     }
 }
