@@ -137,9 +137,9 @@ int main()
 
     // register handlers for signals
     // with this, this program can only run on *unix
-    register_sighandler(SIGCHLD, sigchld_handler, SA_RESTART);
+    register_sighandler(SIGCHLD, sigchld_handler,   SA_RESTART);
     register_sighandler(SIGINT,  sigproxy_handler,  SA_RESTART);
-    register_sighandler(SIGTSTP, sigproxy_handler, SA_RESTART);
+    register_sighandler(SIGTSTP, sigproxy_handler,  SA_RESTART);
 
     job_init();
     pid_t shell_pid = getpid();
@@ -174,7 +174,7 @@ static void child_process(userinput_t *input)
     // handler should delete the job from the list after it's added
     sigset_t mask, prev;
     sigemptyset(&mask);
-    sigaddset(&mask, SIGCHLD | SIGINT | SIGTSTP);
+    sigaddset(&mask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &mask, &prev);
 
     pid_t pid = fork();
@@ -211,6 +211,8 @@ static void child_process(userinput_t *input)
             // wait for hanlder being invoked
             while (fg_reaped == 0)
             {
+                // sleep(1) -- correct, but waste CPU time
+                // pause() -- save CPU time, but RACE CONDITION
                 sleep(1);
             }
         }
@@ -286,7 +288,7 @@ static void sigchld_handler(int sig)
         if (WIFEXITED(status))
         {
             // child was exited normally: exit() or return from main()
-            safe_printf(BLUESTR("[%u] exits normally\n"));
+            safe_printf(BLUESTR("[%u] exits normally\n"), pid);
             job_delete(pid);
         }
 
