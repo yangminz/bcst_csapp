@@ -360,7 +360,7 @@
             "./src/mains/shell.c",
             "-o", "./bin/shl"
         ],
-        "test": ["./bin/shl"],
+        "test": ["/bin/echo", "Run ./bin/shl to handle the keyboard signals correctly"],
         "debug": ["/bin/echo", "Run the shell with '--test' and get it's PID. \nUse 'sudo gdb attach <PID>' to debug."]
     }
 }
