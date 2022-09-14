@@ -175,6 +175,8 @@ static void child_process(userinput_t *input)
     sigset_t mask, prev;
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGTSTP);
     sigprocmask(SIG_BLOCK, &mask, &prev);
 
     pid_t pid = fork();
@@ -184,6 +186,9 @@ static void child_process(userinput_t *input)
         // pending vector, blocking vector from parent.
         // unblock and reset in case further execve will fork
         sigprocmask(SIG_SETMASK, &prev, NULL);
+
+        pid = getpid();
+        setpgid(pid, pid);
 
         // do not trigger copy on write here
         if (execve(input->argv[0], input->argv, envp) < 0)
@@ -205,15 +210,17 @@ static void child_process(userinput_t *input)
             fg_reaped = 0;
             fg_pid = pid;
 
-            // unblock -- recover the previous signal block vector
-            sigprocmask(SIG_SETMASK, &prev, NULL);
-
             // wait for hanlder being invoked
             while (fg_reaped == 0)
             {
+                // RACE CONDITION: handler already invoked.
+
                 // sleep(1) -- correct, but waste CPU time
                 // pause() -- save CPU time, but RACE CONDITION
-                sleep(1);
+                sigsuspend(&prev);
+
+                // SIGCHLD is still blocked here
+                sigprocmask(SIG_SETMASK, &prev, NULL);
             }
         }
         else if (input->type == BACKGROUND_JOB)
@@ -223,6 +230,8 @@ static void child_process(userinput_t *input)
             // STDOUT to terminal/monitor?
             job_add(pid, BG_RUNNING, input->raw);
             assert(fg_reaped = 1);
+
+            // unblock -- recover the previous signal block vector
             sigprocmask(SIG_SETMASK, &prev, NULL);
         }
     }
@@ -264,6 +273,12 @@ static void sigchld_handler(int sig)
     // So we need to save errno on stack and restore it.
     int _errno = errno;
     int status;
+    
+    sigset_t mask, prev;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGTSTP);
+    sigprocmask(SIG_BLOCK, &mask, &prev);
 
     // waitpid(-1) -- match any process
     // other child processes may terminate
@@ -324,6 +339,8 @@ static void sigchld_handler(int sig)
     // If another child exits here, send SIGCHLD to shell
     // shell would have at least one pending SIGCHLD
     // so there would be at least another handler invocation to reap.
+
+    sigprocmask(SIG_SETMASK, &prev, NULL);
 
     // restore errno
     errno = _errno;
