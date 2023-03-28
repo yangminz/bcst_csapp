@@ -118,7 +118,7 @@ int read_cacheline(int i, int *read_value)
     else
     {
         // read miss
-        // bus boardcast read miss
+        // bus broadcast read miss
         for (int j = 0; j < NUM_PROCESSOR; ++ j)
         {
             if (i != j)
@@ -126,7 +126,7 @@ int read_cacheline(int i, int *read_value)
                 if (cache[j].state == MODIFIED)
                 {
                     // write back
-                    // there are eaxctly 2 copies in processors
+                    // there are exactly 2 copies in processors
                     mem_value = cache[j].value;
                     cache[j].state = SHARED;
 
@@ -148,7 +148,7 @@ int read_cacheline(int i, int *read_value)
                     cache[i].state = SHARED;
                     cache[i].value = cache[j].value;
 
-                    // there are eaxctly 2 copies in processors
+                    // there are exactly 2 copies in processors
                     cache[j].state = SHARED;
 
                     *read_value = cache[i].value;
@@ -221,7 +221,7 @@ int write_cacheline(int i, int write_value)
     }
     else if (cache[i].state == SHARED)
     {
-        // boardcast write invalid
+        // broadcast write invalid
         for (int j = 0; j < NUM_PROCESSOR; j ++)
         {
             if (j != i)
@@ -235,7 +235,7 @@ int write_cacheline(int i, int write_value)
         cache[i].value = write_value;
 
 #ifdef DEBUG
-        printf("[%d] write hit; boardcast invalid; update to value %d\n", i, cache[i].value);
+        printf("[%d] write hit; broadcast invalid; update to value %d\n", i, cache[i].value);
 #endif
 
         return 1;
@@ -263,7 +263,7 @@ int write_cacheline(int i, int write_value)
                     cache[i].value = write_value;
 
 #ifdef DEBUG
-                    printf("[%d] write miss; boardcast invalid to M; update to value %d\n", i, cache[i].value);
+                    printf("[%d] write miss; broadcast invalid to M; update to value %d\n", i, cache[i].value);
 #endif
                     return 1;
                 }
@@ -276,7 +276,7 @@ int write_cacheline(int i, int write_value)
                     cache[i].value = write_value;
 
 #ifdef DEBUG
-                    printf("[%d] write miss; boardcast invalid to E; update to value %d\n", i, cache[i].value);
+                    printf("[%d] write miss; broadcast invalid to E; update to value %d\n", i, cache[i].value);
 #endif
                     return 1;
                 }
@@ -295,7 +295,7 @@ int write_cacheline(int i, int write_value)
                     cache[i].value = write_value;
 
 #ifdef DEBUG
-                    printf("[%d] write miss; boardcast invalid to S; update to value %d\n", i, cache[i].value);
+                    printf("[%d] write miss; broadcast invalid to S; update to value %d\n", i, cache[i].value);
 #endif
                     return 1;
                 }
