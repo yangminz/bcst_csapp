@@ -99,12 +99,14 @@ void push_handler(od_t *src_od, od_t *dst_od)
 {
     if (src_od->type == OD_REG)
     {
+        // for test_fork.c: rsp shoud update after acess memory, 
+        // becuase acess memory can trigger page fault, cause to reexecute this instruction.
+
         // src: register
         // dst: empty
-        cpu_reg.rsp = cpu_reg.rsp - 8;
-        virtual_write_data(
-            cpu_reg.rsp, 
-            DEREF_VALUE(src_od));
+        uint64_t tmp_rsp = cpu_reg.rsp - 8;
+        virtual_write_data(tmp_rsp, DEREF_VALUE(src_od));
+        cpu_reg.rsp = tmp_rsp;
         increase_pc();
         cpu_flags.__flags_value = 0;
         return;
@@ -272,13 +274,15 @@ void jne_handler(od_t *src_od, od_t *dst_od)
         // last instruction value == 0
         increase_pc();
     }
-    cpu_flags.__flags_value = 0;
+    // Conditional jump instructions do not set flags. 
+    // cpu_flags.__flags_value = 0;
 }
 
 void jmp_handler(od_t *src_od, od_t *dst_od)
 {
     cpu_pc.rip = (src_od->value);
-    cpu_flags.__flags_value = 0;
+    // Conditional jump instructions do not set flags. 
+    // cpu_flags.__flags_value = 0;
 }
 
 void lea_handler(od_t *src_od, od_t *dst_od)
